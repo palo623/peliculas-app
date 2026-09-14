@@ -86,11 +86,17 @@ const MovieModel = {
         createdAt: new Date().toISOString()
     }),
 
-    saveToDatabase: async (movieData) => {
+    saveToDatabase: async (movieData, userId) => {
+        if (!userId) {
+            throw new Error("Requiere iniciar sesión");
+        }
         const clean = validateMovieData(movieData);
-        const movieId = buildId(clean.title, clean.year);
+        // El dueño forma parte del id: dos usuarios pueden guardar la misma peli.
+        const ownerSuffix = slugifyTitle(String(userId));
+        const movieId = buildId(clean.title, clean.year) + "__" + ownerSuffix;
         const doc = {
             ...clean,
+            userId,
             createdAt: clean.createdAt || new Date().toISOString()
         };
 
@@ -123,38 +129,82 @@ const MovieModel = {
         }
     },
 
-    getAllMovies: async () => {
+    getAllMovies: async (userId) => {
+        // Sin sesión no hay colección personal.
+        if (!userId) {
+            return [];
+        }
         if (!db) {
-            return sortByDateDesc(localMovies);
+            return sortByDateDesc(localMovies.filter((m) => m.userId === userId));
         }
 
         try {
-            const snapshot = await db.collection("movies").orderBy("createdAt", "desc").get();
+            // where() de un solo campo no necesita índice compuesto; se ordena en memoria.
+            const snapshot = await db.collection("movies").where("userId", "==", userId).get();
             const movies = [];
             snapshot.forEach((doc) => {
                 movies.push({ id: doc.id, ...doc.data() });
             });
-            return movies;
+            return sortByDateDesc(movies);
         } catch (error) {
             console.error("Error al listar películas:", error.message || error);
             throw new Error("No se pudo listar la base de datos");
         }
     },
 
-    getMovieById: async (id) => {
+    // Reclama las guardadas de antes de existir usuarios (sin dueño) para quien entra.
+    // Así no se pierde lo guardado en la época sin login.
+    claimOrphanMovies: async (userId) => {
+        if (!userId) return 0;
+        if (!db) {
+            let claimed = 0;
+            localMovies.forEach((m) => {
+                if (!m.userId) {
+                    m.userId = userId;
+                    claimed++;
+                }
+            });
+            if (claimed) console.log(`Reclamadas ${claimed} locales para ${userId}`);
+            return claimed;
+        }
+        try {
+            const snapshot = await db.collection("movies").get();
+            const batch = db.batch();
+            let claimed = 0;
+            snapshot.forEach((doc) => {
+                const data = doc.data() || {};
+                if (!data.userId) {
+                    batch.update(doc.ref, { userId });
+                    claimed++;
+                }
+            });
+            if (claimed) {
+                await batch.commit();
+                console.log(`Reclamadas ${claimed} en Firestore para ${userId}`);
+            }
+            return claimed;
+        } catch (error) {
+            console.error("Error al reclamar películas:", error.message || error);
+            return 0;
+        }
+    },
+
+    getMovieById: async (id, userId) => {
         if (!id) throw new Error("Falta el id");
         if (!db) {
-            return localMovies.find((m) => m.id === id) || null;
+            return localMovies.find((m) => m.id === id && m.userId === userId) || null;
         }
         const doc = await db.collection("movies").doc(id).get();
         if (!doc.exists) return null;
-        return { id: doc.id, ...doc.data() };
+        const data = doc.data() || {};
+        if (data.userId !== userId) return null;
+        return { id: doc.id, ...data };
     },
 
-    deleteMovie: async (id) => {
+    deleteMovie: async (id, userId) => {
         if (!id) throw new Error("Falta el id");
         if (!db) {
-            const idx = localMovies.findIndex((m) => m.id === id);
+            const idx = localMovies.findIndex((m) => m.id === id && m.userId === userId);
             if (idx === -1) return false;
             localMovies.splice(idx, 1);
             return true;
@@ -162,6 +212,8 @@ const MovieModel = {
         const docRef = db.collection("movies").doc(id);
         const doc = await docRef.get();
         if (!doc.exists) return false;
+        const data = doc.data() || {};
+        if (data.userId !== userId) return false;
         await docRef.delete();
         return true;
     }

@@ -3,15 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="App para buscar y guardar películas y series">
-    <title>Películas y Series</title>
+    <meta name="description" content="CineAIros: Descubre, explora y guarda tus películas y series favoritas.">
+    <meta name="theme-color" content="#0c0906">
+    <title>CineAIros · Películas y Series</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <link rel="stylesheet" href="./css/style.css">
+    <link rel="icon" type="image/png" href="/img/logo-icon.png">
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <div id="root"></div>
-    <script type="text/babel" data-presets="react" src="./js/App.js"></script>
+    <div id="root">
+        <p id="boot-loading" style="text-align:center;padding:3rem;color:#aaa;">Cargando CineAIros…</p>
+    </div>
+    <div id="boot-error" style="display:none;max-width:700px;margin:2rem auto;padding:1rem 1.2rem;background:rgba(233,69,96,.12);border:1px solid rgba(233,69,96,.4);border-radius:8px;color:#ff7b93;"></div>
+
+    <script>
+        // Muestra errores JS en pantalla (además de la consola) para diagnosticar.
+        window.addEventListener("error", function (e) {
+            var box = document.getElementById("boot-error");
+            if (!box) return;
+            box.style.display = "block";
+            box.textContent = "Error JS: " + (e.message || "desconocido") + " — pulsa F12 > Consola para más detalle.";
+        });
+        // Si tras 6s React no montó nada, avisa de las causas más probables.
+        setTimeout(function () {
+            var root = document.getElementById("root");
+            var loading = document.getElementById("boot-loading");
+            if (root && loading && root.contains(loading)) {
+                var box = document.getElementById("boot-error");
+                if (box) {
+                    box.style.display = "block";
+                    box.innerHTML = "React no arrancó. Comprueba: 1) abre <b>http://localhost:8080</b> (no el archivo con doble clic), " +
+                        "2) el servidor está en marcha (<b>npm start</b>), 3) hay internet para los CDN (unpkg), " +
+                        "4) F12 &gt; Consola para ver el error exacto.";
+                }
+            }
+        }, 6000);
+    </script>
+
+    <!-- Front en JS plano (sin Babel): un solo fichero, sin transformación en el navegador -->
+    <script src="/js/bundle.js"></script>
 </body>
 </html>

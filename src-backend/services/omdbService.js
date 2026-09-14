@@ -7,7 +7,32 @@ if (!OMDB_API_KEY) {
     console.warn("[omdbService] OMDB_API_KEY no definida. Define OMDB_API_KEY en tu .env.");
 }
 
+// Mini-caché en memoria: las búsquedas repetidas no gastan cuota de OMDb.
+const omdbCache = new Map();
+const CACHE_TTL_MS = 30 * 60 * 1000;
+const CACHE_MAX_ENTRIES = 500;
+
+function cacheGet(url) {
+    const entry = omdbCache.get(url);
+    if (!entry) return null;
+    if (Date.now() - entry.at > CACHE_TTL_MS) {
+        omdbCache.delete(url);
+        return null;
+    }
+    return entry.data;
+}
+
+function cacheSet(url, data) {
+    if (omdbCache.size >= CACHE_MAX_ENTRIES) {
+        const oldest = omdbCache.keys().next().value;
+        omdbCache.delete(oldest);
+    }
+    omdbCache.set(url, { at: Date.now(), data });
+}
+
 async function fetchWithTimeout(url) {
+    const cached = cacheGet(url);
+    if (cached) return cached;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
@@ -15,7 +40,9 @@ async function fetchWithTimeout(url) {
         if (!response.ok) {
             throw new Error(`OMDb respondió con HTTP ${response.status}`);
         }
-        return await response.json();
+        const data = await response.json();
+        cacheSet(url, data);
+        return data;
     } catch (err) {
         if (err.name === "AbortError") {
             throw new Error("OMDb tardó demasiado en responder (timeout)");
@@ -37,11 +64,35 @@ function assertTitle(value, maxLen = 100) {
     return title;
 }
 
+// Año opcional para filtrar en OMDb (?y=2010). Devuelve null si no se pasa.
+function normalizeYear(y) {
+    if (y === undefined || y === null || String(y).trim() === "") return null;
+    const n = Number.parseInt(y, 10);
+    if (Number.isNaN(n) || n < 1900 || n > 2100) {
+        throw new Error("Año inválido (1900-2100)");
+    }
+    return n;
+}
+
+// Tipo opcional para filtrar en OMDb (?type=movie|series). Devuelve null si no se pasa.
+function normalizeType(t) {
+    if (t === undefined || t === null || String(t).trim() === "") return null;
+    const v = String(t).toLowerCase().trim();
+    if (v !== "movie" && v !== "series") {
+        throw new Error("Tipo inválido (movie|series)");
+    }
+    return v;
+}
+
 const omdbService = {
-    // Búsqueda exacta por título: ?t=Inception
-    searchMovie: async (movieTitle) => {
+    // Búsqueda exacta por título: ?t=Inception&y=2010
+    searchMovie: async (movieTitle, opts = {}) => {
         const title = assertTitle(movieTitle);
-        const url = `${OMDB_BASE_URL}?t=${encodeURIComponent(title)}&apikey=${OMDB_API_KEY}`;
+        const year = normalizeYear(opts.year);
+        const type = normalizeType(opts.type);
+        let url = `${OMDB_BASE_URL}?t=${encodeURIComponent(title)}&apikey=${OMDB_API_KEY}`;
+        if (year) url += `&y=${year}`;
+        if (type) url += `&type=${type}`;
         const data = await fetchWithTimeout(url);
 
         if (data.Response === "False") {
@@ -50,12 +101,31 @@ const omdbService = {
         return data;
     },
 
-    // Búsqueda por lista: ?s=Batman&page=1 (devuelve varios resultados)
-    searchMovies: async (query, page = 1) => {
+    // Detalle exacto por IMDb ID: ?i=tt1375666 (más preciso que por título)
+    getById: async (imdbID) => {
+        const id = (imdbID || "").trim();
+        if (!/^tt\d+$/i.test(id)) {
+            throw new Error("IMDb ID inválido");
+        }
+        const url = `${OMDB_BASE_URL}?i=${encodeURIComponent(id)}&apikey=${OMDB_API_KEY}`;
+        const data = await fetchWithTimeout(url);
+
+        if (data.Response === "False") {
+            throw new Error(data.Error || "Película no encontrada");
+        }
+        return data;
+    },
+
+    // Búsqueda por lista: ?s=Batman&page=1&type=movie&y=2008
+    searchMovies: async (query, page = 1, opts = {}) => {
         const q = assertTitle(query);
         const p = Number.parseInt(page, 10) || 1;
         const safePage = Math.min(Math.max(p, 1), 100);
-        const url = `${OMDB_BASE_URL}?s=${encodeURIComponent(q)}&page=${safePage}&apikey=${OMDB_API_KEY}`;
+        const year = normalizeYear(opts.year);
+        const type = normalizeType(opts.type);
+        let url = `${OMDB_BASE_URL}?s=${encodeURIComponent(q)}&page=${safePage}&apikey=${OMDB_API_KEY}`;
+        if (year) url += `&y=${year}`;
+        if (type) url += `&type=${type}`;
         const data = await fetchWithTimeout(url);
 
         if (data.Response === "False") {

@@ -60,8 +60,9 @@ app.use(cors());
 app.use(express.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// Rate-limit muy simple solo para búsqueda (protege la cuota gratuita de OMDb).
-// Máx 30 búsquedas por IP y minuto.
+// Rate-limit para búsqueda: frena bucles accidentales, no el uso normal.
+// La protección real de la cuota de OMDb es la caché de omdbService.
+// Límite generoso porque descubrir hace ráfagas legítimas de detalle.
 const searchHits = new Map();
 app.use("/api/movies/search", (req, res, next) => {
     const now = Date.now();
@@ -70,13 +71,37 @@ app.use("/api/movies/search", (req, res, next) => {
     const hits = (searchHits.get(ip) || []).filter((t) => now - t < windowMs);
     hits.push(now);
     searchHits.set(ip, hits);
-    if (hits.length > 30) {
+    // Limpieza ocasional para no acumular IPs antiguas.
+    if (searchHits.size > 500) {
+        for (const [key, times] of searchHits) {
+            if (!times.some((t) => now - t < windowMs)) searchHits.delete(key);
+        }
+    }
+    if (hits.length > 120) {
         return res.status(429).json({ error: "Demasiadas búsquedas. Espera un minuto." });
     }
     next();
 });
 
 app.use("/api", movieRoutes);
+
+// Anti fuerza bruta en login/registro: 20 intentos por IP y minuto.
+const authHits = new Map();
+app.use("/api/auth", (req, res, next) => {
+    const now = Date.now();
+    const ip = req.ip || "unknown";
+    const windowMs = 60 * 1000;
+    const hits = (authHits.get(ip) || []).filter((t) => now - t < windowMs);
+    hits.push(now);
+    authHits.set(ip, hits);
+    if (hits.length > 20) {
+        return res.status(429).json({ error: "Demasiados intentos. Espera un minuto." });
+    }
+    next();
+});
+
+const authRoutes = require("./src-backend/routes/authRoutes");
+app.use("/api", authRoutes);
 
 // 404 solo para la API (devuelve JSON, no HTML)
 app.use("/api", (req, res) => {
