@@ -1418,8 +1418,9 @@ function MediaPage(props) {
         loadDefaults();
     };
 
-    const handleSave = async () => {
-        if (!result) return;
+    const handleSave = async (movieToSave) => {
+        const movie = movieToSave || result;
+        if (!movie) return;
         setSaving(true);
         setError(null);
         setSuccess(null);
@@ -1427,7 +1428,7 @@ function MediaPage(props) {
             const res = await fetch("/api/movies", {
                 method: "POST",
                 headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
-                body: JSON.stringify(result)
+                body: JSON.stringify(movie)
             });
             const data = await res.json();
             if (!res.ok) {
@@ -1438,6 +1439,7 @@ function MediaPage(props) {
             setSuccess("¡Guardada en tu colección!");
             setResult(null);
             setResultWarning(null);
+            setDetail(null);
             setQuery("");
             await onRefresh();
         } catch (err) {
@@ -1589,7 +1591,14 @@ function MediaPage(props) {
                         detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
                         detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
                         detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
-                        detail.plot ? h("p", null, detail.plot) : null
+                        detail.plot ? h("p", null, detail.plot) : null,
+                        h("div", { className: "result-actions" },
+                            h("button", {
+                                onClick: () => handleSave(detail),
+                                disabled: saving
+                            }, saving ? "Guardando..." : (user ? "Guardar en mi colección" : "Entrar para guardar")),
+                            h("button", { className: "btn-ghost", type: "button", onClick: () => setDetail(null) }, "Cerrar")
+                        )
                     )
                 )
             )
