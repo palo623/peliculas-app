@@ -87,11 +87,15 @@ function friendlyFirebaseError(err) {
         "auth/invalid-continue-uri": "La URL de retorno no es válida. Revisa los dominios autorizados en Firebase.",
         "auth/missing-continue-uri": "Falta la URL de retorno de Firebase.",
         "auth/too-many-requests": "Demasiados intentos. Espera unos minutos y vuelve a probar.",
+        "auth/internal-error": "Firebase no pudo completar el acceso. Revisa la cuota de Firebase e inténtalo de nuevo.",
         "auth/expired-action-code": "El enlace ha caducado. Solicita otro.",
         "auth/invalid-action-code": "El enlace no es válido. Solicita otro."
     };
     if (map[code]) return map[code];
     if (code === "auth/network-request-failed") return "Sin conexión. Revisa tu internet.";
+    if (/RESOURCE_EXHAUSTED|quota exceeded/i.test(String(err && err.message || ""))) {
+        return "Firebase ha alcanzado su cuota temporal. Espera a que se restablezca e inténtalo de nuevo.";
+    }
     return (err && err.message) || "No se pudo entrar con Firebase";
 }
 

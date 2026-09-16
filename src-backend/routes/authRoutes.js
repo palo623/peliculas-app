@@ -21,6 +21,10 @@ router.post("/auth/firebase", async (req, res) => {
         });
         res.json({ ok: true, token, user });
     } catch (error) {
+        if (error && (error.code === 8 || error.code === "RESOURCE_EXHAUSTED" || /RESOURCE_EXHAUSTED|quota exceeded/i.test(error.message || ""))) {
+            console.error("[auth] Cuota de Firebase agotada:", error.message || error);
+            return res.status(503).json({ error: "Firebase ha alcanzado su cuota temporal. Espera a que se restablezca e inténtalo de nuevo." });
+        }
         if (error.code === "INVALID_FIREBASE_TOKEN") {
             return res.status(401).json({ error: error.message });
         }
