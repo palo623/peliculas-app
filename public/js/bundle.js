@@ -174,7 +174,7 @@ function MovieCard(props) {
         ),
         h("div", { className: "movie-card-body" },
             h("h3", { title: movie.title }, movie.title),
-            h("p", { className: "movie-meta" }, (movie.year || "----") + (typeLabel ? " · " + typeLabel : "")),
+            h("p", { className: "movie-meta" }, (movie.year || "----") + (typeLabel ? " · " + typeLabel : "") + ((movie.type === "series" && movie.totalSeasons) ? " · " + movie.totalSeasons + " temp." : "")),
             movie.genre ? h("p", { className: "movie-genre" }, movie.genre) : null,
             (showDelete && onDelete)
                 ? h("button", {
@@ -849,7 +849,8 @@ function MediaPage(props) {
                             plot: data.plot,
                             director: data.director,
                             actors: data.actors,
-                            type: data.type || item.type
+                            type: data.type || item.type,
+                            totalSeasons: data.totalSeasons != null ? data.totalSeasons : item.totalSeasons
                         }),
                         limited: false
                     };
@@ -1248,6 +1249,7 @@ function MediaPage(props) {
                     h("p", null, h("strong", null, "Género:"), " " + result.genre),
                     result.actors ? h("p", null, h("strong", null, "Actores:"), " " + result.actors) : null,
                     result.rating ? h("p", null, h("strong", null, "Nota IMDb:"), " ★ " + result.rating) : null,
+                    result.totalSeasons ? h("p", null, h("strong", null, "Temporadas:"), " " + result.totalSeasons) : null,
                     h("p", null, h("strong", null, "Sinopsis:"), " " + result.plot),
                     resultWarning ? h("p", { className: "muted" }, "ℹ " + resultWarning) : null,
                     typeMismatch ? h("p", { className: "error" }, "«" + result.title + "» es " + (mediaType === "series" ? "una película" : "una serie") + ": está en el apartado " + (mediaType === "series" ? "Películas" : "Series") + ".") : null,
@@ -1285,6 +1287,7 @@ function MediaPage(props) {
                         detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
                         detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
                         detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
+                        detail.totalSeasons ? h("p", null, h("strong", null, "Temporadas:"), " " + detail.totalSeasons) : null,
                         detail.plot ? h("p", null, detail.plot) : null
                     )
                 )
@@ -1392,6 +1395,7 @@ function MiCuenta(props) {
                         detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
                         detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
                         detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
+                        detail.totalSeasons ? h("p", null, h("strong", null, "Temporadas:"), " " + detail.totalSeasons) : null,
                         detail.plot ? h("p", null, detail.plot) : null
                     )
                 )

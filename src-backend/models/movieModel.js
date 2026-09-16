@@ -48,20 +48,29 @@ function sortByDateDesc(list) {
 const MovieModel = {
     isFirestoreConnected: () => firebaseConn.isFirestoreConnected(),
 
-    formatData: (rawJson) => ({
-        title: rawJson.Title || "Sin título",
-        year: rawJson.Year || "----",
-        director: rawJson.Director && rawJson.Director !== "N/A" ? rawJson.Director : "Desconocido",
-        genre: rawJson.Genre && rawJson.Genre !== "N/A" ? rawJson.Genre : "Sin género",
-        plot: rawJson.Plot && rawJson.Plot !== "N/A" ? rawJson.Plot : "Sin sinopsis disponible.",
-        poster: rawJson.Poster && rawJson.Poster !== "N/A" ? rawJson.Poster : null,
-        actors: rawJson.Actors && rawJson.Actors !== "N/A" ? rawJson.Actors : null,
-        runtime: rawJson.Runtime && rawJson.Runtime !== "N/A" ? rawJson.Runtime : null,
-        rating: rawJson.imdbRating && rawJson.imdbRating !== "N/A" ? rawJson.imdbRating : null,
-        type: rawJson.Type || null,
-        imdbID: rawJson.imdbID || null,
-        createdAt: new Date().toISOString()
-    }),
+    formatData: (rawJson) => {
+        // OMDb solo devuelve totalSeasons en el detalle (?t= / ?i=), no en las listas (?s=).
+        let totalSeasons = null;
+        if (rawJson.totalSeasons && rawJson.totalSeasons !== "N/A") {
+            const n = Number.parseInt(rawJson.totalSeasons, 10);
+            if (!Number.isNaN(n) && n > 0) totalSeasons = n;
+        }
+        return {
+            title: rawJson.Title || "Sin título",
+            year: rawJson.Year || "----",
+            director: rawJson.Director && rawJson.Director !== "N/A" ? rawJson.Director : "Desconocido",
+            genre: rawJson.Genre && rawJson.Genre !== "N/A" ? rawJson.Genre : "Sin género",
+            plot: rawJson.Plot && rawJson.Plot !== "N/A" ? rawJson.Plot : "Sin sinopsis disponible.",
+            poster: rawJson.Poster && rawJson.Poster !== "N/A" ? rawJson.Poster : null,
+            actors: rawJson.Actors && rawJson.Actors !== "N/A" ? rawJson.Actors : null,
+            runtime: rawJson.Runtime && rawJson.Runtime !== "N/A" ? rawJson.Runtime : null,
+            rating: rawJson.imdbRating && rawJson.imdbRating !== "N/A" ? rawJson.imdbRating : null,
+            type: rawJson.Type || null,
+            imdbID: rawJson.imdbID || null,
+            totalSeasons: totalSeasons,
+            createdAt: new Date().toISOString()
+        };
+    },
 
     saveToDatabase: async (movieData, userId) => {
         if (!userId) {
