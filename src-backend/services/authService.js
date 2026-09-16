@@ -1,13 +1,12 @@
-// Auth con scrypt (nativo de Node, sin dependencias) + sesiones con token.
-// Persiste en Firestore si hay credenciales (.env o firebase-key.json); si no, en memoria
-// (en modo local los usuarios se pierden al reiniciar el servidor).
+// Firebase Authentication valida la identidad; este servicio sincroniza el perfil
+// con Firestore y crea una sesión técnica para las rutas privadas.
 const crypto = require("crypto");
 
 // Conexión centralizada a Firestore (ver ../models/firebase.js).
 const firebaseConn = require("../models/firebase");
 const db = firebaseConn.getDb();
 if (!firebaseConn.isFirestoreConnected()) {
-    console.warn("[auth] Sin Firestore. Usuarios en memoria.");
+    console.warn("[auth] Sin Firestore. La autenticación Firebase no estará disponible.");
 }
 
 // Memoria para modo local.
@@ -16,54 +15,16 @@ const localSessions = new Map(); // token -> { userId, expiresAt }
 
 const SESSION_DAYS = 30;
 
+// Firebase demuestra quién es el usuario; esta sesión técnica autoriza las
+// operaciones de Firestore de la aplicación sin exponer credenciales Admin.
 function sessionExpiry() {
     return Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
-}
-
-function validateName(name) {
-    const clean = (name || "").toString().trim();
-    if (clean.length < 2) throw new Error("El nombre debe tener al menos 2 caracteres");
-    if (clean.length > 80) throw new Error("El nombre es demasiado largo");
-    return clean;
-}
-
-function validateEmail(email) {
-    const clean = (email || "").toString().trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(clean)) {
-        throw new Error("El email no es válido");
-    }
-    if (clean.length > 160) throw new Error("El email es demasiado largo");
-    return clean;
-}
-
-function validatePassword(password) {
-    const pass = (password || "").toString();
-    if (pass.length < 6) throw new Error("La contraseña debe tener al menos 6 caracteres");
-    if (pass.length > 200) throw new Error("La contraseña es demasiado larga");
-    return pass;
-}
-
-function hashPassword(password) {
-    const salt = crypto.randomBytes(16).toString("hex");
-    const hash = crypto.scryptSync(password, salt, 64).toString("hex");
-    return salt + ":" + hash;
-}
-
-function verifyPassword(password, stored) {
-    const parts = String(stored || "").split(":");
-    if (parts.length !== 2) return false;
-    const hash = crypto.scryptSync(password, parts[0], 64);
-    const expected = Buffer.from(parts[1], "hex");
-    if (hash.length !== expected.length) return false;
-    return crypto.timingSafeEqual(hash, expected);
 }
 
 function defaultPrefs() {
     return {
         favoriteGenres: [],      // máx 3, strings (ej: ["Action", "Drama", "Sci-Fi"])
-        likesSeries: null,       // true | false | null
         likesMovies: null,       // true | false | null
-        likesMiniseries: null,   // true | false | null
         onboardingDone: false    // true cuando completó el cuestionario
     };
 }
@@ -73,8 +34,17 @@ function publicUser(user) {
         id: user.id,
         name: user.name,
         email: user.email,
+        photoURL: user.photoURL || null,
+        provider: user.provider || (user.passHash ? "password" : "firebase"),
         prefs: user.prefs || defaultPrefs()
     };
+}
+
+function cleanDisplayName(raw, emailFallback) {
+    const clean = (raw || "").toString().trim().slice(0, 80);
+    if (clean.length >= 2) return clean;
+    const prefix = String(emailFallback || "").split("@")[0] || "Usuario";
+    return prefix.slice(0, 80) || "Usuario";
 }
 
 async function findUserByEmail(email) {
@@ -140,46 +110,71 @@ async function updateUserPrefs(userId, prefs) {
 }
 
 const authService = {
-    register: async ({ name, email, password, prefs }) => {
-        const cleanName = validateName(name);
-        const cleanEmail = validateEmail(email);
-        const cleanPassword = validatePassword(password);
-
-        const existing = await findUserByEmail(cleanEmail);
-        if (existing) {
-            const err = new Error("Ese email ya está registrado. Prueba a entrar.");
-            err.code = "DUPLICATE";
+    // Recibe el ID token del navegador, lo verifica con Admin y sincroniza el
+    // perfil local antes de devolver la sesión técnica de la aplicación.
+    loginWithFirebase: async ({ idToken, name }) => {
+        const adminAuth = firebaseConn.getAuth();
+        if (!adminAuth) {
+            const err = new Error("Firebase Auth no configurado en el servidor (faltan credenciales de la cuenta de servicio)");
+            err.code = "FIREBASE_NOT_CONFIGURED";
             throw err;
         }
+        if (!idToken || typeof idToken !== "string" || idToken.length < 20) {
+            const err = new Error("ID token de Firebase requerido");
+            err.code = "INVALID_FIREBASE_TOKEN";
+            throw err;
+        }
+        let decoded;
+        try {
+            decoded = await adminAuth.verifyIdToken(idToken);
+        } catch (e) {
+            const err = new Error("Sesión de Firebase no válida o caducada. Vuelve a entrar.");
+            err.code = "INVALID_FIREBASE_TOKEN";
+            throw err;
+        }
+        const email = String(decoded.email || "").trim().toLowerCase();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+            const err = new Error("La cuenta de Firebase no tiene un email válido");
+            err.code = "INVALID_FIREBASE_TOKEN";
+            throw err;
+        }
+        const provider = (decoded.firebase && decoded.firebase.sign_in_provider) || "firebase";
+        const displayName = cleanDisplayName(name || decoded.name, email);
 
-        const user = {
-            id: cleanEmail,
-            name: cleanName,
-            email: cleanEmail,
-            passHash: hashPassword(cleanPassword),
-            prefs: prefs || defaultPrefs(),
-            createdAt: new Date().toISOString()
-        };
-
-        if (!db) {
-            localUsers.set(cleanEmail, user);
+        let user = await findUserByEmail(email);
+        if (!user) {
+            user = {
+                id: email,
+                name: displayName,
+                email: email,
+                passHash: null,
+                provider: provider,
+                firebaseUid: decoded.uid || null,
+                photoURL: decoded.picture || null,
+                emailVerified: Boolean(decoded.email_verified),
+                prefs: defaultPrefs(),
+                createdAt: new Date().toISOString()
+            };
+            if (!db) {
+                localUsers.set(email, user);
+            } else {
+                await db.collection("users").doc(email).set(user);
+            }
         } else {
-            await db.collection("users").doc(cleanEmail).set(user);
-        }
-
-        const token = await createSession(user.id);
-        return { token, user: publicUser(user) };
-    },
-
-    login: async ({ email, password }) => {
-        const cleanEmail = validateEmail(email);
-        const pass = (password || "").toString();
-
-        const user = await findUserByEmail(cleanEmail);
-        if (!user || !verifyPassword(pass, user.passHash)) {
-            const err = new Error("Email o contraseña incorrectos");
-            err.code = "INVALID_CREDENTIALS";
-            throw err;
+            // Enlaza cuentas legacy (email+password propio) con Firebase si comparten email.
+            const patch = {};
+            if (!user.firebaseUid && decoded.uid) patch.firebaseUid = decoded.uid;
+            if (!user.provider) patch.provider = user.passHash ? "password" : provider;
+            if ((!user.name || user.name.length < 2) && displayName) patch.name = displayName;
+            if (!user.photoURL && decoded.picture) patch.photoURL = decoded.picture;
+            if (Object.keys(patch).length > 0) {
+                Object.assign(user, patch);
+                if (!db) {
+                    localUsers.set(email, user);
+                } else {
+                    await db.collection("users").doc(email).set(patch, { merge: true });
+                }
+            }
         }
 
         const token = await createSession(user.id);
@@ -221,63 +216,6 @@ const authService = {
         return merged;
     },
 
-    // Solicita reset de contraseña (genera token, en producción enviaría email)
-    requestPasswordReset: async (email) => {
-        const cleanEmail = validateEmail(email);
-        const user = await findUserByEmail(cleanEmail);
-        // Siempre devolvemos ok aunque no exista (para no filtrar emails)
-        if (!user) return { ok: true };
-        const resetToken = crypto.randomBytes(32).toString("hex");
-        const resetData = {
-            token: resetToken,
-            userId: user.id,
-            expiresAt: Date.now() + 60 * 60 * 1000 // 1 hora
-        };
-        if (!db) {
-            localSessions.set("reset:" + resetToken, resetData);
-        } else {
-            await db.collection("passwordResets").doc(resetToken).set(resetData);
-        }
-        // Aquí iría el envío de email con el enlace: /reset-password?token=...
-        console.log(`[PasswordReset] Token para ${cleanEmail}: ${resetToken}`);
-        return { ok: true };
-    },
-
-    // Restablece contraseña con token
-    resetPassword: async (token, newPassword) => {
-        const cleanPassword = validatePassword(newPassword);
-        let resetData = null;
-        if (!db) {
-            resetData = localSessions.get("reset:" + token);
-        } else {
-            const doc = await db.collection("passwordResets").doc(token).get();
-            if (doc.exists) resetData = doc.data();
-        }
-        if (!resetData || resetData.expiresAt < Date.now()) {
-            const err = new Error("El enlace ha caducado o es inválido");
-            err.code = "INVALID_TOKEN";
-            throw err;
-        }
-        const user = await findUserByEmail(resetData.userId);
-        if (!user) {
-            const err = new Error("Usuario no encontrado");
-            err.code = "USER_NOT_FOUND";
-            throw err;
-        }
-        user.passHash = hashPassword(cleanPassword);
-        if (!db) {
-            localSessions.set(user.id, user);
-        } else {
-            await db.collection("users").doc(user.id).set({ passHash: user.passHash }, { merge: true });
-        }
-        // Invalida el token de reset
-        if (!db) {
-            localSessions.delete("reset:" + token);
-        } else {
-            await db.collection("passwordResets").doc(token).delete();
-        }
-        return { ok: true };
-    }
 };
 
 module.exports = { authService };

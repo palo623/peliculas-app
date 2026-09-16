@@ -1,7 +1,7 @@
 {
-  "name": "series-peliculas-app",
+  "name": "peliculas-app",
   "version": "1.0.0",
-  "description": "App de películas y series con Express + React (CDN)",
+  "description": "App de películas con Express + React (CDN)",
   "main": "server.js",
   "engines": { "node": ">=18" },
   "scripts": {

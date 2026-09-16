@@ -2,20 +2,16 @@
    bundle.js — front CineAIros en JavaScript PLANO (sin JSX).
    Se usa React.createElement a través del ayudante h().
    NO necesita Babel: index.html lo carga como <script> clásico.
-   Secciones: Inicio (landing), Películas y Series (tabs + filtros).
+    Secciones: Inicio (landing), Películas y cuenta personal.
    ============================================================ */
 
 const { useState, useEffect } = React;
 const h = React.createElement;
 
 const BRAND = "CineAIros";
-const SLOGAN = "Descubre, explora y guarda tus películas y series favoritas.";
+const SLOGAN = "Descubre, explora y guarda tus películas favoritas.";
 
-// Contenido por defecto para que cada apartado no se vea vacío antes de buscar.
-const DEFAULTS = {
-    movie: { label: "Películas", query: "Batman" },
-    series: { label: "Series", query: "Star Wars" }
-};
+// "Popular ahora" se carga desde Firebase a través de /api/movies/popular.
 
 // Único origen del token: localStorage (así fetchMovies siempre lo ve actualizado).
 function getStoredToken() {
@@ -31,8 +27,99 @@ function authHeaders() {
     return tok ? { Authorization: "Bearer " + tok } : {};
 }
 
-function mediaLabel(mediaType) {
-    return mediaType === "series" ? "Series" : "Películas";
+function firebaseActionSettings(mode) {
+    return {
+        url: window.location.origin + "/?mode=" + encodeURIComponent(mode),
+        handleCodeInApp: true
+    };
+}
+
+/* ---------- Firebase Auth (email+password y Google) ----------
+   La config pública se sirve en /api/firebase-config (ver server.js).
+    Sin la configuración web, Firebase Authentication no puede arrancar. */
+let __firebaseConfigCache = null;
+let __firebaseInitPromise = null;
+
+function ensureFirebase() {
+    if (typeof firebase === "undefined" || !firebase.auth) {
+        return Promise.reject(new Error("SDK de Firebase no cargado (revisa tu conexión a internet)"));
+    }
+    if (__firebaseConfigCache) return Promise.resolve(__firebaseConfigCache);
+    if (__firebaseInitPromise) return __firebaseInitPromise;
+    __firebaseInitPromise = fetch("/api/firebase-config")
+        .then((r) => r.json())
+        .then((cfg) => {
+            if (!cfg || !cfg.configured) {
+                throw new Error("Firebase no configurado: añade la configuración web FIREBASE_API_KEY y FIREBASE_APP_ID al .env");
+            }
+            if (!firebase.apps || firebase.apps.length === 0) {
+                firebase.initializeApp(cfg);
+            }
+            __firebaseConfigCache = cfg;
+            return cfg;
+        })
+        .catch((e) => {
+            __firebaseInitPromise = null;
+            throw e;
+        });
+    return __firebaseInitPromise;
+}
+
+function isFirebaseUnavailableMessage(msg) {
+    const m = String(msg || "");
+    return m.indexOf("Firebase no configurado") !== -1 || m.indexOf("SDK de Firebase") !== -1;
+}
+
+function friendlyFirebaseError(err) {
+    const code = (err && err.code) || "";
+    const map = {
+        "auth/email-already-in-use": "Ese email ya está registrado. Prueba a entrar.",
+        "auth/user-not-found": "No existe una cuenta Firebase con ese correo. Usa Crear cuenta primero.",
+        "auth/wrong-password": "Email o contraseña incorrectos.",
+        "auth/invalid-credential": "Email o contraseña incorrectos.",
+        "auth/invalid-email": "El email no es válido.",
+        "auth/weak-password": "La contraseña debe tener al menos 6 caracteres.",
+        "auth/popup-closed-by-user": "Ventana de Google cerrada. Inténtalo de nuevo.",
+        "auth/cancelled-popup-request": "Ya hay una ventana de Google abierta.",
+        "auth/popup-blocked": "El navegador bloqueó la ventana de Google. Permite ventanas emergentes.",
+        "auth/operation-not-allowed": "Ese método de login no está activado en Firebase Console.",
+        "auth/unauthorized-domain": "Este dominio no está autorizado en Firebase Auth.",
+        "auth/invalid-continue-uri": "La URL de retorno no es válida. Revisa los dominios autorizados en Firebase.",
+        "auth/missing-continue-uri": "Falta la URL de retorno de Firebase.",
+        "auth/too-many-requests": "Demasiados intentos. Espera unos minutos y vuelve a probar.",
+        "auth/expired-action-code": "El enlace ha caducado. Solicita otro.",
+        "auth/invalid-action-code": "El enlace no es válido. Solicita otro."
+    };
+    if (map[code]) return map[code];
+    if (code === "auth/network-request-failed") return "Sin conexión. Revisa tu internet.";
+    return (err && err.message) || "No se pudo entrar con Firebase";
+}
+
+// Envía el ID token de Firebase al backend, que verifica y devuelve sesión propia.
+async function firebaseSessionWithBackend(firebaseUser, fallbackName) {
+    const idToken = await firebaseUser.getIdToken(true);
+    const displayName = fallbackName || firebaseUser.displayName || "";
+    const res = await fetch("/api/auth/firebase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken: idToken, name: displayName })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "No se pudo entrar con Firebase");
+    try {
+        window.localStorage.setItem("cineairos_token", data.token);
+    } catch (e) { /* sin almacenamiento */ }
+    return data;
+}
+
+// Logo "G" de Google (SVG inline, colores oficiales).
+function GoogleGIcon() {
+    return h("svg", { className: "google-g", viewBox: "0 0 24 24", width: "18", height: "18", "aria-hidden": "true" },
+        h("path", { fill: "#4285F4", d: "M23.5 12.3c0-.9-.1-1.5-.3-2.3H12v4.5h6.5c-.1 1.1-.8 2.7-2.4 3.8l-.1.1 3.5 2.7.2.1c2.2-2 3.8-5 3.8-8.9z" }),
+        h("path", { fill: "#34A853", d: "M12 24c3.2 0 6-1.1 7.9-2.9l-3.8-2.9c-1 .7-2.4 1.2-4.1 1.2-3.2 0-5.9-2.1-6.8-5l-.1.1-3.6 2.8v.1C3.5 21.4 7.5 24 12 24z" }),
+        h("path", { fill: "#FBBC05", d: "M5.2 14.4c-.2-.7-.4-1.5-.4-2.4s.1-1.7.4-2.4l-.1-.1-3.5-2.7-.1.1C.5 8.9 0 10.4 0 12s.5 3.1 1.5 4.5l3.7-2.1z" }),
+        h("path", { fill: "#EA4335", d: "M12 4.6c1.8 0 3 .8 3.7 1.4l3.3-3.2C17.9 1.1 15.2 0 12 0 7.5 0 3.5 2.6 1.5 6.9l3.7 2.9c1-2.9 3.6-5.2 6.8-5.2z" })
+    );
 }
 
 // El año de OMDb puede venir como "2010" o rango "2008–2013": comparamos los 4 primeros dígitos.
@@ -71,7 +158,6 @@ function SiteHeader(props) {
     const page = props.page;
     const onNavigate = props.onNavigate;
     const peliCount = props.peliCount || 0;
-    const serieCount = props.serieCount || 0;
     const user = props.user || null;
     const onLogout = props.onLogout || (() => {});
     const openState = React.useState(false);
@@ -101,11 +187,6 @@ function SiteHeader(props) {
                     { className: "nav-link" + (page === "peliculas" ? " active" : ""), onClick: () => go("peliculas") },
                     "Películas",
                     peliCount > 0 ? h("span", { className: "badge" }, String(peliCount)) : null
-                ),
-                h("button",
-                    { className: "nav-link" + (page === "series" ? " active" : ""), onClick: () => go("series") },
-                    "Series",
-                    serieCount > 0 ? h("span", { className: "badge" }, String(serieCount)) : null
                 ),
                 user
                     ? h("button", { className: "user-chip", title: "Mi cuenta", onClick: () => go("cuenta") }, user.name)
@@ -142,7 +223,6 @@ function SiteFooter(props) {
                 h("p", { className: "footer-title" }, "Navegación"),
                 h("button", { className: "footer-link", onClick: () => onNavigate("home") }, "Inicio"),
                 h("button", { className: "footer-link", onClick: () => onNavigate("peliculas") }, "Películas"),
-                h("button", { className: "footer-link", onClick: () => onNavigate("series") }, "Series")
             ),
             h("div", { className: "footer-col" },
                 h("p", { className: "footer-title" }, "Empieza ahora"),
@@ -164,7 +244,6 @@ function MovieCard(props) {
     const onDelete = props.onDelete;
     const onDetail = props.onDetail;
     const showDelete = props.showDelete;
-    const typeLabel = movie.type === "series" ? "Serie" : (movie.type === "movie" ? "Película" : null);
 
     return h("article",
         { className: "movie-card", onClick: () => { if (onDetail) onDetail(movie); } },
@@ -174,7 +253,7 @@ function MovieCard(props) {
         ),
         h("div", { className: "movie-card-body" },
             h("h3", { title: movie.title }, movie.title),
-            h("p", { className: "movie-meta" }, (movie.year || "----") + (typeLabel ? " · " + typeLabel : "") + ((movie.type === "series" && movie.totalSeasons) ? " · " + movie.totalSeasons + " temp." : "")),
+            h("p", { className: "movie-meta" }, (movie.year || "----") + " · Película"),
             movie.genre ? h("p", { className: "movie-genre" }, movie.genre) : null,
             (showDelete && onDelete)
                 ? h("button", {
@@ -237,10 +316,33 @@ function MovieCarousel(props) {
 function LandingPage(props) {
     const onExplore = props.onExplore;
     const movies = props.movies;
+    const user = props.user || null;
+    const featuredState = React.useState([]);
+    const featuredMovies = featuredState[0];
+    const setFeaturedMovies = featuredState[1];
+
+    React.useEffect(() => {
+        if (user) {
+            setFeaturedMovies([]);
+            return;
+        }
+        let alive = true;
+        fetch("/api/movies/popular?limit=3")
+            .then((res) => res.json())
+            .then((data) => {
+                if (alive && Array.isArray(data.results)) setFeaturedMovies(data.results);
+            })
+            .catch(() => {
+                if (alive) setFeaturedMovies([]);
+            });
+        return () => { alive = false; };
+    }, [user]);
+
     const preview = (movies || []).slice(0, 10);
-    const heroPosters = (preview.length > 0
-        ? preview
-        : [{ title: "Inception", poster: null }, { title: "Dune", poster: null }, { title: "Breaking Bad", poster: null }]
+    const source = !user && featuredMovies.length > 0 ? featuredMovies : preview;
+    const heroPosters = (source.length > 0
+        ? source
+        : [{ title: "Inception", poster: null }, { title: "Dune", poster: null }, { title: "Avatar", poster: null }]
     ).slice(0, 3);
 
     return h("div", { className: "landing" },
@@ -276,7 +378,7 @@ function LandingPage(props) {
             h("div", { className: "feature" },
                 h("span", { className: "feature-icon" }, "01"),
                 h("h3", null, "Encuentra tu próxima favorita"),
-                h("p", null, "Busca entre miles de películas y series por su título.")
+                h("p", null, "Busca entre miles de películas por su título.")
             ),
             h("div", { className: "feature" },
                 h("span", { className: "feature-icon" }, "02"),
@@ -291,7 +393,7 @@ function LandingPage(props) {
         ),
         h("section", { className: "cta-band" },
             h("h2", null, "¿Empezamos?"),
-            h("p", null, "Busca tu primera película o serie, guárdala y aparecerá en tu colección."),
+            h("p", null, "Busca tu primera película, guárdala y aparecerá en tu colección."),
             h("button", { className: "btn-primary btn-big", onClick: onExplore }, "Continuar ahora")
         )
     );
@@ -338,16 +440,11 @@ function ForgotPasswordPage(props) {
         setError(null);
         setSuccess(null);
         try {
-            const res = await fetch("/api/auth/forgot-password", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: cleanEmail })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "No se pudo solicitar");
+            await ensureFirebase();
+            await firebase.auth().sendPasswordResetEmail(cleanEmail, firebaseActionSettings("resetPassword"));
             setSuccess("Si el email existe, recibirás un enlace para restablecer la contraseña.");
         } catch (err) {
-            setError(err.message);
+            setError(friendlyFirebaseError(err));
         } finally {
             setLoading(false);
         }
@@ -379,10 +476,150 @@ function ForgotPasswordPage(props) {
     );
 }
 
-/* ---------- LoginPage ---------- */
+/* ---------- EmailVerificationPage (Firebase Auth) ---------- */
+function EmailVerificationPage(props) {
+    const onBack = props.onBack;
+    const params = new URLSearchParams(window.location.search);
+    const actionCode = params.get("oobCode") || "";
+    const errorState = React.useState(null);
+    const error = errorState[0];
+    const setError = errorState[1];
+    const successState = React.useState(false);
+    const success = successState[0];
+    const setSuccess = successState[1];
+    const loadingState = React.useState(true);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+
+    React.useEffect(() => {
+        if (!actionCode) {
+            setError("El enlace de verificación no es válido.");
+            setLoading(false);
+            return;
+        }
+        ensureFirebase()
+            .then(() => firebase.auth().applyActionCode(actionCode))
+            .then(() => setSuccess(true))
+            .catch((err) => setError(friendlyFirebaseError(err)))
+            .finally(() => setLoading(false));
+    }, []);
+
+    return h("div", { className: "auth-wrap" },
+        h("div", { className: "auth-card" },
+            h("h1", null, "Verificación de correo"),
+            loading ? h("p", { className: "muted" }, "Comprobando el enlace...") : null,
+            error ? h("p", { className: "error" }, error) : null,
+            success ? h("p", { className: "success" }, "Correo verificado correctamente. Ya puedes iniciar sesión.") : null,
+            h("button", { className: "btn-primary", type: "button", onClick: onBack }, "Ir a iniciar sesión")
+        )
+    );
+}
+
+/* ---------- PasswordResetPage (Firebase Auth) ---------- */
+function PasswordResetPage(props) {
+    const onBack = props.onBack;
+    const params = new URLSearchParams(window.location.search);
+    const actionCode = params.get("oobCode") || "";
+    const emailState = React.useState("");
+    const email = emailState[0];
+    const setEmail = emailState[1];
+    const passwordState = React.useState("");
+    const password = passwordState[0];
+    const setPassword = passwordState[1];
+    const password2State = React.useState("");
+    const password2 = password2State[0];
+    const setPassword2 = password2State[1];
+    const errorState = React.useState(null);
+    const error = errorState[0];
+    const setError = errorState[1];
+    const successState = React.useState(null);
+    const success = successState[0];
+    const setSuccess = successState[1];
+    const loadingState = React.useState(true);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+
+    React.useEffect(() => {
+        if (!actionCode) {
+            setError("El enlace de recuperación no es válido.");
+            setLoading(false);
+            return;
+        }
+        ensureFirebase()
+            .then(() => firebase.auth().verifyPasswordResetCode(actionCode))
+            .then((resolvedEmail) => {
+                setEmail(resolvedEmail);
+                setLoading(false);
+            })
+            .catch((err) => {
+                setError(friendlyFirebaseError(err));
+                setLoading(false);
+            });
+    }, []);
+
+    const submit = async (e) => {
+        e.preventDefault();
+        if (password.length < 6) {
+            setError("La contraseña debe tener al menos 6 caracteres.");
+            return;
+        }
+        if (password !== password2) {
+            setError("Las contraseñas no coinciden.");
+            return;
+        }
+        setLoading(true);
+        setError(null);
+        try {
+            await firebase.auth().confirmPasswordReset(actionCode, password);
+            setSuccess("Contraseña actualizada. Ya puedes iniciar sesión.");
+        } catch (err) {
+            setError(friendlyFirebaseError(err));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return h("div", { className: "auth-wrap" },
+        h("div", { className: "auth-card" },
+            h("h1", null, "Nueva contraseña"),
+            email ? h("p", { className: "muted" }, email) : null,
+            error ? h("p", { className: "error" }, error) : null,
+            success ? h("p", { className: "success" }, success) : null,
+            !success && !error && !loading
+                ? h("form", { onSubmit: submit },
+                    h("div", { className: "auth-field" },
+                        h("label", null, "Nueva contraseña"),
+                        h("input", {
+                            type: "password", value: password,
+                            onChange: (e) => setPassword(e.target.value),
+                            autoComplete: "new-password", minLength: 6
+                        })
+                    ),
+                    h("div", { className: "auth-field" },
+                        h("label", null, "Repite la contraseña"),
+                        h("input", {
+                            type: "password", value: password2,
+                            onChange: (e) => setPassword2(e.target.value),
+                            autoComplete: "new-password", minLength: 6
+                        })
+                    ),
+                    h("button", { className: "btn-primary", type: "submit", disabled: loading },
+                        loading ? "Guardando..." : "Guardar contraseña"
+                    )
+                )
+                : null,
+            h("p", { className: "auth-switch" },
+                h("button", { type: "button", onClick: onBack }, "Volver a entrar")
+            )
+        )
+    );
+}
+
+/* ---------- LoginPage (Firebase email+password + Google) ---------- */
 function LoginPage(props) {
     const onAuth = props.onAuth;
     const onSwitch = props.onSwitch;
+    const onForgot = props.onForgot;
     const emailState = React.useState("");
     const email = emailState[0];
     const setEmail = emailState[1];
@@ -395,6 +632,19 @@ function LoginPage(props) {
     const loadingState = React.useState(false);
     const loading = loadingState[0];
     const setLoading = loadingState[1];
+    const googleLoadingState = React.useState(false);
+    const googleLoading = googleLoadingState[0];
+    const setGoogleLoading = googleLoadingState[1];
+    const fbState = React.useState(null); // null | "ready" | "unavailable"
+    const fbStatus = fbState[0];
+    const setFbStatus = fbState[1];
+
+    React.useEffect(() => {
+        let alive = true;
+        ensureFirebase().then(() => { if (alive) setFbStatus("ready"); })
+            .catch(() => { if (alive) setFbStatus("unavailable"); });
+        return () => { alive = false; };
+    }, []);
 
     const submit = async (e) => {
         e.preventDefault();
@@ -406,18 +656,37 @@ function LoginPage(props) {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch("/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: cleanEmail, password: password })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "No se pudo entrar");
+            await ensureFirebase();
+            const cred = await firebase.auth().signInWithEmailAndPassword(cleanEmail, password);
+            if (!cred.user.emailVerified) {
+                await cred.user.sendEmailVerification();
+                await firebase.auth().signOut();
+                throw new Error("Debes verificar tu correo antes de entrar. Te hemos enviado un nuevo enlace.");
+            }
+            const data = await firebaseSessionWithBackend(cred.user, "");
             onAuth(data.token, data.user);
         } catch (err) {
             setError(err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loginWithGoogle = async () => {
+        setGoogleLoading(true);
+        setError(null);
+        try {
+            await ensureFirebase();
+            const provider = new firebase.auth.GoogleAuthProvider();
+            const cred = await firebase.auth().signInWithPopup(provider);
+            const data = await firebaseSessionWithBackend(cred.user, "");
+            onAuth(data.token, data.user);
+        } catch (err) {
+            setError(isFirebaseUnavailableMessage(err.message)
+                ? "Google no disponible: falta FIREBASE_API_KEY en el servidor. Activa Google en Firebase Console y añade la config web al .env."
+                : friendlyFirebaseError(err));
+        } finally {
+            setGoogleLoading(false);
         }
     };
 
@@ -443,15 +712,26 @@ function LoginPage(props) {
                         placeholder: "Tu contraseña", autoComplete: "current-password"
                     })
                 ),
-                h("button", { className: "btn-primary", type: "submit", disabled: loading },
+                h("button", { className: "btn-primary", type: "submit", disabled: loading || googleLoading },
                     loading ? "Entrando..." : "Entrar"
                 )
             ),
+            h("div", { className: "auth-divider" }, h("span", null, "o")),
+            h("button", {
+                className: "btn-google", type: "button",
+                onClick: loginWithGoogle, disabled: loading || googleLoading
+            },
+                h(GoogleGIcon, null),
+                googleLoading ? "Conectando con Google..." : "Continuar con Google"
+            ),
+            fbStatus === "unavailable"
+                ? h("p", { className: "hint" }, "Firebase Authentication no está configurado. Revisa la configuración web y las credenciales del servidor.")
+                : null,
             h("p", { className: "auth-switch" }, "¿No tienes cuenta? ",
                 h("button", { type: "button", onClick: onSwitch }, "Regístrate")
             ),
-            h("p", { className: "auth-switch" },
-                h("button", { type: "button", onClick: () => navigate("recuperar") }, "¿Has olvidado la contraseña? Recuperar contraseña")
+            h("p", { className: "auth-switch" }, "¿Has olvidado la contraseña? ",
+                h("button", { type: "button", onClick: onForgot }, "Recuperar contraseña")
             )
         )
     );
@@ -480,9 +760,10 @@ function genreLabel(g) {
 function RegisterPage(props) {
     const onAuth = props.onAuth;
     const onSwitch = props.onSwitch;
+    const questionnaireOnly = props.questionnaireOnly === true;
 
     // Paso 1: datos básicos | Paso 2: cuestionario
-    const stepState = React.useState(1);
+    const stepState = React.useState(questionnaireOnly ? 2 : 1);
     const step = stepState[0];
     const setStep = stepState[1];
 
@@ -504,15 +785,9 @@ function RegisterPage(props) {
     const genresState = React.useState([]);
     const selectedGenres = genresState[0];
     const setSelectedGenres = genresState[1];
-    const likesSeriesState = React.useState(null);
-    const likesSeries = likesSeriesState[0];
-    const setLikesSeries = likesSeriesState[1];
     const likesMoviesState = React.useState(null);
     const likesMovies = likesMoviesState[0];
     const setLikesMovies = likesMoviesState[1];
-    const likesMiniseriesState = React.useState(null);
-    const likesMiniseries = likesMiniseriesState[0];
-    const setLikesMiniseries = likesMiniseriesState[1];
 
     const errorState = React.useState(null);
     const error = errorState[0];
@@ -520,6 +795,9 @@ function RegisterPage(props) {
     const loadingState = React.useState(false);
     const loading = loadingState[0];
     const setLoading = loadingState[1];
+    const verificationState = React.useState(false);
+    const verificationSent = verificationState[0];
+    const setVerificationSent = verificationState[1];
 
     const toggleGenre = (g) => {
         setSelectedGenres((prev) =>
@@ -529,6 +807,71 @@ function RegisterPage(props) {
                     ? [...prev, g]
                     : prev
         );
+    };
+
+    const fbState = React.useState(null); // null | "ready" | "unavailable"
+    const fbStatus = fbState[0];
+    const setFbStatus = fbState[1];
+    const googleLoadingState = React.useState(false);
+    const googleLoading = googleLoadingState[0];
+    const setGoogleLoading = googleLoadingState[1];
+
+    React.useEffect(() => {
+        let alive = true;
+        ensureFirebase().then(() => { if (alive) setFbStatus("ready"); })
+            .catch(() => { if (alive) setFbStatus("unavailable"); });
+        return () => { alive = false; };
+    }, []);
+
+    // Tras crear sesión con Firebase: si ya hizo el cuestionario, entra directo;
+    // si no, avanza al paso 2 (NO llama a onAuth para no navegar todavía).
+    const afterFirebaseSession = (data, needsVerification) => {
+        try {
+            window.localStorage.setItem("cineairos_token", data.token);
+        } catch (e) { /* sin almacenamiento */ }
+        if (data.user && data.user.prefs && data.user.prefs.onboardingDone) {
+            onAuth(data.token, data.user);
+        } else {
+            setVerificationSent(Boolean(needsVerification));
+            setStep(2);
+        }
+    };
+
+    const resendVerification = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            await ensureFirebase();
+            const currentUser = firebase.auth().currentUser;
+            if (!currentUser) throw new Error("La sesión de Firebase ha caducado. Vuelve a registrarte.");
+            await currentUser.sendEmailVerification(firebaseActionSettings("verifyEmail"));
+            setVerificationSent(true);
+        } catch (err) {
+            setError(friendlyFirebaseError(err));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const continueAfterVerification = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            await ensureFirebase();
+            const currentUser = firebase.auth().currentUser;
+            if (!currentUser) throw new Error("La sesión de Firebase ha caducado. Vuelve a registrarte.");
+            await currentUser.reload();
+            if (!currentUser.emailVerified) {
+                throw new Error("El correo todavía no aparece como verificado. Abre el enlace recibido y vuelve a intentarlo.");
+            }
+            const data = await firebaseSessionWithBackend(currentUser, currentUser.displayName || name.trim());
+            setVerificationSent(false);
+            afterFirebaseSession(data, false);
+        } catch (err) {
+            setError(friendlyFirebaseError(err));
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleStep1 = async (e) => {
@@ -543,23 +886,36 @@ function RegisterPage(props) {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch("/api/auth/register", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: cleanName, email: cleanEmail, password: password })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "No se pudo registrar");
-            // Usuario creado: guardamos token en localStorage y avanzamos al paso 2 (cuestionario)
-            // NO llamamos a onAuth aquí para no navegar todavía.
+            await ensureFirebase();
+            const cred = await firebase.auth().createUserWithEmailAndPassword(cleanEmail, password);
             try {
-                window.localStorage.setItem("cineairos_token", data.token);
-            } catch (e) { /* sin almacenamiento */ }
+                await cred.user.updateProfile({ displayName: cleanName });
+            } catch (updErr) { /* nombre opcional */ }
+            await cred.user.sendEmailVerification(firebaseActionSettings("verifyEmail"));
+            setVerificationSent(true);
             setStep(2);
         } catch (err) {
             setError(err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const registerWithGoogle = async () => {
+        setGoogleLoading(true);
+        setError(null);
+        try {
+            await ensureFirebase();
+            const provider = new firebase.auth.GoogleAuthProvider();
+            const cred = await firebase.auth().signInWithPopup(provider);
+            const data = await firebaseSessionWithBackend(cred.user, cred.user.displayName || name.trim());
+            afterFirebaseSession(data, false);
+        } catch (err) {
+            setError(isFirebaseUnavailableMessage(err.message)
+                ? "Google no disponible: falta FIREBASE_API_KEY en el servidor. Activa Google en Firebase Console y añade la config web al .env."
+                : friendlyFirebaseError(err));
+        } finally {
+            setGoogleLoading(false);
         }
     };
 
@@ -569,8 +925,8 @@ function RegisterPage(props) {
             setError("Selecciona exactamente 3 géneros.");
             return;
         }
-        if (likesSeries === null || likesMovies === null || likesMiniseries === null) {
-            setError("Responde las 3 preguntas de Sí/No.");
+        if (likesMovies === null) {
+            setError("Responde la pregunta de Sí/No.");
             return;
         }
         setLoading(true);
@@ -582,9 +938,7 @@ function RegisterPage(props) {
                 headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
                 body: JSON.stringify({
                     favoriteGenres: selectedGenres,
-                    likesSeries: likesSeries,
                     likesMovies: likesMovies,
-                    likesMiniseries: likesMiniseries,
                     onboardingDone: true
                 })
             });
@@ -606,46 +960,68 @@ function RegisterPage(props) {
         }
     };
 
-    const renderStep1 = () => h("form", { onSubmit: handleStep1 },
-        h("div", { className: "auth-field" },
-            h("label", null, "Nombre"),
-            h("input", {
-                type: "text", value: name,
-                onChange: (e) => setName(e.target.value),
-                placeholder: "Tu nombre", autoComplete: "name", maxLength: 80
-            })
+    const renderStep1 = () => React.createElement(React.Fragment, null,
+        h("form", { onSubmit: handleStep1 },
+            h("div", { className: "auth-field" },
+                h("label", null, "Nombre"),
+                h("input", {
+                    type: "text", value: name,
+                    onChange: (e) => setName(e.target.value),
+                    placeholder: "Tu nombre", autoComplete: "name", maxLength: 80
+                })
+            ),
+            h("div", { className: "auth-field" },
+                h("label", null, "Email"),
+                h("input", {
+                    type: "email", value: email,
+                    onChange: (e) => setEmail(e.target.value),
+                    placeholder: "tu@email.com", autoComplete: "email"
+                })
+            ),
+            h("div", { className: "auth-field" },
+                h("label", null, "Contraseña"),
+                h("input", {
+                    type: "password", value: password,
+                    onChange: (e) => setPassword(e.target.value),
+                    placeholder: "Mínimo 6 caracteres", autoComplete: "new-password"
+                })
+            ),
+            h("div", { className: "auth-field" },
+                h("label", null, "Repite la contraseña"),
+                h("input", {
+                    type: "password", value: password2,
+                    onChange: (e) => setPassword2(e.target.value),
+                    placeholder: "Otra vez", autoComplete: "new-password"
+                })
+            ),
+            h("button", { className: "btn-primary", type: "submit", disabled: loading || googleLoading },
+                loading ? "Creando cuenta..." : "Continuar"
+            )
         ),
-        h("div", { className: "auth-field" },
-            h("label", null, "Email"),
-            h("input", {
-                type: "email", value: email,
-                onChange: (e) => setEmail(e.target.value),
-                placeholder: "tu@email.com", autoComplete: "email"
-            })
+        h("div", { className: "auth-divider" }, h("span", null, "o")),
+        h("button", {
+            className: "btn-google", type: "button",
+            onClick: registerWithGoogle, disabled: loading || googleLoading
+        },
+            h(GoogleGIcon, null),
+            googleLoading ? "Conectando con Google..." : "Registrarse con Google"
         ),
-        h("div", { className: "auth-field" },
-            h("label", null, "Contraseña"),
-            h("input", {
-                type: "password", value: password,
-                onChange: (e) => setPassword(e.target.value),
-                placeholder: "Mínimo 6 caracteres", autoComplete: "new-password"
-            })
-        ),
-        h("div", { className: "auth-field" },
-            h("label", null, "Repite la contraseña"),
-            h("input", {
-                type: "password", value: password2,
-                onChange: (e) => setPassword2(e.target.value),
-                placeholder: "Otra vez", autoComplete: "new-password"
-            })
-        ),
-        h("button", { className: "btn-primary", type: "submit", disabled: loading },
-            loading ? "Creando cuenta..." : "Continuar"
-        )
+        fbStatus === "unavailable"
+            ? h("p", { className: "hint" }, "Google y email de Firebase pendientes de configurar (falta la config web en el servidor). El registro clásico sigue funcionando.")
+            : null
     );
 
     const renderStep2 = () => h("form", { onSubmit: handleQuestionnaire },
-        h("p", { className: "muted" }, "Solo 4 preguntas rápidas para personalizar tu experiencia."),
+        h("p", { className: "muted" }, "Solo 2 preguntas rápidas para personalizar tu experiencia."),
+        verificationSent
+            ? h("div", { className: "success" },
+                "Te hemos enviado un correo de verificación. No se abrirá tu sesión hasta que confirmes tu dirección.",
+                h("div", { className: "result-actions" },
+                    h("button", { type: "button", className: "btn-primary btn-small", onClick: continueAfterVerification, disabled: loading }, loading ? "Comprobando..." : "Ya he verificado mi correo"),
+                    h("button", { type: "button", className: "btn-ghost btn-small", onClick: resendVerification, disabled: loading }, "Reenviar correo")
+                )
+            )
+            : h(React.Fragment, null,
         // Pregunta 1: Géneros (multi-select, máx 3)
         h("fieldset", { className: "question" },
             h("legend", null, h("span", { className: "q-num" }, "1"), " ¿Cuáles son tus 3 géneros favoritos?"),
@@ -662,23 +1038,9 @@ function RegisterPage(props) {
             ),
             h("p", { className: "hint" }, selectedGenres.length + " de 3 seleccionados")
         ),
-        // Pregunta 2: Series
+        // Pregunta 2: Películas
         h("fieldset", { className: "question" },
-            h("legend", null, h("span", { className: "q-num" }, "2"), " ¿Te gusta ver series?"),
-            h("div", { className: "yn-buttons" },
-                h("button", {
-                    type: "button", className: "yn-btn" + (likesSeries === true ? " active" : ""),
-                    onClick: () => setLikesSeries(true)
-                }, "Sí"),
-                h("button", {
-                    type: "button", className: "yn-btn" + (likesSeries === false ? " active" : ""),
-                    onClick: () => setLikesSeries(false)
-                }, "No")
-            )
-        ),
-        // Pregunta 3: Películas
-        h("fieldset", { className: "question" },
-            h("legend", null, h("span", { className: "q-num" }, "3"), " ¿Te gusta ver películas?"),
+            h("legend", null, h("span", { className: "q-num" }, "2"), " ¿Te gusta ver películas?"),
             h("div", { className: "yn-buttons" },
                 h("button", {
                     type: "button", className: "yn-btn" + (likesMovies === true ? " active" : ""),
@@ -690,23 +1052,10 @@ function RegisterPage(props) {
                 }, "No")
             )
         ),
-        // Pregunta 4: Miniseries
-        h("fieldset", { className: "question" },
-            h("legend", null, h("span", { className: "q-num" }, "4"), " ¿Te gusta ver miniseries?"),
-            h("div", { className: "yn-buttons" },
-                h("button", {
-                    type: "button", className: "yn-btn" + (likesMiniseries === true ? " active" : ""),
-                    onClick: () => setLikesMiniseries(true)
-                }, "Sí"),
-                h("button", {
-                    type: "button", className: "yn-btn" + (likesMiniseries === false ? " active" : ""),
-                    onClick: () => setLikesMiniseries(false)
-                }, "No")
-            )
-        ),
         h("button", { className: "btn-primary", type: "submit", disabled: loading },
             loading ? "Guardando..." : "Terminar"
         )
+            ),
     );
 
     return h("div", { className: "auth-wrap" },
@@ -738,19 +1087,17 @@ function RegisterPage(props) {
     );
 }
 
-/* ---------- MediaPage: Películas o Series con tabs + filtros ----------
-   Props: mediaType ("movie" | "series"), movies, loadingList,
+/* ---------- MediaPage: Películas con filtros ----------
+    Props: movies, loadingList,
    onRefresh(), onDelete(id), onNavigate(page) */
 function MediaPage(props) {
-    const mediaType = props.mediaType;
     const user = props.user || null;
     const movies = props.movies;
     const loadingList = props.loadingList;
     const onRefresh = props.onRefresh;
     const onDelete = props.onDelete;
     const onNavigate = props.onNavigate;
-    const defaults = DEFAULTS[mediaType === "series" ? "series" : "movie"];
-    const omdbType = mediaType === "series" ? "series" : "movie";
+    const omdbType = "movie";
 
     const queryState = React.useState("");
     const query = queryState[0];
@@ -773,11 +1120,6 @@ function MediaPage(props) {
     const resultWarningState = React.useState(null);
     const resultWarning = resultWarningState[0];
     const setResultWarning = resultWarningState[1];
-    // true cuando la búsqueda exacta devolvió algo del OTRO apartado (la API
-    // ignora el filtro de tipo en ?t=): se muestra como aviso, sin guardar.
-    const typeMismatchState = React.useState(false);
-    const typeMismatch = typeMismatchState[0];
-    const setTypeMismatch = typeMismatchState[1];
     const exploreState = React.useState([]);
     const explore = exploreState[0];
     const setExplore = exploreState[1];
@@ -814,11 +1156,6 @@ function MediaPage(props) {
     const cooldown = cooldownState[0];
     const setCooldown = cooldownState[1];
 
-    // Colección filtrada por apartado: las series van a Series, el resto a Películas.
-    const collection = (movies || []).filter((m) =>
-        mediaType === "series" ? m.type === "series" : m.type !== "series"
-    );
-
     // Valida el filtro de año (vacío o 4 cifras 1900-2100).
     const parseYearFilter = () => {
         const y = String(yearFilter).trim();
@@ -850,7 +1187,6 @@ function MediaPage(props) {
                             director: data.director,
                             actors: data.actors,
                             type: data.type || item.type,
-                            totalSeasons: data.totalSeasons != null ? data.totalSeasons : item.totalSeasons
                         }),
                         limited: false
                     };
@@ -908,45 +1244,27 @@ function MediaPage(props) {
         return arr;
     };
 
-    // Modo descubrir: sin título, usa búsquedas amplias y filtra en el cliente
-    // (la API de OMDb exige siempre un texto de búsqueda).
+    // Modo descubrir: pide una muestra aleatoria de Firebase y aplica aquí
+    // los filtros que no forman parte de la consulta del servidor.
     const runDiscovery = async (year, min, genre) => {
-        const baseQueries = ["the", "love", defaults.query];
         let pooled = [];
-        const seen = {};
-        let limited = false;
-        for (const bq of baseQueries) {
-            try {
-                let url = "/api/movies/search-list?s=" + encodeURIComponent(bq) + "&type=" + omdbType;
-                if (year) url += "&y=" + year;
-                const res = await fetch(url);
-                if (res.status === 429) {
-                    limited = true;
-                    break;
-                }
-                const data = await res.json();
-                if (res.ok && Array.isArray(data.results)) {
-                    data.results.forEach((item) => {
-                        const key = item.imdbID || (item.title + item.year);
-                        if (!seen[key]) {
-                            seen[key] = true;
-                            pooled.push(item);
-                        }
-                    });
-                }
-                // Si la búsqueda amplia falla (ej. "demasiados resultados") se sigue con la siguiente.
-            } catch (e) {
-                // Fallo de red: se sigue con la siguiente búsqueda amplia.
+        try {
+            let url = "/api/movies/popular?limit=30";
+            if (year) url += "&y=" + year;
+            const res = await fetch(url);
+            if (res.status === 429) {
+                throw rateLimitExceeded();
             }
-            if (pooled.length >= 20) break;
-        }
-        if (limited) {
-            throw rateLimitExceeded();
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Sin resultados para esos filtros.");
+            if (Array.isArray(data.results)) pooled = data.results;
+        } catch (e) {
+            if (e && e.code === "RATE_LIMIT") throw e;
+            throw new Error(e.message || "No se pudo cargar contenido desde Firebase.");
         }
         if (pooled.length === 0) {
             throw new Error("Sin resultados para esos filtros. Prueba con otros.");
         }
-        pooled = pooled.slice(0, 20);
         // Sin filtro de nota ni género no hace falta pedir detalles: la lista ya trae año y tipo.
         if (min > 0 || genre !== "") {
             setLoadingDetails(true);
@@ -964,13 +1282,13 @@ function MediaPage(props) {
         }
     };
 
-    // Contenido por defecto del apartado para que no se vea vacío antes de buscar.
+    // Carga el contenido inicial desde el mismo catálogo que usa el buscador.
     const loadDefaults = async () => {
         setLoadingDefaults(true);
         setError(null);
         try {
             const res = await fetch(
-                "/api/movies/search-list?s=" + encodeURIComponent(defaults.query) + "&type=" + omdbType
+                "/api/movies/popular?limit=12"
             );
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "No se pudo cargar el contenido");
@@ -978,6 +1296,7 @@ function MediaPage(props) {
             setExploreTitle("Popular ahora");
         } catch (e) {
             setExplore([]);
+            setError(e.message || "No se pudo cargar Popular ahora desde Firebase.");
         } finally {
             setLoadingDefaults(false);
         }
@@ -986,7 +1305,7 @@ function MediaPage(props) {
     // Al entrar o cambiar de apartado se carga su contenido por defecto.
     useEffect(() => {
         loadDefaults();
-    }, [mediaType]);
+    }, []);
 
     // Ticker de la cuenta atrás del límite (nunca sube, solo baja).
     useEffect(() => {
@@ -1024,7 +1343,6 @@ function MediaPage(props) {
         setSuccess(null);
         setResult(null);
         setResultWarning(null);
-        setTypeMismatch(false);
         setExplore([]);
         try {
             // Sin título pero con filtros: modo descubrir.
@@ -1032,8 +1350,8 @@ function MediaPage(props) {
                 await runDiscovery(year, min, genre);
                 return;
             }
-            let exactUrl = "/api/movies/search?t=" + encodeURIComponent(q) + "&type=" + omdbType;
-            let listUrl = "/api/movies/search-list?s=" + encodeURIComponent(q) + "&type=" + omdbType;
+            let exactUrl = "/api/movies/search?t=" + encodeURIComponent(q);
+            let listUrl = "/api/movies/search-list?s=" + encodeURIComponent(q);
             if (year) {
                 exactUrl += "&y=" + year;
                 listUrl += "&y=" + year;
@@ -1050,25 +1368,16 @@ function MediaPage(props) {
             }
 
             if (exactRes.ok) {
-                const foundType = String(exactRes.data.type || "").toLowerCase();
-                if (foundType && foundType !== omdbType) {
-                    // Es del otro apartado: aviso + botón para ir allí, SIN guardar.
-                    setResult(exactRes.data);
-                    setResultWarning(null);
-                    setTypeMismatch(true);
-                } else {
-                    const warnings = [];
-                    const exactRating = ratingOf(exactRes.data);
-                    if (min > 0 && (exactRating === null || exactRating < min)) {
-                        warnings.push("Su nota (" + (exactRes.data.rating || "sin nota") + ") está por debajo de tu filtro de " + min + ".");
-                    }
-                    if (genre && String(exactRes.data.genre || "").toLowerCase().indexOf(genre.toLowerCase()) === -1) {
-                        warnings.push("Su género no coincide con tu filtro.");
-                    }
-                    setResult(exactRes.data);
-                    setResultWarning(warnings.length > 0 ? warnings.join(" ") : null);
-                    setTypeMismatch(false);
+                const warnings = [];
+                const exactRating = ratingOf(exactRes.data);
+                if (min > 0 && (exactRating === null || exactRating < min)) {
+                    warnings.push("Su nota (" + (exactRes.data.rating || "sin nota") + ") está por debajo de tu filtro de " + min + ".");
                 }
+                if (genre && String(exactRes.data.genre || "").toLowerCase().indexOf(genre.toLowerCase()) === -1) {
+                    warnings.push("Su género no coincide con tu filtro.");
+                }
+                setResult(exactRes.data);
+                setResultWarning(warnings.length > 0 ? warnings.join(" ") : null);
             }
             if (listRes.ok) {
                 let items = Array.isArray(listRes.data.results) ? listRes.data.results : [];
@@ -1103,7 +1412,6 @@ function MediaPage(props) {
         setSortBy("relevance");
         setResult(null);
         setResultWarning(null);
-        setTypeMismatch(false);
         setError(null);
         setSuccess(null);
         setExploreTitle("Popular ahora");
@@ -1166,7 +1474,7 @@ function MediaPage(props) {
 
     return h("div", { className: "movies-page" },
         h("div", { className: "page-head" },
-            h("h1", null, mediaLabel(mediaType)),
+            h("h1", null, "Películas"),
             h("p", { className: "muted" }, "Busca tus favoritas, guárdalas y vuelve a verlas cuando quieras.")
         ),
         h("form", { onSubmit: handleSearch, className: "search-form" },
@@ -1174,9 +1482,7 @@ function MediaPage(props) {
                 type: "text",
                 value: query,
                 onChange: (e) => setQuery(e.target.value),
-                placeholder: mediaType === "series"
-                    ? "Buscar series... (ej. Breaking Bad)"
-                    : "Buscar películas... (ej. Inception)",
+                placeholder: "Buscar películas... (ej. Inception)",
                 maxLength: 100
             }),
             h("button", { type: "submit", disabled: loading || cooldown > 0 }, loading ? "Buscando..." : (cooldown > 0 ? "Espera " + cooldown + "s" : "Buscar"))
@@ -1249,23 +1555,19 @@ function MediaPage(props) {
                     h("p", null, h("strong", null, "Género:"), " " + result.genre),
                     result.actors ? h("p", null, h("strong", null, "Actores:"), " " + result.actors) : null,
                     result.rating ? h("p", null, h("strong", null, "Nota IMDb:"), " ★ " + result.rating) : null,
-                    result.totalSeasons ? h("p", null, h("strong", null, "Temporadas:"), " " + result.totalSeasons) : null,
                     h("p", null, h("strong", null, "Sinopsis:"), " " + result.plot),
                     resultWarning ? h("p", { className: "muted" }, "ℹ " + resultWarning) : null,
-                    typeMismatch ? h("p", { className: "error" }, "«" + result.title + "» es " + (mediaType === "series" ? "una película" : "una serie") + ": está en el apartado " + (mediaType === "series" ? "Películas" : "Series") + ".") : null,
                     h("div", { className: "result-actions" },
-                        typeMismatch
-                            ? h("button", { onClick: () => onNavigate(mediaType === "series" ? "peliculas" : "series") }, "Ir a " + (mediaType === "series" ? "Películas" : "Series"))
-                            : h("button", { onClick: handleSave, disabled: saving }, saving ? "Guardando..." : "Guardar en mi colección"),
-                        h("button", { className: "btn-ghost", type: "button", onClick: () => { setResult(null); setResultWarning(null); setTypeMismatch(false); } }, "Descartar")
+                        h("button", { onClick: handleSave, disabled: saving }, saving ? "Guardando..." : "Guardar en mi colección"),
+                        h("button", { className: "btn-ghost", type: "button", onClick: () => { setResult(null); setResultWarning(null); } }, "Descartar")
                     )
                 )
             )
         ) : null,
         loadingDefaults
-            ? h("p", { className: "muted" }, "Cargando " + mediaLabel(mediaType).toLowerCase() + "...")
+            ? h("p", { className: "muted" }, "Cargando películas...")
             : h(MovieCarousel, {
-                title: exploreTitle + (mediaType === "series" ? " · Series" : " · Películas"),
+                title: exploreTitle + " · Películas",
                 subtitle: "Desliza para descubrir",
                 movies: explore,
                 onDetail: openDetail,
@@ -1287,7 +1589,6 @@ function MediaPage(props) {
                         detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
                         detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
                         detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
-                        detail.totalSeasons ? h("p", null, h("strong", null, "Temporadas:"), " " + detail.totalSeasons) : null,
                         detail.plot ? h("p", null, detail.plot) : null
                     )
                 )
@@ -1309,13 +1610,7 @@ function MiCuenta(props) {
     const detailLoadingState = React.useState(false);
     const detailLoading = detailLoadingState[0];
     const setDetailLoading = detailLoadingState[1];
-    const tabState = React.useState("movie");
-    const tab = tabState[0];
-    const setTab = tabState[1];
-
-    const pelis = (movies || []).filter((m) => m.type !== "series");
-    const series = (movies || []).filter((m) => m.type === "series");
-    const shown = tab === "series" ? series : pelis;
+    const shown = movies || [];
     const recent = shown.slice(0, 10);
 
     const openDetail = async (movie) => {
@@ -1346,32 +1641,19 @@ function MiCuenta(props) {
         ),
         h("div", { className: "hero-stats account-stats" },
             h("div", null, h("strong", null, String((movies || []).length)), h("span", null, "guardadas")),
-            h("div", null, h("strong", null, String(pelis.length)), h("span", null, "películas")),
-            h("div", null, h("strong", null, String(series.length)), h("span", null, "series"))
+            h("div", null, h("strong", null, String(shown.length)), h("span", null, "películas"))
         ),
         detailLoading ? h("p", { className: "muted" }, "Cargando detalle...") : null,
-        h("div", { className: "tabs" },
-            h("button", {
-                className: "tab" + (tab === "movie" ? " active" : ""),
-                onClick: () => setTab("movie")
-            }, "Películas guardadas (" + pelis.length + ")"),
-            h("button", {
-                className: "tab" + (tab === "series" ? " active" : ""),
-                onClick: () => setTab("series")
-            }, "Series guardadas (" + series.length + ")")
-        ),
         h(MovieCarousel, {
             title: "Guardadas recientemente",
-            subtitle: tab === "series" ? "Tus últimas series" : "Tus últimas películas",
+            subtitle: "Tus últimas películas",
             movies: recent,
             onDelete: onDelete,
             onDetail: openDetail,
             showDelete: true,
-            emptyText: tab === "series"
-                ? "Aún no guardaste series. Explora Series y pulsa Guardar."
-                : "Aún no guardaste películas. Explora Películas y pulsa Guardar."
+            emptyText: "Aún no guardaste películas. Explora Películas y pulsa Guardar."
         }),
-        h("h2", null, tab === "series" ? "Todas tus series" : "Todas tus películas"),
+        h("h2", null, "Todas tus películas"),
         loadingList ? h("p", { className: "muted" }, "Cargando lista...") : null,
         (!loadingList && shown.length === 0)
             ? h("p", { className: "muted" }, "Vacío por ahora.")
@@ -1395,7 +1677,6 @@ function MiCuenta(props) {
                         detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
                         detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
                         detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
-                        detail.totalSeasons ? h("p", null, h("strong", null, "Temporadas:"), " " + detail.totalSeasons) : null,
                         detail.plot ? h("p", null, detail.plot) : null
                     )
                 )
@@ -1448,7 +1729,13 @@ function CookieConsentBanner() {
 
 /* ---------- App raíz ---------- */
 function App() {
-    const pageState = useState("home");
+    const pageState = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (!params.get("oobCode")) return "home";
+        if (params.get("mode") === "resetPassword") return "reset-password";
+        if (params.get("mode") === "verifyEmail") return "verify-email";
+        return "home";
+    });
     const page = pageState[0];
     const setPage = pageState[1];
     const moviesState = useState([]);
@@ -1464,6 +1751,8 @@ function App() {
     const user = userState[0];
     const setUser = userState[1];
 
+    // La sesión Firebase autentica al usuario; el token propio autoriza las
+    // rutas privadas del backend y se restaura al recargar la página.
     const restoreSession = async () => {
         let saved = null;
         try {
@@ -1479,6 +1768,9 @@ function App() {
             const data = await res.json();
             if (!res.ok) throw new Error("invalid");
             setUser(data.user);
+            if (!data.user.prefs || !data.user.prefs.onboardingDone) {
+                navigate("cuestionario");
+            }
         } catch (e) {
             try {
                 window.localStorage.removeItem("cineairos_token");
@@ -1544,6 +1836,10 @@ function App() {
         }
         setUser(userValue);
         setToast({ type: "success", text: "Hola, " + userValue.name });
+        if (!userValue.prefs || !userValue.prefs.onboardingDone) {
+            navigate("cuestionario");
+            return;
+        }
         await fetchMovies();
         navigate("peliculas");
     };
@@ -1560,6 +1856,13 @@ function App() {
                 /* salida best-effort */
             }
         }
+        if (typeof firebase !== "undefined" && firebase.auth) {
+            try {
+                await firebase.auth().signOut();
+            } catch (e) {
+                /* salida best-effort */
+            }
+        }
         try {
             window.localStorage.removeItem("cineairos_token");
         } catch (e) {
@@ -1570,33 +1873,37 @@ function App() {
         navigate("home");
     };
 
-    const peliCount = (movies || []).filter((m) => m.type !== "series").length;
-    const serieCount = (movies || []).filter((m) => m.type === "series").length;
+    const peliCount = (movies || []).length;
 
     return h("div", { className: "layout" },
-        h(SiteHeader, { page: page, onNavigate: navigate, peliCount: peliCount, serieCount: serieCount, user: user, onLogout: handleLogout }),
+        h(SiteHeader, { page: page, onNavigate: navigate, peliCount: peliCount, user: user, onLogout: handleLogout }),
         toast ? h("div", { className: "toast " + toast.type },
             h("span", null, toast.text),
             h("button", { onClick: () => setToast(null), "aria-label": "Cerrar" }, "✕")
         ) : null,
         h("main", { className: "main" },
             page === "home"
-                ? h(LandingPage, { onExplore: () => navigate("peliculas"), movies: movies })
+                ? h(LandingPage, { onExplore: () => navigate("peliculas"), movies: movies, user: user })
                 : page === "auth"
                 ? h(AuthChoice, { onLogin: () => navigate("login"), onRegister: () => navigate("register") })
                 : page === "login"
-                ? h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth") })
+                ? h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") })
                 : page === "recuperar"
                 ? h(ForgotPasswordPage, { onBack: () => navigate("login") })
+                : page === "reset-password"
+                ? h(PasswordResetPage, { onBack: () => navigate("login") })
+                : page === "verify-email"
+                ? h(EmailVerificationPage, { onBack: () => navigate("login") })
                 : page === "register"
                 ? h(RegisterPage, { onAuth: handleAuth, onSwitch: () => navigate("auth") })
+                : page === "cuestionario"
+                ? h(RegisterPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), questionnaireOnly: true })
                 : page === "cuenta"
                 ? (user
                     ? h(MiCuenta, { user: user, movies: movies, loadingList: loadingList, onDelete: handleDelete })
-                    : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth") }))
+                    : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
                 : h(MediaPage, {
                     key: page,
-                    mediaType: page === "series" ? "series" : "movie",
                     user: user,
                     movies: movies,
                     loadingList: loadingList,

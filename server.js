@@ -60,9 +60,8 @@ app.use(cors());
 app.use(express.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// Rate-limit para búsqueda: frena bucles accidentales, no el uso normal.
-// La protección real de la cuota de OMDb es la caché de omdbService.
-// Límite generoso porque descubrir hace ráfagas legítimas de detalle.
+// Rate-limit de lectura del catálogo: evita bucles accidentales y abusos
+// aunque estas rutas ya no consultan directamente la API externa.
 const searchHits = new Map();
 app.use("/api/movies/search", (req, res, next) => {
     const now = Date.now();
@@ -98,6 +97,25 @@ app.use("/api/auth", (req, res, next) => {
         return res.status(429).json({ error: "Demasiados intentos. Espera un minuto." });
     }
     next();
+});
+
+// Config pública de Firebase para el front (solo claves públicas, sin secretos).
+// El front la usa para iniciar Firebase Auth (email+password y Google).
+app.get("/api/firebase-config", (req, res) => {
+    const projectId = (process.env.FIREBASE_PROJECT_ID || "").trim();
+    const apiKey = (process.env.FIREBASE_API_KEY || "").trim();
+    if (!apiKey || !projectId) {
+        return res.json({ configured: false });
+    }
+    res.json({
+        configured: true,
+        apiKey: apiKey,
+        authDomain: (process.env.FIREBASE_AUTH_DOMAIN || (projectId + ".firebaseapp.com")).trim(),
+        projectId: projectId,
+        storageBucket: (process.env.FIREBASE_STORAGE_BUCKET || (projectId + ".appspot.com")).trim(),
+        messagingSenderId: (process.env.FIREBASE_MESSAGING_SENDER_ID || "").trim(),
+        appId: (process.env.FIREBASE_APP_ID || "").trim()
+    });
 });
 
 const authRoutes = require("./src-backend/routes/authRoutes");

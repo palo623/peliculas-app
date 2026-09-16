@@ -8,41 +8,26 @@ function tokenFromHeader(req) {
     return match ? match[1].trim() : null;
 }
 
-// POST /api/auth/register { name, email, password }
-router.post("/auth/register", async (req, res) => {
+// POST /api/auth/firebase { idToken, name? } — verifica Firebase Auth y crea sesión propia
+router.post("/auth/firebase", async (req, res) => {
     try {
         const body = req.body || {};
-        if (typeof body !== "object") {
-            return res.status(400).json({ error: "Cuerpo de petición inválido" });
+        if (typeof body !== "object" || !body.idToken) {
+            return res.status(400).json({ error: "ID token de Firebase requerido" });
         }
-        const { token, user } = await authService.register({
-            name: body.name,
-            email: body.email,
-            password: body.password
-        });
-        res.status(201).json({ ok: true, token, user });
-    } catch (error) {
-        if (error.code === "DUPLICATE") {
-            return res.status(409).json({ error: error.message });
-        }
-        res.status(400).json({ error: error.message || "No se pudo registrar" });
-    }
-});
-
-// POST /api/auth/login { email, password }
-router.post("/auth/login", async (req, res) => {
-    try {
-        const body = req.body || {};
-        const { token, user } = await authService.login({
-            email: body.email,
-            password: body.password
+        const { token, user } = await authService.loginWithFirebase({
+            idToken: body.idToken,
+            name: body.name
         });
         res.json({ ok: true, token, user });
     } catch (error) {
-        if (error.code === "INVALID_CREDENTIALS") {
+        if (error.code === "INVALID_FIREBASE_TOKEN") {
             return res.status(401).json({ error: error.message });
         }
-        res.status(400).json({ error: error.message || "No se pudo entrar" });
+        if (error.code === "FIREBASE_NOT_CONFIGURED") {
+            return res.status(500).json({ error: error.message });
+        }
+        res.status(400).json({ error: error.message || "No se pudo entrar con Firebase" });
     }
 });
 
@@ -69,7 +54,7 @@ router.get("/auth/me", async (req, res) => {
     }
 });
 
-// PUT /api/auth/prefs { favoriteGenres, likesSeries, likesMovies, likesMiniseries, onboardingDone }
+// PUT /api/auth/prefs { favoriteGenres, likesMovies, onboardingDone }
 router.put("/auth/prefs", async (req, res) => {
     try {
         const token = tokenFromHeader(req);
@@ -79,9 +64,7 @@ router.put("/auth/prefs", async (req, res) => {
         }
         const prefs = await authService.updatePrefs(token, {
             favoriteGenres: Array.isArray(body.favoriteGenres) ? body.favoriteGenres.slice(0, 3) : [],
-            likesSeries: typeof body.likesSeries === "boolean" ? body.likesSeries : null,
             likesMovies: typeof body.likesMovies === "boolean" ? body.likesMovies : null,
-            likesMiniseries: typeof body.likesMiniseries === "boolean" ? body.likesMiniseries : null,
             onboardingDone: body.onboardingDone === true
         });
         if (!prefs) {
@@ -90,37 +73,6 @@ router.put("/auth/prefs", async (req, res) => {
         res.json({ ok: true, prefs });
     } catch (error) {
         res.status(400).json({ error: error.message || "No se pudo actualizar" });
-    }
-});
-
-// POST /api/auth/forgot-password { email }
-router.post("/auth/forgot-password", async (req, res) => {
-    try {
-        const body = req.body || {};
-        if (typeof body !== "object" || !body.email) {
-            return res.status(400).json({ error: "Email requerido" });
-        }
-        const result = await authService.requestPasswordReset(body.email);
-        res.json({ ok: true, message: result.ok ? "Si el email existe, recibirás un enlace" : "Error" });
-    } catch (error) {
-        res.status(400).json({ error: error.message || "No se pudo solicitar" });
-    }
-});
-
-// POST /api/auth/reset-password { token, password }
-router.post("/api/auth/reset-password", async (req, res) => {
-    try {
-        const body = req.body || {};
-        if (typeof body !== "object" || !body.token || !body.password) {
-            return res.status(400).json({ error: "Token y contraseña requeridos" });
-        }
-        await authService.resetPassword(body.token, body.password);
-        res.json({ ok: true, message: "Contraseña restablecida" });
-    } catch (error) {
-        if (error.code === "INVALID_TOKEN") {
-            return res.status(400).json({ error: "El enlace ha caducado o es inválido" });
-        }
-        res.status(400).json({ error: error.message || "No se pudo restablecer" });
     }
 });
 

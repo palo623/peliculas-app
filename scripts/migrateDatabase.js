@@ -32,9 +32,7 @@ async function migrateDatabase() {
             if (!data.prefs) {
                 updateFields.prefs = {
                     favoriteGenres: [],
-                    likesSeries: true,
                     likesMovies: true,
-                    likesMiniseries: false,
                     onboardingDone: false
                 };
                 needsUpdate = true;
@@ -46,7 +44,7 @@ async function migrateDatabase() {
             }
         }
 
-        // 2. Revisar colección "movies" (Películas y Series)
+        // 2. Revisar colección "movies" (solo películas)
         const moviesSnapshot = await db.collection("movies").get();
         console.log(`\n🎬 Elementos en colección 'movies': ${moviesSnapshot.size}`);
 
@@ -56,7 +54,7 @@ async function migrateDatabase() {
             let needsUpdate = false;
             const updateFields = {};
 
-            // Asegurar campo type ("movie" o "series")
+            // Asegurar que los documentos antiguos sean películas.
             if (!data.type) {
                 updateFields.type = "movie";
                 needsUpdate = true;
@@ -71,13 +69,13 @@ async function migrateDatabase() {
             if (needsUpdate) {
                 await doc.ref.update(updateFields);
                 migratedMovies++;
-                console.log(`  ✔ Película/Serie migrada: ${doc.id} (Tipo: ${updateFields.type || data.type})`);
+                console.log(`  ✔ Película migrada: ${doc.id}`);
             }
         }
 
         console.log(`\n✨ Migración completada con éxito.`);
         console.log(`   - Usuarios revisados: ${usersSnapshot.size}`);
-        console.log(`   - Películas/Series revisadas/actualizadas: ${moviesSnapshot.size} (${migratedMovies} actualizadas).`);
+        console.log(`   - Películas revisadas/actualizadas: ${moviesSnapshot.size} (${migratedMovies} actualizadas).`);
         
     } catch (error) {
         console.error("❌ Error durante la migración de la base de datos:", error);

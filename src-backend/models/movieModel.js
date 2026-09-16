@@ -1,4 +1,6 @@
-// Conexión centralizada a Firestore (ver ./firebase.js).
+// Este modelo separa dos usos de la colección movies:
+// catálogo público (búsqueda y populares) y colección personal (userId).
+// La conexión se centraliza en ./firebase.js.
 // Soporta credenciales por .env o por firebase-key.json (legacy).
 const firebaseConn = require("./firebase");
 const db = firebaseConn.getDb();
@@ -38,6 +40,9 @@ function validateMovieData(movieData) {
     if (title.length > 200) {
         throw new Error("El título es demasiado largo");
     }
+    if (String(movieData.type || "movie").toLowerCase() !== "movie") {
+        throw new Error("Solo se pueden guardar películas");
+    }
     return { ...movieData, title };
 }
 
@@ -45,16 +50,34 @@ function sortByDateDesc(list) {
     return [...list].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 }
 
+function shuffleInPlace(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+    return arr;
+}
+
+function toPopularItem(doc) {
+    return {
+        title: doc.title || "Sin título",
+        year: doc.year || "----",
+        imdbID: doc.imdbID || null,
+        type: doc.type || null,
+        poster: doc.poster || null,
+        // Extras si existen en Firestore (el front los ignora si no los usa).
+        rating: doc.rating || null,
+        genre: doc.genre || null,
+        plot: doc.plot || null
+    };
+}
+
 const MovieModel = {
     isFirestoreConnected: () => firebaseConn.isFirestoreConnected(),
 
     formatData: (rawJson) => {
-        // OMDb solo devuelve totalSeasons en el detalle (?t= / ?i=), no en las listas (?s=).
-        let totalSeasons = null;
-        if (rawJson.totalSeasons && rawJson.totalSeasons !== "N/A") {
-            const n = Number.parseInt(rawJson.totalSeasons, 10);
-            if (!Number.isNaN(n) && n > 0) totalSeasons = n;
-        }
         return {
             title: rawJson.Title || "Sin título",
             year: rawJson.Year || "----",
@@ -67,9 +90,56 @@ const MovieModel = {
             rating: rawJson.imdbRating && rawJson.imdbRating !== "N/A" ? rawJson.imdbRating : null,
             type: rawJson.Type || null,
             imdbID: rawJson.imdbID || null,
-            totalSeasons: totalSeasons,
             createdAt: new Date().toISOString()
         };
+    },
+
+    // El catálogo público nunca usa el modo local: si Firestore no está
+    // disponible, la web debe mostrar vacío en lugar de inventar resultados.
+    getCatalogMovies: async () => {
+        if (!db) return [];
+        try {
+            const snapshot = await db.collection("movies").where("type", "==", "movie").limit(5000).get();
+            return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error("Error al leer el catálogo de películas:", error.message || error);
+            throw new Error("No se pudo leer el catálogo de películas");
+        }
+    },
+
+    // La API externa solo se usa por los scripts de carga, nunca desde la web.
+    findCatalogMovie: async ({ title, year, imdbID }) => {
+        const movies = await MovieModel.getCatalogMovies();
+        const wantedId = String(imdbID || "").trim().toLowerCase();
+        const wantedTitle = String(title || "").trim().toLowerCase();
+        const wantedYear = String(year || "").trim();
+        return movies.find((movie) => {
+            if (wantedId && String(movie.imdbID || "").toLowerCase() !== wantedId) return false;
+            if (!wantedId && String(movie.title || "").trim().toLowerCase() !== wantedTitle) return false;
+            return !wantedYear || String(movie.year || "").includes(wantedYear);
+        }) || null;
+    },
+
+    searchCatalog: async ({ query, year, page }) => {
+        const movies = await MovieModel.getCatalogMovies();
+        const wanted = String(query || "").trim().toLowerCase();
+        const wantedYear = String(year || "").trim();
+        const pageNumber = Math.min(Math.max(Number.parseInt(page, 10) || 1, 1), 100);
+        const matches = movies.filter((movie) => {
+            if (!String(movie.title || "").toLowerCase().includes(wanted)) return false;
+            return !wantedYear || String(movie.year || "").includes(wantedYear);
+        });
+        const unique = [];
+        const seen = new Set();
+        for (const movie of matches) {
+            const key = String(movie.imdbID || `${movie.title}|${movie.year}`).toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            unique.push(movie);
+        }
+        const pageSize = 10;
+        const start = (pageNumber - 1) * pageSize;
+        return { results: unique.slice(start, start + pageSize), totalResults: unique.length };
     },
 
     saveToDatabase: async (movieData, userId) => {
@@ -121,7 +191,7 @@ const MovieModel = {
             return [];
         }
         if (!db) {
-            return sortByDateDesc(localMovies.filter((m) => m.userId === userId));
+            return sortByDateDesc(localMovies.filter((m) => m.userId === userId && String(m.type || "movie").toLowerCase() === "movie"));
         }
 
         try {
@@ -129,7 +199,10 @@ const MovieModel = {
             const snapshot = await db.collection("movies").where("userId", "==", userId).get();
             const movies = [];
             snapshot.forEach((doc) => {
-                movies.push({ id: doc.id, ...doc.data() });
+                const data = doc.data() || {};
+                if (String(data.type || "movie").toLowerCase() === "movie") {
+                    movies.push({ id: doc.id, ...data });
+                }
             });
             return sortByDateDesc(movies);
         } catch (error) {
@@ -202,6 +275,86 @@ const MovieModel = {
         if (data.userId !== userId) return false;
         await docRef.delete();
         return true;
+    },
+
+    // Popular aleatorio desde Firestore (no desde la API externa).
+    // Lee el catálogo de películas, elimina duplicados entre usuarios
+    // (misma peli guardada por varios) y devuelve una muestra al azar.
+    getPopularFromDb: async ({ year, limit }) => {
+        const want = Math.min(Math.max(Number.parseInt(limit, 10) || 12, 1), 30);
+        const yearStr = year ? String(year).trim() : "";
+
+        let docs = [];
+        if (!db) {
+            return [];
+        } else {
+            try {
+                // Lectura acotada para no disparar los costes de Firestore.
+                const snapshot = await db
+                    .collection("movies")
+                    .where("type", "==", "movie")
+                    .limit(500)
+                    .get();
+                snapshot.forEach((d) => {
+                    docs.push({ id: d.id, ...d.data() });
+                });
+            } catch (error) {
+                console.error("Error al leer populares desde Firestore:", error.message || error);
+                return [];
+            }
+        }
+
+        // Filtro por año en memoria: cubre "2010", "2010–2013", "2008-2012", etc.
+        let filtered = docs.filter((m) => {
+            const t = String(m.type || "").toLowerCase();
+            if (t && t !== "movie") return false;
+            if (!m.title) return false;
+            if (yearStr) {
+                const yField = String(m.year || "");
+                if (!yField.includes(yearStr)) return false;
+            }
+            return true;
+        });
+
+        // Sin tipo en docs antiguos: si el where() no trajo nada, probar sin filtro
+        // (por si hay docs sin campo type). Solo en Firestore.
+        if (filtered.length === 0 && db && !yearStr) {
+            try {
+                const fallback = await db.collection("movies").limit(500).get();
+                const all = [];
+                fallback.forEach((d) => {
+                    all.push({ id: d.id, ...d.data() });
+                });
+                filtered = all.filter((m) => {
+                    const t = String(m.type || "").toLowerCase();
+                    // Acepta docs sin type como películas para no dejar vacío "Popular ahora".
+                    if (!t) return !!m.title;
+                    return t === "movie" && !!m.title;
+                });
+            } catch (e) {
+                return [];
+            }
+        }
+
+        // Deduplicar: la colección es personal (mismo título guardado por N usuarios).
+        const seen = new Set();
+        const unique = [];
+        for (const m of filtered) {
+            const imdb = String(m.imdbID || "").trim().toLowerCase();
+            const key = imdb || ((String(m.title || "").toLowerCase().trim()) + "__" + String(m.year || "").trim());
+            if (seen.has(key)) continue;
+            seen.add(key);
+            unique.push(m);
+        }
+
+        if (unique.length === 0) return [];
+
+        // Preferir fichas con póster para que el carrusel no salga vacío de imágenes,
+        // pero sin excluir las que no lo tienen si no hay suficientes.
+        const withPoster = unique.filter((m) => !!m.poster);
+        const pool = withPoster.length >= want ? withPoster : unique;
+
+        return shuffleInPlace([...pool]).slice(0, want).map(toPopularItem);
     }
 };
 

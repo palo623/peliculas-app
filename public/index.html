@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="CineAIros: Descubre, explora y guarda tus películas y series favoritas.">
+    <meta name="description" content="CineAIros: Descubre, explora y guarda tus películas favoritas.">
     <meta name="theme-color" content="#10161f">
-    <title>CineAIros · Películas y Series</title>
+    <title>CineAIros · Películas</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -44,6 +44,9 @@
         }, 6000);
     </script>
 
+    <!-- Firebase Auth (compat, sin módulos): necesario para login email + Google -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <!-- Front en JS plano (sin Babel): un solo fichero, sin transformación en el navegador -->
     <script src="/js/bundle.js"></script>
 </body>

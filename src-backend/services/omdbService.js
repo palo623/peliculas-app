@@ -74,34 +74,18 @@ function normalizeYear(y) {
     return n;
 }
 
-// Tipo opcional para filtrar en OMDb (?type=movie|series). Devuelve null si no se pasa.
+    // La app solo admite películas.
 function normalizeType(t) {
-    if (t === undefined || t === null || String(t).trim() === "") return null;
+    if (t === undefined || t === null || String(t).trim() === "") return "movie";
     const v = String(t).toLowerCase().trim();
-    if (v !== "movie" && v !== "series") {
-        throw new Error("Tipo inválido (movie|series)");
+    if (v !== "movie") {
+        throw new Error("Tipo inválido (solo se admiten películas)");
     }
     return v;
 }
 
 const omdbService = {
-    // Búsqueda exacta por título: ?t=Inception&y=2010
-    searchMovie: async (movieTitle, opts = {}) => {
-        const title = assertTitle(movieTitle);
-        const year = normalizeYear(opts.year);
-        const type = normalizeType(opts.type);
-        let url = `${OMDB_BASE_URL}?t=${encodeURIComponent(title)}&apikey=${OMDB_API_KEY}`;
-        if (year) url += `&y=${year}`;
-        if (type) url += `&type=${type}`;
-        const data = await fetchWithTimeout(url);
-
-        if (data.Response === "False") {
-            throw new Error(data.Error || "Película no encontrada");
-        }
-        return data;
-    },
-
-    // Detalle exacto por IMDb ID: ?i=tt1375666 (más preciso que por título)
+    // Detalle exacto por IMDb ID. El catálogo se carga con este método.
     getById: async (imdbID) => {
         const id = (imdbID || "").trim();
         if (!/^tt\d+$/i.test(id)) {
@@ -116,7 +100,7 @@ const omdbService = {
         return data;
     },
 
-    // Búsqueda por lista: ?s=Batman&page=1&type=movie&y=2008
+    // Búsqueda por lista. Solo la usan los scripts de carga del catálogo.
     searchMovies: async (query, page = 1, opts = {}) => {
         const q = assertTitle(query);
         const p = Number.parseInt(page, 10) || 1;

@@ -236,7 +236,7 @@ button { font-family: inherit; }
 }
 .cta-band p { color: var(--muted); margin-bottom: 1.2rem; }
 
-/* ---------- Página Películas / Series ---------- */
+/* ---------- Página Películas ---------- */
 .page-head { margin-bottom: 1rem; }
 .page-head h1 {
     text-align: left; margin-bottom: 0.3rem;
@@ -431,7 +431,7 @@ a.footer-link:hover, button.footer-link:hover { color: var(--sky-bright); }
     border-top: 1px solid var(--line); color: var(--muted-dim); font-size: 0.85rem;
 }
 
-/* ---------- Tabs Películas / Series (píldoras) ---------- */
+/* ---------- Controles de cuenta ---------- */
 .tabs {
     display: flex; gap: 0.5rem;
     background: var(--surface);
@@ -497,6 +497,27 @@ a.footer-link:hover, button.footer-link:hover { color: var(--sky-bright); }
 .auth-choice { text-align: center; }
 .auth-choice h1 { margin-bottom: 0.5rem; }
 .choice-buttons { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; margin-top: 1.5rem; }
+
+/* ---------- Firebase Auth: botón Google + divisor ---------- */
+.auth-divider {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin: 1.2rem 0 1rem; color: var(--muted-dim);
+    font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em;
+}
+.auth-divider::before, .auth-divider::after {
+    content: ""; flex: 1; height: 1px; background: var(--line);
+}
+.btn-google {
+    width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+    background: #fff; color: #1f1f1f;
+    border: 1px solid #dadce0; border-radius: 8px;
+    padding: 0.7rem 1rem; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-google:hover { background: #f6fafe; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35); }
+.btn-google:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
+.btn-google .google-g { flex-shrink: 0; }
 
 /* ---------- Step Indicator (registro multi-paso) ---------- */
 .step-indicator {

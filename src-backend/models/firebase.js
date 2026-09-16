@@ -53,6 +53,12 @@ try {
     loadEnvIfNeeded();
     const admin = require("firebase-admin");
     const { getFirestore } = require("firebase-admin/firestore");
+    let getAuthFn = null;
+    try {
+        getAuthFn = require("firebase-admin/auth").getAuth;
+    } catch (e) {
+        getAuthFn = null;
+    }
 
     const fromEnv = serviceAccountFromEnv();
     const fromFile = fromEnv ? null : serviceAccountFromFile();
@@ -67,6 +73,14 @@ try {
             admin.initializeApp({ credential });
         }
         db = typeof getFirestore === "function" ? getFirestore() : admin.firestore();
+        try {
+            adminAuth = typeof getAuthFn === "function"
+                ? getAuthFn()
+                : (typeof admin.auth === "function" ? admin.auth() : null);
+        } catch (e) {
+            console.warn("Firebase Auth (admin) no disponible. Detalle:", e.message);
+            adminAuth = null;
+        }
         mode = fromEnv ? "firestore-env" : "firestore-file";
         console.log("Firestore conectado (" + (fromEnv ? "variables de entorno" : "firebase-key.json") + ")");
     } else {
@@ -78,6 +92,8 @@ try {
 
 module.exports = {
     getDb: () => db,
+    getAuth: () => adminAuth,
     isFirestoreConnected: () => db !== null,
+    isAuthConnected: () => adminAuth !== null,
     getMode: () => mode
 };

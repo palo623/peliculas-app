@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const { omdbService } = require("../services/omdbService");
 const { MovieModel } = require("../models/movieModel");
 const { authService } = require("../services/authService");
 
-// Sesión opcional (listar) u obligatoria (guardar/borrar) según la ruta.
+// El catálogo público no necesita sesión; guardar, listar y borrar la colección
+// personal sí requieren la sesión técnica emitida por authService.
 async function authUser(req) {
     const header = req.headers.authorization || "";
     const match = header.match(/^Bearer\s+(.+)$/i);
@@ -24,54 +24,63 @@ router.get("/health", async (req, res) => {
     });
 });
 
-// Búsqueda exacta: /api/movies/search?t=Inception&y=2010&type=movie
-// o por IMDb ID: /api/movies/search?i=tt1375666
+// Búsqueda exacta dentro del catálogo de Firestore.
 router.get("/movies/search", async (req, res) => {
-    const { t, i, y, type } = req.query;
+    const { t, i, y } = req.query;
     try {
-        let data;
-        if (i && i.trim()) {
-            data = await omdbService.getById(i.trim());
-        } else {
-            if (!t || !t.trim()) {
-                return res.status(400).json({ error: "Falta el parámetro 't' (título) o 'i' (IMDb ID)" });
-            }
-            if (t.trim().length > 100) {
-                return res.status(400).json({ error: "El título es demasiado largo" });
-            }
-            data = await omdbService.searchMovie(t.trim(), { year: y, type });
+        if ((!t || !t.trim()) && (!i || !i.trim())) {
+            return res.status(400).json({ error: "Falta el parámetro 't' (título) o 'i' (IMDb ID)" });
         }
-        const cleanData = MovieModel.formatData(data);
-        res.json(cleanData);
+        if (t && t.trim().length > 100) {
+            return res.status(400).json({ error: "El título es demasiado largo" });
+        }
+        const movie = await MovieModel.findCatalogMovie({ title: t, year: y, imdbID: i });
+        if (!movie) return res.status(404).json({ error: "Película no encontrada en el catálogo" });
+        res.json(movie);
     } catch (error) {
         const badRequest = /inválido|falta el título|demasiado largo/i.test(error.message || "");
-        const notFound = /no encontrada|not found|incorrect imdb/i.test(error.message || "");
+        const notFound = /no encontrada|catálogo/i.test(error.message || "");
         res.status(badRequest ? 400 : notFound ? 404 : 500).json({ error: error.message });
     }
 });
 
-// Búsqueda por lista: /api/movies/search-list?s=Batman&page=1&type=movie&y=2008
+// Búsqueda por lista dentro del catálogo de Firestore.
 router.get("/movies/search-list", async (req, res) => {
-    const { s, page, type, y } = req.query;
+    const { s, page, y } = req.query;
     if (!s || !s.trim()) {
         return res.status(400).json({ error: "Falta el parámetro 's' (texto de búsqueda)" });
     }
     try {
-        const data = await omdbService.searchMovies(s.trim(), page, { type, year: y });
-        res.json({
-            results: (data.Search || []).map((item) => ({
-                title: item.Title,
-                year: item.Year,
-                imdbID: item.imdbID,
-                type: item.Type,
-                poster: item.Poster && item.Poster !== "N/A" ? item.Poster : null
-            })),
-            totalResults: Number.parseInt(data.totalResults, 10) || 0
-        });
+        if (s.trim().length > 100) {
+            return res.status(400).json({ error: "El texto de búsqueda es demasiado largo" });
+        }
+        const data = await MovieModel.searchCatalog({ query: s, page, year: y });
+        res.json(data);
     } catch (error) {
-        const badRequest = /inválido/i.test(error.message || "");
-        const notFound = /no encontrada|not found|sin resultados|movie not found/i.test(error.message || "");
+        const badRequest = /inválido|demasiado largo/i.test(error.message || "");
+        const notFound = /no encontrada|catálogo/i.test(error.message || "");
         res.status(badRequest ? 400 : notFound ? 404 : 500).json({ error: error.message });
+    }
+});
+
+// Popular aleatorio desde Firestore: /api/movies/popular?limit=12&y=2010
+// "Popular ahora" sale exclusivamente de la colección "movies" de Firebase.
+// Cada petición devuelve una muestra distinta y aleatoria.
+
+router.get("/movies/popular", async (req, res) => {
+    try {
+        const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 12, 1), 30);
+        const yRaw = String(req.query.y || "").trim();
+        let year = null;
+        if (yRaw) {
+            const n = Number.parseInt(yRaw, 10);
+            if (!Number.isNaN(n) && n >= 1900 && n <= 2100) year = n;
+        }
+
+        const fromDb = await MovieModel.getPopularFromDb({ year, limit });
+        res.json({ results: fromDb, totalResults: fromDb.length, source: "firebase" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
