@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs");
 
 let db = null;
+let adminAuth = null;
 let mode = "local";
 
 function loadEnvIfNeeded() {
