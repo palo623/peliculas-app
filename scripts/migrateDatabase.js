@@ -1,42 +1,20 @@
 /**
  * Script de migración y verificación de Firestore para CineAIros.
- * Este script se conecta a tu base de datos mediante firebase-key.json,
- * revisa las colecciones (users, movies, passwordResets) y asegura
- * que todos los documentos tengan la estructura correcta (userId, type, etc.).
- * 
+ * Usa la conexión centralizada (src-backend/models/firebase.js):
+ * variables de entorno del .env o firebase-key.json como fallback.
+ *
  * Uso:
  *   node scripts/migrateDatabase.js
  */
 
-const admin = require("firebase-admin");
-const { getFirestore } = require("firebase-admin/firestore");
-const path = require("path");
-const fs = require("fs");
+const firebaseConn = require("../src-backend/models/firebase");
+const db = firebaseConn.getDb();
 
-const keyPath = path.join(__dirname, "../firebase-key.json");
-
-if (!fs.existsSync(keyPath)) {
-    console.error("❌ Error: No se encontró el fichero 'firebase-key.json' en la raíz del proyecto.");
+if (!db) {
+    console.error("❌ Sin conexión a Firestore. Revisa tu .env (FIREBASE_*) o firebase-key.json.");
     process.exit(1);
 }
-
-let db = null;
-
-try {
-    const serviceAccount = require(keyPath);
-    const apps = typeof admin.getApps === "function" ? admin.getApps() : (admin.apps || []);
-    if (apps.length === 0) {
-        const credential = typeof admin.cert === "function"
-            ? admin.cert(serviceAccount)
-            : (admin.credential && admin.credential.cert ? admin.credential.cert(serviceAccount) : undefined);
-        admin.initializeApp({ credential });
-    }
-    db = typeof getFirestore === "function" ? getFirestore() : admin.firestore();
-    console.log("🔥 Firebase Admin inicializado correctamente para migración.");
-} catch (e) {
-    console.error("❌ Error al inicializar Firebase Admin:", e.message);
-    process.exit(1);
-}
+console.log("🔥 Firebase Admin inicializado correctamente para migración (" + firebaseConn.getMode() + ").");
 
 async function migrateDatabase() {
     console.log("\n--- INICIANDO VERIFICACIÓN Y MIGRACIÓN DE FIRESTORE ---\n");

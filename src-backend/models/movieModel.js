@@ -1,33 +1,7 @@
-let db = null;
-
-try {
-    const admin = require("firebase-admin");
-    const { getFirestore } = require("firebase-admin/firestore");
-    const path = require("path");
-    const fs = require("fs");
-    const keyPath = path.join(__dirname, "../../firebase-key.json");
-
-    if (fs.existsSync(keyPath)) {
-        try {
-            const serviceAccount = require(keyPath);
-            const apps = typeof admin.getApps === "function" ? admin.getApps() : (admin.apps || []);
-            if (apps.length === 0) {
-                const credential = typeof admin.cert === "function"
-                    ? admin.cert(serviceAccount)
-                    : (admin.credential && admin.credential.cert ? admin.credential.cert(serviceAccount) : undefined);
-                admin.initializeApp({ credential });
-            }
-            db = typeof getFirestore === "function" ? getFirestore() : (typeof admin.firestore === "function" ? admin.firestore() : null);
-            console.log("Firestore conectado");
-        } catch (e) {
-            console.warn("firebase-key.json inválido. Modo local (memoria). Detalle:", e.message);
-        }
-    } else {
-        console.warn("firebase-key.json no encontrado. Modo local (memoria).");
-    }
-} catch (e) {
-    console.warn("firebase-admin no disponible. Modo local (memoria).");
-}
+// Conexión centralizada a Firestore (ver ./firebase.js).
+// Soporta credenciales por .env o por firebase-key.json (legacy).
+const firebaseConn = require("./firebase");
+const db = firebaseConn.getDb();
 
 // Almacén en memoria para que el modo local sí persista mientras el servidor corre.
 // (Sin Firestore antes se devolvía [] siempre y lo guardado "desaparecía".)
@@ -72,7 +46,7 @@ function sortByDateDesc(list) {
 }
 
 const MovieModel = {
-    isFirestoreConnected: () => db !== null,
+    isFirestoreConnected: () => firebaseConn.isFirestoreConnected(),
 
     formatData: (rawJson) => ({
         title: rawJson.Title || "Sin título",

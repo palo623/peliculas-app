@@ -1,34 +1,13 @@
 // Auth con scrypt (nativo de Node, sin dependencias) + sesiones con token.
-// Persiste en Firestore si hay firebase-key.json; si no, en memoria
+// Persiste en Firestore si hay credenciales (.env o firebase-key.json); si no, en memoria
 // (en modo local los usuarios se pierden al reiniciar el servidor).
 const crypto = require("crypto");
 
-let db = null;
-
-try {
-    const admin = require("firebase-admin");
-    const { getFirestore } = require("firebase-admin/firestore");
-    const path = require("path");
-    const fs = require("fs");
-    const keyPath = path.join(__dirname, "../../firebase-key.json");
-
-    if (fs.existsSync(keyPath)) {
-        try {
-            const serviceAccount = require(keyPath);
-            const apps = typeof admin.getApps === "function" ? admin.getApps() : (admin.apps || []);
-            if (apps.length === 0) {
-                const credential = typeof admin.cert === "function"
-                    ? admin.cert(serviceAccount)
-                    : (admin.credential && admin.credential.cert ? admin.credential.cert(serviceAccount) : undefined);
-                admin.initializeApp({ credential });
-            }
-            db = typeof getFirestore === "function" ? getFirestore() : (typeof admin.firestore === "function" ? admin.firestore() : null);
-        } catch (e) {
-            console.warn("[auth] firebase-key.json inválido. Usuarios en memoria. Detalle:", e.message);
-        }
-    }
-} catch (e) {
-    console.warn("[auth] firebase-admin no disponible. Usuarios en memoria.");
+// Conexión centralizada a Firestore (ver ../models/firebase.js).
+const firebaseConn = require("../models/firebase");
+const db = firebaseConn.getDb();
+if (!firebaseConn.isFirestoreConnected()) {
+    console.warn("[auth] Sin Firestore. Usuarios en memoria.");
 }
 
 // Memoria para modo local.
