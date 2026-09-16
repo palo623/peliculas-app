@@ -2,6 +2,7 @@ let db = null;
 
 try {
     const admin = require("firebase-admin");
+    const { getFirestore } = require("firebase-admin/firestore");
     const path = require("path");
     const fs = require("fs");
     const keyPath = path.join(__dirname, "../../firebase-key.json");
@@ -9,12 +10,14 @@ try {
     if (fs.existsSync(keyPath)) {
         try {
             const serviceAccount = require(keyPath);
-            if (admin.apps.length === 0) {
-                admin.initializeApp({
-                    credential: admin.credential.cert(serviceAccount)
-                });
+            const apps = typeof admin.getApps === "function" ? admin.getApps() : (admin.apps || []);
+            if (apps.length === 0) {
+                const credential = typeof admin.cert === "function"
+                    ? admin.cert(serviceAccount)
+                    : (admin.credential && admin.credential.cert ? admin.credential.cert(serviceAccount) : undefined);
+                admin.initializeApp({ credential });
             }
-            db = admin.firestore();
+            db = typeof getFirestore === "function" ? getFirestore() : (typeof admin.firestore === "function" ? admin.firestore() : null);
             console.log("Firestore conectado");
         } catch (e) {
             console.warn("firebase-key.json inválido. Modo local (memoria). Detalle:", e.message);

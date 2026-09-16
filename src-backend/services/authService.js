@@ -7,6 +7,7 @@ let db = null;
 
 try {
     const admin = require("firebase-admin");
+    const { getFirestore } = require("firebase-admin/firestore");
     const path = require("path");
     const fs = require("fs");
     const keyPath = path.join(__dirname, "../../firebase-key.json");
@@ -14,14 +15,16 @@ try {
     if (fs.existsSync(keyPath)) {
         try {
             const serviceAccount = require(keyPath);
-            if (admin.apps.length === 0) {
-                admin.initializeApp({
-                    credential: admin.credential.cert(serviceAccount)
-                });
+            const apps = typeof admin.getApps === "function" ? admin.getApps() : (admin.apps || []);
+            if (apps.length === 0) {
+                const credential = typeof admin.cert === "function"
+                    ? admin.cert(serviceAccount)
+                    : (admin.credential && admin.credential.cert ? admin.credential.cert(serviceAccount) : undefined);
+                admin.initializeApp({ credential });
             }
-            db = admin.firestore();
+            db = typeof getFirestore === "function" ? getFirestore() : (typeof admin.firestore === "function" ? admin.firestore() : null);
         } catch (e) {
-            console.warn("[auth] firebase-key.json inválido. Usuarios en memoria.");
+            console.warn("[auth] firebase-key.json inválido. Usuarios en memoria. Detalle:", e.message);
         }
     }
 } catch (e) {
@@ -237,6 +240,64 @@ const authService = {
         if (!session) return null;
         const merged = await updateUserPrefs(session.userId, prefs);
         return merged;
+    },
+
+    // Solicita reset de contraseña (genera token, en producción enviaría email)
+    requestPasswordReset: async (email) => {
+        const cleanEmail = validateEmail(email);
+        const user = await findUserByEmail(cleanEmail);
+        // Siempre devolvemos ok aunque no exista (para no filtrar emails)
+        if (!user) return { ok: true };
+        const resetToken = crypto.randomBytes(32).toString("hex");
+        const resetData = {
+            token: resetToken,
+            userId: user.id,
+            expiresAt: Date.now() + 60 * 60 * 1000 // 1 hora
+        };
+        if (!db) {
+            localSessions.set("reset:" + resetToken, resetData);
+        } else {
+            await db.collection("passwordResets").doc(resetToken).set(resetData);
+        }
+        // Aquí iría el envío de email con el enlace: /reset-password?token=...
+        console.log(`[PasswordReset] Token para ${cleanEmail}: ${resetToken}`);
+        return { ok: true };
+    },
+
+    // Restablece contraseña con token
+    resetPassword: async (token, newPassword) => {
+        const cleanPassword = validatePassword(newPassword);
+        let resetData = null;
+        if (!db) {
+            resetData = localSessions.get("reset:" + token);
+        } else {
+            const doc = await db.collection("passwordResets").doc(token).get();
+            if (doc.exists) resetData = doc.data();
+        }
+        if (!resetData || resetData.expiresAt < Date.now()) {
+            const err = new Error("El enlace ha caducado o es inválido");
+            err.code = "INVALID_TOKEN";
+            throw err;
+        }
+        const user = await findUserByEmail(resetData.userId);
+        if (!user) {
+            const err = new Error("Usuario no encontrado");
+            err.code = "USER_NOT_FOUND";
+            throw err;
+        }
+        user.passHash = hashPassword(cleanPassword);
+        if (!db) {
+            localSessions.set(user.id, user);
+        } else {
+            await db.collection("users").doc(user.id).set({ passHash: user.passHash }, { merge: true });
+        }
+        // Invalida el token de reset
+        if (!db) {
+            localSessions.delete("reset:" + token);
+        } else {
+            await db.collection("passwordResets").doc(token).delete();
+        }
+        return { ok: true };
     }
 };
 

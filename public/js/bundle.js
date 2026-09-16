@@ -114,7 +114,7 @@ function SiteHeader(props) {
                     ? h("button", { className: "nav-link", onClick: () => { setOpen(false); onLogout(); } }, "Salir")
                     : h("button",
                         {
-                            className: "nav-link nav-cta" + ((page === "login" || page === "register" || page === "auth") ? " active" : ""),
+                            className: "nav-link nav-cta" + ((page === "login" || page === "register" || page === "auth" || page === "recuperar") ? " active" : ""),
                             onClick: () => go("auth")
                         },
                         "Entrar"
@@ -314,6 +314,71 @@ function AuthChoice(props) {
     );
 }
 
+/* ---------- ForgotPasswordPage ---------- */
+function ForgotPasswordPage(props) {
+    const onBack = props.onBack;
+    const emailState = React.useState("");
+    const email = emailState[0];
+    const setEmail = emailState[1];
+    const errorState = React.useState(null);
+    const error = errorState[0];
+    const setError = errorState[1];
+    const successState = React.useState(null);
+    const success = successState[0];
+    const setSuccess = successState[1];
+    const loadingState = React.useState(false);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+
+    const submit = async (e) => {
+        e.preventDefault();
+        const cleanEmail = email.trim().toLowerCase();
+        if (!cleanEmail) { setError("Escribe tu email."); return; }
+        setLoading(true);
+        setError(null);
+        setSuccess(null);
+        try {
+            const res = await fetch("/api/auth/forgot-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: cleanEmail })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "No se pudo solicitar");
+            setSuccess("Si el email existe, recibirás un enlace para restablecer la contraseña.");
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return h("div", { className: "auth-wrap" },
+        h("div", { className: "auth-card" },
+            h("h1", null, "Recuperar contraseña"),
+            h("p", { className: "muted" }, "Te enviaremos un enlace a tu email para crear una nueva contraseña."),
+            error ? h("p", { className: "error" }, error) : null,
+            success ? h("p", { className: "success" }, success) : null,
+            h("form", { onSubmit: submit },
+                h("div", { className: "auth-field" },
+                    h("label", null, "Email"),
+                    h("input", {
+                        type: "email", value: email,
+                        onChange: (e) => setEmail(e.target.value),
+                        placeholder: "tu@email.com", autoComplete: "email"
+                    })
+                ),
+                h("button", { className: "btn-primary", type: "submit", disabled: loading },
+                    loading ? "Enviando..." : "Enviar enlace"
+                )
+            ),
+            h("p", { className: "auth-switch" }, "¿Recordaste la contraseña? ",
+                h("button", { type: "button", onClick: onBack }, "Volver a entrar")
+            )
+        )
+    );
+}
+
 /* ---------- LoginPage ---------- */
 function LoginPage(props) {
     const onAuth = props.onAuth;
@@ -384,6 +449,9 @@ function LoginPage(props) {
             ),
             h("p", { className: "auth-switch" }, "¿No tienes cuenta? ",
                 h("button", { type: "button", onClick: onSwitch }, "Regístrate")
+            ),
+            h("p", { className: "auth-switch" },
+                h("button", { type: "button", onClick: () => navigate("recuperar") }, "¿Has olvidado la contraseña? Recuperar contraseña")
             )
         )
     );
@@ -1100,16 +1168,6 @@ function MediaPage(props) {
             h("h1", null, mediaLabel(mediaType)),
             h("p", { className: "muted" }, "Busca tus favoritas, guárdalas y vuelve a verlas cuando quieras.")
         ),
-        h("div", { className: "tabs" },
-            h("button", {
-                className: "tab" + (mediaType === "movie" ? " active" : ""),
-                onClick: () => onNavigate("peliculas")
-            }, "Películas"),
-            h("button", {
-                className: "tab" + (mediaType === "series" ? " active" : ""),
-                onClick: () => onNavigate("series")
-            }, "Series")
-        ),
         h("form", { onSubmit: handleSearch, className: "search-form" },
             h("input", {
                 type: "text",
@@ -1342,6 +1400,48 @@ function MiCuenta(props) {
     );
 }
 
+/* ---------- CookieConsentBanner ---------- */
+function CookieConsentBanner() {
+    const consentState = React.useState(() => {
+        try {
+            return window.localStorage.getItem("cineairos_cookie_consent");
+        } catch (e) {
+            return null;
+        }
+    });
+    const consent = consentState[0];
+    const setConsent = consentState[1];
+
+    if (consent) return null;
+
+    const handleChoice = (choice) => {
+        try {
+            window.localStorage.setItem("cineairos_cookie_consent", choice);
+        } catch (e) {
+            /* sin almacenamiento */
+        }
+        setConsent(choice);
+    };
+
+    return h("div", { className: "cookie-banner" },
+        h("div", { className: "cookie-content" },
+            h("p", { className: "cookie-text" },
+                "Utilizamos cookies propias y de terceros para asegurar el funcionamiento de la web, analizar el tráfico y personalizar la experiencia. Puedes aceptar todas o elegir solo las esenciales."
+            ),
+            h("div", { className: "cookie-actions" },
+                h("button", {
+                    className: "btn-ghost btn-small",
+                    onClick: () => handleChoice("essential")
+                }, "Solo esenciales"),
+                h("button", {
+                    className: "btn-primary btn-small",
+                    onClick: () => handleChoice("all")
+                }, "Aceptar todas")
+            )
+        )
+    );
+}
+
 /* ---------- App raíz ---------- */
 function App() {
     const pageState = useState("home");
@@ -1482,6 +1582,8 @@ function App() {
                 ? h(AuthChoice, { onLogin: () => navigate("login"), onRegister: () => navigate("register") })
                 : page === "login"
                 ? h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth") })
+                : page === "recuperar"
+                ? h(ForgotPasswordPage, { onBack: () => navigate("login") })
                 : page === "register"
                 ? h(RegisterPage, { onAuth: handleAuth, onSwitch: () => navigate("auth") })
                 : page === "cuenta"
@@ -1499,7 +1601,8 @@ function App() {
                     onNavigate: navigate
                 })
         ),
-        h(SiteFooter, { onNavigate: navigate })
+        h(SiteFooter, { onNavigate: navigate }),
+        h(CookieConsentBanner, null)
     );
 }
 

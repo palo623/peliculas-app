@@ -93,4 +93,35 @@ router.put("/auth/prefs", async (req, res) => {
     }
 });
 
+// POST /api/auth/forgot-password { email }
+router.post("/auth/forgot-password", async (req, res) => {
+    try {
+        const body = req.body || {};
+        if (typeof body !== "object" || !body.email) {
+            return res.status(400).json({ error: "Email requerido" });
+        }
+        const result = await authService.requestPasswordReset(body.email);
+        res.json({ ok: true, message: result.ok ? "Si el email existe, recibirás un enlace" : "Error" });
+    } catch (error) {
+        res.status(400).json({ error: error.message || "No se pudo solicitar" });
+    }
+});
+
+// POST /api/auth/reset-password { token, password }
+router.post("/api/auth/reset-password", async (req, res) => {
+    try {
+        const body = req.body || {};
+        if (typeof body !== "object" || !body.token || !body.password) {
+            return res.status(400).json({ error: "Token y contraseña requeridos" });
+        }
+        await authService.resetPassword(body.token, body.password);
+        res.json({ ok: true, message: "Contraseña restablecida" });
+    } catch (error) {
+        if (error.code === "INVALID_TOKEN") {
+            return res.status(400).json({ error: "El enlace ha caducado o es inválido" });
+        }
+        res.status(400).json({ error: error.message || "No se pudo restablecer" });
+    }
+});
+
 module.exports = router;
