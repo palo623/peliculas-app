@@ -1008,9 +1008,7 @@ function RegisterPage(props) {
             h(GoogleGIcon, null),
             googleLoading ? "Conectando con Google..." : "Registrarse con Google"
         ),
-        fbStatus === "unavailable"
-            ? h("p", { className: "hint" }, "Google y email de Firebase pendientes de configurar (falta la config web en el servidor). El registro clásico sigue funcionando.")
-            : null
+        
     );
 
     const renderStep2 = () => h("form", { onSubmit: handleQuestionnaire },
