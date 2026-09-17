@@ -387,7 +387,7 @@ function LandingPage(props) {
             h("div", { className: "feature" },
                 h("span", { className: "feature-icon" }, "02"),
                 h("h3", null, "Desliza y descubre"),
-                h("p", null, "Explora las cards cómodamente, en el móvil o en el ordenador.")
+                h("p", null, "Explora las cards cómodamente")
             ),
             h("div", { className: "feature" },
                 h("span", { className: "feature-icon" }, "03"),
