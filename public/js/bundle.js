@@ -728,9 +728,7 @@ function LoginPage(props) {
                 h(GoogleGIcon, null),
                 googleLoading ? "Conectando con Google..." : "Continuar con Google"
             ),
-            fbStatus === "unavailable"
-                ? h("p", { className: "hint" }, "Firebase Authentication no está configurado. Revisa la configuración web y las credenciales del servidor.")
-                : null,
+            
             h("p", { className: "auth-switch" }, "¿No tienes cuenta? ",
                 h("button", { type: "button", onClick: onSwitch }, "Regístrate")
             ),
