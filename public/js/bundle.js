@@ -793,6 +793,12 @@ function RegisterPage(props) {
     const likesMoviesState = React.useState(null);
     const likesMovies = likesMoviesState[0];
     const setLikesMovies = likesMoviesState[1];
+    const likesSeriesState = React.useState(null);
+    const likesSeries = likesSeriesState[0];
+    const setLikesSeries = likesSeriesState[1];
+    const likesMiniseriesState = React.useState(null);
+    const likesMiniseries = likesMiniseriesState[0];
+    const setLikesMiniseries = likesMiniseriesState[1];
 
     const errorState = React.useState(null);
     const error = errorState[0];
@@ -931,7 +937,15 @@ function RegisterPage(props) {
             return;
         }
         if (likesMovies === null) {
-            setError("Responde la pregunta de Sí/No.");
+            setError("Responde la pregunta de películas.");
+            return;
+        }
+        if (likesSeries === null) {
+            setError("Responde la pregunta de series.");
+            return;
+        }
+        if (likesMiniseries === null) {
+            setError("Responde la pregunta de miniseries.");
             return;
         }
         setLoading(true);
@@ -944,6 +958,8 @@ function RegisterPage(props) {
                 body: JSON.stringify({
                     favoriteGenres: selectedGenres,
                     likesMovies: likesMovies,
+                    likesSeries: likesSeries,
+                    likesMiniseries: likesMiniseries,
                     onboardingDone: true
                 })
             });
@@ -1015,7 +1031,7 @@ function RegisterPage(props) {
     );
 
     const renderStep2 = () => h("form", { onSubmit: handleQuestionnaire },
-        h("p", { className: "muted" }, "Solo 2 preguntas rápidas para personalizar tu experiencia."),
+        h("p", { className: "muted" }, "Solo 3 preguntas rápidas para personalizar tu experiencia."),
         verificationSent
             ? h("div", { className: "success" },
                 "Te hemos enviado un correo de verificación. No se abrirá tu sesión hasta que confirmes tu dirección.",
@@ -1055,6 +1071,34 @@ function RegisterPage(props) {
                 }, "No")
             )
         ),
+        // Pregunta 3: Series
+        h("fieldset", { className: "question" },
+            h("legend", null, h("span", { className: "q-num" }, "3"), " ¿Te gustan las series?"),
+            h("div", { className: "yn-buttons" },
+                h("button", {
+                    type: "button", className: "yn-btn" + (likesSeries === true ? " active" : ""),
+                    onClick: () => setLikesSeries(true)
+                }, "Sí"),
+                h("button", {
+                    type: "button", className: "yn-btn" + (likesSeries === false ? " active" : ""),
+                    onClick: () => setLikesSeries(false)
+                }, "No")
+            )
+        ),
+        // Pregunta 4: Miniseries
+        h("fieldset", { className: "question" },
+            h("legend", null, h("span", { className: "q-num" }, "4"), " ¿Te gustan las miniseries?"),
+            h("div", { className: "yn-buttons" },
+                h("button", {
+                    type: "button", className: "yn-btn" + (likesMiniseries === true ? " active" : ""),
+                    onClick: () => setLikesMiniseries(true)
+                }, "Sí"),
+                h("button", {
+                    type: "button", className: "yn-btn" + (likesMiniseries === false ? " active" : ""),
+                    onClick: () => setLikesMiniseries(false)
+                }, "No")
+            )
+        ),
         h("button", { className: "btn-primary", type: "submit", disabled: loading },
             loading ? "Guardando..." : "Terminar"
         )
@@ -1066,7 +1110,9 @@ function RegisterPage(props) {
             h("div", { className: "step-indicator" },
                 h("span", { className: "step-dot" + (step >= 1 ? " active" : "") }, "1"),
                 h("span", { className: "step-line" }),
-                h("span", { className: "step-dot" + (step >= 2 ? " active" : "") }, "2")
+                h("span", { className: "step-dot" + (step >= 2 ? " active" : "") }, "2"),
+                h("span", { className: "step-line" }),
+                h("span", { className: "step-dot" + (step >= 3 ? " active" : "") }, "3")
             ),
             step === 1 ? (
                 React.createElement(React.Fragment, null,
@@ -1081,7 +1127,7 @@ function RegisterPage(props) {
             ) : (
                 React.createElement(React.Fragment, null,
                     h("h1", null, "Cuéntanos tus gustos"),
-                    h("p", { className: "muted" }, "Paso 2 de 2: preferencias."),
+                    h("p", { className: "muted" }, "Paso 2 de 3: preferencias."),
                     error ? h("p", { className: "error" }, error) : null,
                     renderStep2()
                 )
