@@ -189,8 +189,7 @@ function SiteHeader(props) {
                 ),
                 h("button",
                     { className: "nav-link" + (page === "peliculas" ? " active" : ""), onClick: () => go("peliculas") },
-                    "Películas",
-                    peliCount > 0 ? h("span", { className: "badge" }, String(peliCount)) : null
+                    "Películas"
                 ),
                 user
                     ? h("button", { className: "user-chip", title: "Mi cuenta", onClick: () => go("cuenta") }, user.name)
