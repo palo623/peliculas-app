@@ -9,7 +9,7 @@ const { useState, useEffect } = React;
 const h = React.createElement;
 
 const BRAND = "CineAIros";
-const SLOGAN = "¡Descubre, explora y guarda tus películas favoritas!";
+const SLOGAN = "Descubre, explora y guarda tus películas favoritas";
 
 // "Popular ahora" se carga desde Firebase a través de /api/movies/popular.
 
@@ -230,7 +230,7 @@ function SiteFooter(props) {
             ),
             h("div", { className: "footer-col" },
                 h("p", { className: "footer-title" }, "Empieza ahora"),
-                h("p", { className: "muted" }, "Busca tu primera historia y pulsa Guardar."),
+                h("p", { className: "muted" }, "Busca tu primera historia y pulsa Guardar"),
                 h("button", { className: "footer-link", onClick: () => onNavigate("peliculas") }, "Continuar ahora →")
             )
         ),
@@ -411,7 +411,7 @@ function AuthChoice(props) {
     return h("div", { className: "auth-wrap" },
         h("div", { className: "auth-card auth-choice" },
             h("h1", null, "Bienvenido a " + BRAND),
-            h("p", { className: "muted" }, "Elige cómo quieres continuar."),
+            h("p", { className: "muted" }, "Elige cómo quieres continuar:"),
             h("div", { className: "choice-buttons" },
                 h("button", { className: "btn-primary btn-big", onClick: onLogin }, "Iniciar sesión"),
                 h("button", { className: "btn-ghost btn-big", onClick: onRegister }, "Crear cuenta")
@@ -697,7 +697,7 @@ function LoginPage(props) {
     return h("div", { className: "auth-wrap" },
         h("div", { className: "auth-card" },
             h("h1", null, "Entrar"),
-            h("p", { className: "muted" }, "Bienvenido de nuevo a " + BRAND + "."),
+            h("p", { className: "muted" }, "Bienvenido de nuevo a " + BRAND),
             error ? h("p", { className: "error" }, error) : null,
             h("form", { onSubmit: submit },
                 h("div", { className: "auth-field" },
@@ -1068,7 +1068,7 @@ function RegisterPage(props) {
             step === 1 ? (
                 React.createElement(React.Fragment, null,
                     h("h1", null, "Crear cuenta"),
-                    h("p", { className: "muted" }, "Paso 1 de 2: tus datos básicos."),
+                    h("p", { className: "muted" }, "Paso 1 de 2: tus datos básicos"),
                     error ? h("p", { className: "error" }, error) : null,
                     renderStep1(),
                     h("p", { className: "auth-switch" }, "¿Ya tienes cuenta? ",
@@ -1078,7 +1078,7 @@ function RegisterPage(props) {
             ) : (
                 React.createElement(React.Fragment, null,
                     h("h1", null, "Cuéntanos tus gustos"),
-                    h("p", { className: "muted" }, "Paso 2 de 2: preferencias."),
+                    h("p", { className: "muted" }, "Paso 2 de 2: preferencias"),
                     error ? h("p", { className: "error" }, error) : null,
                     renderStep2()
                 )
@@ -1709,7 +1709,7 @@ function CookieConsentBanner() {
     return h("div", { className: "cookie-banner" },
         h("div", { className: "cookie-content" },
             h("p", { className: "cookie-text" },
-                "Utilizamos cookies propias y de terceros para asegurar el funcionamiento de la web, analizar el tráfico y personalizar la experiencia. Puedes aceptar todas o elegir solo las esenciales!"
+                "Utilizamos cookies propias y de terceros para asegurar el funcionamiento de la web, analizar el tráfico y personalizar la experiencia. Puedes aceptar todas o elegir solo las esenciales."
             ),
             h("div", { className: "cookie-actions" },
                 h("button", {
