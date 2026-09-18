@@ -1696,25 +1696,14 @@ function MiCuenta(props) {
 
 /* ---------- CookieConsentBanner ---------- */
 function CookieConsentBanner() {
-    const consentState = React.useState(() => {
-        try {
-            return window.localStorage.getItem("cineairos_cookie_consent");
-        } catch (e) {
-            return null;
-        }
-    });
+    const consentState = React.useState(false);
     const consent = consentState[0];
     const setConsent = consentState[1];
 
     if (consent) return null;
 
     const handleChoice = (choice) => {
-        try {
-            window.localStorage.setItem("cineairos_cookie_consent", choice);
-        } catch (e) {
-            /* sin almacenamiento */
-        }
-        setConsent(choice);
+        setConsent(true);
     };
 
     return h("div", { className: "cookie-banner" },
