@@ -4,6 +4,7 @@
 // Soporta credenciales por .env o por firebase-key.json (legacy).
 const firebaseConn = require("./firebase");
 const db = firebaseConn.getDb();
+const { enrichWithScraping } = require("../services/scrapingService");
 
 // Almacén en memoria para que el modo local sí persista mientras el servidor corre.
 // (Sin Firestore antes se devolvía [] siempre y lo guardado "desaparecía".)
@@ -107,17 +108,35 @@ const MovieModel = {
         }
     },
 
+    // Enriquece los datos de una película con scraping si faltan campos críticos.
+    // Prioriza datos de OMDb/Firestore; el scraping solo rellena huecos.
+    enrichMovieData: async (movie) => {
+        if (!movie || !movie.title) return movie;
+        try {
+            const enriched = await enrichWithScraping(movie, movie.title, "movie");
+            return enriched;
+        } catch (error) {
+            console.warn(`[movieModel] Error enriqueciendo "${movie.title}":`, error.message);
+            return movie;
+        }
+    },
+
     // La API externa solo se usa por los scripts de carga, nunca desde la web.
     findCatalogMovie: async ({ title, year, imdbID }) => {
         const movies = await MovieModel.getCatalogMovies();
         const wantedId = String(imdbID || "").trim().toLowerCase();
         const wantedTitle = String(title || "").trim().toLowerCase();
         const wantedYear = String(year || "").trim();
-        return movies.find((movie) => {
+        const found = movies.find((movie) => {
             if (wantedId && String(movie.imdbID || "").toLowerCase() !== wantedId) return false;
             if (!wantedId && String(movie.title || "").trim().toLowerCase() !== wantedTitle) return false;
             return !wantedYear || String(movie.year || "").includes(wantedYear);
         }) || null;
+
+        if (found) {
+            return await MovieModel.enrichMovieData(found);
+        }
+        return null;
     },
 
     searchCatalog: async ({ query, year, page }) => {
@@ -349,10 +368,20 @@ const MovieModel = {
 
         if (unique.length === 0) return [];
 
+        // Enriquecer los items seleccionados con scraping si faltan datos críticos (solo póster y género para rendimiento)
+        const enriched = await Promise.all(
+            unique.slice(0, want * 2).map(async (m) => {
+                if (!m.poster || !m.genre || m.genre === "Sin género") {
+                    return await MovieModel.enrichMovieData(m);
+                }
+                return m;
+            })
+        );
+
         // Preferir fichas con póster para que el carrusel no salga vacío de imágenes,
         // pero sin excluir las que no lo tienen si no hay suficientes.
-        const withPoster = unique.filter((m) => !!m.poster);
-        const pool = withPoster.length >= want ? withPoster : unique;
+        const withPoster = enriched.filter((m) => !!m.poster);
+        const pool = withPoster.length >= want ? withPoster : enriched;
 
         return shuffleInPlace([...pool]).slice(0, want).map(toPopularItem);
     }

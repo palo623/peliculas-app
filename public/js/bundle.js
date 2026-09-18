@@ -9,7 +9,7 @@ const { useState, useEffect } = React;
 const h = React.createElement;
 
 const BRAND = "CineAIros";
-const SLOGAN = "Descubre, explora y guarda tus películas favoritas.";
+const SLOGAN = "Descubre, explora y guarda tus películas favoritas";
 
 // "Popular ahora" se carga desde Firebase a través de /api/movies/popular.
 
@@ -189,11 +189,8 @@ function SiteHeader(props) {
                 ),
                 h("button",
                     { className: "nav-link" + (page === "peliculas" ? " active" : ""), onClick: () => go("peliculas") },
-                    "Películas"
-                ),
-                h("button",
-                    { className: "nav-link" + (page === "series" ? " active" : ""), onClick: () => go("series") },
-                    "Series"
+                    "Películas",
+                    peliCount > 0 ? h("span", { className: "badge" }, String(peliCount)) : null
                 ),
                 user
                     ? h("button", { className: "user-chip", title: "Mi cuenta", onClick: () => go("cuenta") }, user.name)
@@ -233,7 +230,7 @@ function SiteFooter(props) {
             ),
             h("div", { className: "footer-col" },
                 h("p", { className: "footer-title" }, "Empieza ahora"),
-                h("p", { className: "muted" }, "Busca tu primera historia y pulsa Guardar."),
+                h("p", { className: "muted" }, "Busca tu primera historia y pulsa Guardar"),
                 h("button", { className: "footer-link", onClick: () => onNavigate("peliculas") }, "Continuar ahora →")
             )
         ),
@@ -356,7 +353,7 @@ function LandingPage(props) {
         h("section", { className: "hero" },
             h("div", { className: "hero-text" },
                 h("p", { className: "hero-kicker" }, BRAND),
-                h("h1", null, "Descubre, explora", h("br", null), "y guarda tus favoritas."),
+                h("h1", null, "Descubre, explora", h("br", null), "y guarda tus favoritas"),
                 h("p", { className: "hero-sub" }, SLOGAN),
                 h("div", { className: "hero-actions" },
                     h("button", { className: "btn-primary btn-big", onClick: onExplore }, "Continuar ahora →")
@@ -385,7 +382,7 @@ function LandingPage(props) {
             h("div", { className: "feature" },
                 h("span", { className: "feature-icon" }, "01"),
                 h("h3", null, "Encuentra tu próxima favorita"),
-                h("p", null, "Busca entre miles de películas por su título.")
+                h("p", null, "Busca entre miles de películas por su título")
             ),
             h("div", { className: "feature" },
                 h("span", { className: "feature-icon" }, "02"),
@@ -395,12 +392,12 @@ function LandingPage(props) {
             h("div", { className: "feature" },
                 h("span", { className: "feature-icon" }, "03"),
                 h("h3", null, "Guarda tu colección"),
-                h("p", null, "Guarda las que te gusten y tenlas siempre a mano.")
+                h("p", null, "Guarda las que te gusten y tenlas siempre a mano")
             )
         ),
         h("section", { className: "cta-band" },
             h("h2", null, "¿Empezamos?"),
-            h("p", null, "Busca tu primera película, guárdala y aparecerá en tu colección."),
+            h("p", null, "Busca tu primera película, guárdala y aparecerá en tu colección"),
             h("button", { className: "btn-primary btn-big", onClick: onExplore }, "Continuar ahora")
         )
     );
@@ -414,7 +411,7 @@ function AuthChoice(props) {
     return h("div", { className: "auth-wrap" },
         h("div", { className: "auth-card auth-choice" },
             h("h1", null, "Bienvenido a " + BRAND),
-            h("p", { className: "muted" }, "Elige cómo quieres continuar."),
+            h("p", { className: "muted" }, "Elige cómo quieres continuar:"),
             h("div", { className: "choice-buttons" },
                 h("button", { className: "btn-primary btn-big", onClick: onLogin }, "Iniciar sesión"),
                 h("button", { className: "btn-ghost btn-big", onClick: onRegister }, "Crear cuenta")
@@ -700,7 +697,7 @@ function LoginPage(props) {
     return h("div", { className: "auth-wrap" },
         h("div", { className: "auth-card" },
             h("h1", null, "Entrar"),
-            h("p", { className: "muted" }, "Bienvenido de nuevo a " + BRAND + "."),
+            h("p", { className: "muted" }, "Bienvenido de nuevo a " + BRAND),
             error ? h("p", { className: "error" }, error) : null,
             h("form", { onSubmit: submit },
                 h("div", { className: "auth-field" },
@@ -793,12 +790,6 @@ function RegisterPage(props) {
     const likesMoviesState = React.useState(null);
     const likesMovies = likesMoviesState[0];
     const setLikesMovies = likesMoviesState[1];
-    const likesSeriesState = React.useState(null);
-    const likesSeries = likesSeriesState[0];
-    const setLikesSeries = likesSeriesState[1];
-    const likesMiniseriesState = React.useState(null);
-    const likesMiniseries = likesMiniseriesState[0];
-    const setLikesMiniseries = likesMiniseriesState[1];
 
     const errorState = React.useState(null);
     const error = errorState[0];
@@ -937,15 +928,7 @@ function RegisterPage(props) {
             return;
         }
         if (likesMovies === null) {
-            setError("Responde la pregunta de películas.");
-            return;
-        }
-        if (likesSeries === null) {
-            setError("Responde la pregunta de series.");
-            return;
-        }
-        if (likesMiniseries === null) {
-            setError("Responde la pregunta de miniseries.");
+            setError("Responde la pregunta de Sí/No.");
             return;
         }
         setLoading(true);
@@ -958,8 +941,6 @@ function RegisterPage(props) {
                 body: JSON.stringify({
                     favoriteGenres: selectedGenres,
                     likesMovies: likesMovies,
-                    likesSeries: likesSeries,
-                    likesMiniseries: likesMiniseries,
                     onboardingDone: true
                 })
             });
@@ -1031,7 +1012,7 @@ function RegisterPage(props) {
     );
 
     const renderStep2 = () => h("form", { onSubmit: handleQuestionnaire },
-        h("p", { className: "muted" }, "Solo 3 preguntas rápidas para personalizar tu experiencia."),
+        h("p", { className: "muted" }, "Solo 2 preguntas rápidas para personalizar tu experiencia."),
         verificationSent
             ? h("div", { className: "success" },
                 "Te hemos enviado un correo de verificación. No se abrirá tu sesión hasta que confirmes tu dirección.",
@@ -1071,34 +1052,6 @@ function RegisterPage(props) {
                 }, "No")
             )
         ),
-        // Pregunta 3: Series
-        h("fieldset", { className: "question" },
-            h("legend", null, h("span", { className: "q-num" }, "3"), " ¿Te gustan las series?"),
-            h("div", { className: "yn-buttons" },
-                h("button", {
-                    type: "button", className: "yn-btn" + (likesSeries === true ? " active" : ""),
-                    onClick: () => setLikesSeries(true)
-                }, "Sí"),
-                h("button", {
-                    type: "button", className: "yn-btn" + (likesSeries === false ? " active" : ""),
-                    onClick: () => setLikesSeries(false)
-                }, "No")
-            )
-        ),
-        // Pregunta 4: Miniseries
-        h("fieldset", { className: "question" },
-            h("legend", null, h("span", { className: "q-num" }, "4"), " ¿Te gustan las miniseries?"),
-            h("div", { className: "yn-buttons" },
-                h("button", {
-                    type: "button", className: "yn-btn" + (likesMiniseries === true ? " active" : ""),
-                    onClick: () => setLikesMiniseries(true)
-                }, "Sí"),
-                h("button", {
-                    type: "button", className: "yn-btn" + (likesMiniseries === false ? " active" : ""),
-                    onClick: () => setLikesMiniseries(false)
-                }, "No")
-            )
-        ),
         h("button", { className: "btn-primary", type: "submit", disabled: loading },
             loading ? "Guardando..." : "Terminar"
         )
@@ -1110,14 +1063,12 @@ function RegisterPage(props) {
             h("div", { className: "step-indicator" },
                 h("span", { className: "step-dot" + (step >= 1 ? " active" : "") }, "1"),
                 h("span", { className: "step-line" }),
-                h("span", { className: "step-dot" + (step >= 2 ? " active" : "") }, "2"),
-                h("span", { className: "step-line" }),
-                h("span", { className: "step-dot" + (step >= 3 ? " active" : "") }, "3")
+                h("span", { className: "step-dot" + (step >= 2 ? " active" : "") }, "2")
             ),
             step === 1 ? (
                 React.createElement(React.Fragment, null,
                     h("h1", null, "Crear cuenta"),
-                    h("p", { className: "muted" }, "Paso 1 de 2: tus datos básicos."),
+                    h("p", { className: "muted" }, "Paso 1 de 2: tus datos básicos"),
                     error ? h("p", { className: "error" }, error) : null,
                     renderStep1(),
                     h("p", { className: "auth-switch" }, "¿Ya tienes cuenta? ",
@@ -1127,7 +1078,7 @@ function RegisterPage(props) {
             ) : (
                 React.createElement(React.Fragment, null,
                     h("h1", null, "Cuéntanos tus gustos"),
-                    h("p", { className: "muted" }, "Paso 2 de 3: preferencias."),
+                    h("p", { className: "muted" }, "Paso 2 de 2: preferencias"),
                     error ? h("p", { className: "error" }, error) : null,
                     renderStep2()
                 )
@@ -1384,7 +1335,7 @@ function MediaPage(props) {
         const genre = genreFilter || "";
         const hasFilters = year !== null || min > 0 || genre !== "";
         if (!q && !hasFilters) {
-            setError("Escribe un título o elige algún filtro para explorar.");
+            setError("Escribe un título o elige algún filtro para explorar");
             return;
         }
         setLoading(true);
@@ -1625,509 +1576,7 @@ function MediaPage(props) {
                 showDelete: false,
                 emptyText: "Haz una búsqueda para ver aquí más resultados."
             }),
-        h("p", { className: "muted hint" }, user ? "Lo que guardes lo encontrarás en tu página personal." : "Entra en tu cuenta para tener tu página personal con tu colección."),
-        detail ? h("div", { className: "modal-backdrop", onClick: () => setDetail(null) },
-            h("div", { className: "modal", onClick: (e) => e.stopPropagation() },
-                h("button", { className: "modal-close", onClick: () => setDetail(null) }, "✕"),
-                h("div", { className: "modal-content" },
-                    h("img", {
-                        src: detail.poster || "https://via.placeholder.com/300x450?text=Sin+imagen",
-                        alt: detail.title
-                    }),
-                    h("div", null,
-                        h("h2", null, detail.title + " (" + detail.year + ")"),
-                        detail.genre ? h("p", null, h("strong", null, "Género:"), " " + detail.genre) : null,
-                        detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
-                        detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
-                        detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
-                        detail.plot ? h("p", null, detail.plot) : null,
-                        h("div", { className: "result-actions" },
-                            h("button", {
-                                onClick: () => handleSave(detail),
-                                disabled: saving
-                            }, saving ? "Guardando..." : (user ? "Guardar en mi colección" : "Entrar para guardar")),
-                            h("button", { className: "btn-ghost", type: "button", onClick: () => setDetail(null) }, "Cerrar")
-                        )
-                    )
-                )
-            )
-        ) : null
-    );
-}
-
-/* ---------- SeriesPage: pantalla de búsqueda y descubrimiento de series ----------
-   Props: user, series, loadingList, onRefresh(), onDelete(id), onNavigate(page) */
-function SeriesPage(props) {
-    const user = props.user || null;
-    const series = props.series;
-    const loadingList = props.loadingList;
-    const onRefresh = props.onRefresh;
-    const onDelete = props.onDelete;
-    const onNavigate = props.onNavigate;
-    const omdbType = "series";
-
-    const queryState = React.useState("");
-    const query = queryState[0];
-    const setQuery = queryState[1];
-    const yearState = React.useState("");
-    const yearFilter = yearState[0];
-    const setYearFilter = yearState[1];
-    const ratingState = React.useState(0);
-    const minRating = ratingState[0];
-    const setMinRating = ratingState[1];
-    const genreState = React.useState("");
-    const genreFilter = genreState[0];
-    const setGenreFilter = genreState[1];
-    const sortState = React.useState("relevance");
-    const sortBy = sortState[0];
-    const setSortBy = sortState[1];
-    const resultState = React.useState(null);
-    const result = resultState[0];
-    const setResult = resultState[1];
-    const resultWarningState = React.useState(null);
-    const resultWarning = resultWarningState[0];
-    const setResultWarning = resultWarningState[1];
-    const exploreState = React.useState([]);
-    const explore = exploreState[0];
-    const setExplore = exploreState[1];
-    const exploreTitleState = React.useState("Descubre");
-    const exploreTitle = exploreTitleState[0];
-    const setExploreTitle = exploreTitleState[1];
-    const loadingState = React.useState(false);
-    const loading = loadingState[0];
-    const setLoading = loadingState[1];
-    const loadingDetailsState = React.useState(false);
-    const loadingDetails = loadingDetailsState[0];
-    const setLoadingDetails = loadingDetailsState[1];
-    const loadingDefaultsState = React.useState(true);
-    const loadingDefaults = loadingDefaultsState[0];
-    const setLoadingDefaults = loadingDefaultsState[1];
-    const savingState = React.useState(false);
-    const saving = savingState[0];
-    const setSaving = savingState[1];
-    const errorState = React.useState(null);
-    const error = errorState[0];
-    const setError = errorState[1];
-    const successState = React.useState(null);
-    const success = successState[0];
-    const setSuccess = successState[1];
-    const detailState = React.useState(null);
-    const detail = detailState[0];
-    const setDetail = detailState[1];
-    const detailLoadingState = React.useState(false);
-    const detailLoading = detailLoadingState[0];
-    const setDetailLoading = detailLoadingState[1];
-    const cooldownState = React.useState(0);
-    const cooldown = cooldownState[0];
-    const setCooldown = cooldownState[1];
-
-    const parseYearFilter = () => {
-        const y = String(yearFilter).trim();
-        if (!y) return null;
-        if (!/^\d{4}$/.test(y)) throw new Error("El año debe tener 4 cifras (ej. 2010)");
-        const n = Number.parseInt(y, 10);
-        if (n < 1900 || n > 2100) throw new Error("El año debe estar entre 1900 y 2100");
-        return n;
-    };
-
-    const enrichWithDetails = async (items) => {
-        const out = [];
-        for (let i = 0; i < items.length; i += 5) {
-            const chunk = await Promise.all(items.slice(i, i + 5).map(async (item) => {
-                if (!item.imdbID) return { item: item, limited: false };
-                try {
-                    const res = await fetch("/api/series/search?i=" + encodeURIComponent(item.imdbID));
-                    if (res.status === 429) return { item: item, limited: true };
-                    const data = await res.json();
-                    if (!res.ok) return { item: item, limited: false };
-                    return {
-                        item: Object.assign({}, item, {
-                            genre: data.genre || item.genre,
-                            rating: data.rating || null,
-                            plot: data.plot,
-                            director: data.director,
-                            actors: data.actors,
-                            type: data.type || item.type,
-                        }),
-                        limited: false
-                    };
-                } catch (e) {
-                    return { item: item, limited: false };
-                }
-            }));
-            if (chunk.some((r) => r.limited)) {
-                throw rateLimitExceeded();
-            }
-            chunk.forEach((r) => out.push(r.item));
-        }
-        return out;
-    };
-
-    const applyClientFilters = (items, year, min, genre, expectedType) => {
-        return items.filter((item) => {
-            if (expectedType) {
-                const it = String(item.type || "").toLowerCase();
-                if (it && it !== expectedType) return false;
-            }
-            if (year) {
-                const iy = yearOf(item);
-                if (iy !== year) return false;
-            }
-            if (min > 0) {
-                const r = ratingOf(item);
-                if (r === null || r < min) return false;
-            }
-            if (genre) {
-                const g = String(item.genre || "").toLowerCase();
-                if (!g || g.indexOf(genre.toLowerCase()) === -1) return false;
-            }
-            return true;
-        });
-    };
-
-    const applySort = (items, mode) => {
-        const arr = items.slice();
-        if (mode === "year-desc") {
-            arr.sort((a, b) => (yearOf(b) || -1) - (yearOf(a) || -1));
-        } else if (mode === "year-asc") {
-            arr.sort((a, b) => (yearOf(a) || 9999) - (yearOf(b) || 9999));
-        } else if (mode === "rating-desc") {
-            arr.sort((a, b) => {
-                const ra = ratingOf(a);
-                const rb = ratingOf(b);
-                if (ra === null && rb === null) return 0;
-                if (ra === null) return 1;
-                if (rb === null) return -1;
-                return rb - ra;
-            });
-        }
-        return arr;
-    };
-
-    const runDiscovery = async (year, min, genre) => {
-        let pooled = [];
-        try {
-            let url = "/api/series/popular?limit=30";
-            if (year) url += "&y=" + year;
-            const res = await fetch(url);
-            if (res.status === 429) {
-                throw rateLimitExceeded();
-            }
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Sin resultados para esos filtros.");
-            if (Array.isArray(data.results)) pooled = data.results;
-        } catch (e) {
-            if (e && e.code === "RATE_LIMIT") throw e;
-            throw new Error(e.message || "No se pudo cargar contenido desde Firebase.");
-        }
-        if (pooled.length === 0) {
-            throw new Error("Sin resultados para esos filtros. Prueba con otros.");
-        }
-        if (min > 0 || genre !== "") {
-            setLoadingDetails(true);
-            try {
-                pooled = await enrichWithDetails(pooled);
-            } finally {
-                setLoadingDetails(false);
-            }
-        }
-        const filtered = applySort(applyClientFilters(pooled, year, min, genre, omdbType), sortBy);
-        setExplore(filtered);
-        setExploreTitle("Explora (" + filtered.length + ")");
-        if (filtered.length === 0) {
-            setError("Nada coincide con esos filtros. Prueba a suavizarlos.");
-        }
-    };
-
-    const loadDefaults = async () => {
-        setLoadingDefaults(true);
-        setError(null);
-        try {
-            const res = await fetch(
-                "/api/series/popular?limit=12"
-            );
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "No se pudo cargar el contenido");
-            setExplore(Array.isArray(data.results) ? data.results : []);
-            setExploreTitle("Popular ahora");
-        } catch (e) {
-            setExplore([]);
-            setError(e.message || "No se pudo cargar Popular ahora desde Firebase.");
-        } finally {
-            setLoadingDefaults(false);
-        }
-    };
-
-    useEffect(() => {
-        loadDefaults();
-    }, []);
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setCooldown((c) => (c > 0 ? c - 1 : 0));
-        }, 1000);
-        return () => clearInterval(timer);
-    }, []);
-
-    const rateLimitExceeded = () => {
-        const err = new Error("Has hecho muchas búsquedas seguidas. Espera un minuto y vuelve a intentarlo.");
-        err.code = "RATE_LIMIT";
-        return err;
-    };
-
-    const handleSearch = async (e) => {
-        e.preventDefault();
-        const q = query.trim();
-        let year = null;
-        try {
-            year = parseYearFilter();
-        } catch (err) {
-            setError(err.message);
-            return;
-        }
-        const min = Number(minRating) || 0;
-        const genre = genreFilter || "";
-        const hasFilters = year !== null || min > 0 || genre !== "";
-        if (!q && !hasFilters) {
-            setError("Escribe un título o elige algún filtro para explorar.");
-            return;
-        }
-        setLoading(true);
-        setError(null);
-        setSuccess(null);
-        setResult(null);
-        setResultWarning(null);
-        setExplore([]);
-        try {
-            if (!q) {
-                await runDiscovery(year, min, genre);
-                return;
-            }
-            let exactUrl = "/api/series/search?t=" + encodeURIComponent(q);
-            let listUrl = "/api/series/search-list?s=" + encodeURIComponent(q);
-            if (year) {
-                exactUrl += "&y=" + year;
-                listUrl += "&y=" + year;
-            }
-            const results = await Promise.all([
-                fetch(exactUrl).then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json() })),
-                fetch(listUrl).then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json() }))
-            ]);
-            const exactRes = results[0];
-            const listRes = results[1];
-
-            if (exactRes.status === 429 || listRes.status === 429) {
-                throw rateLimitExceeded();
-            }
-
-            if (exactRes.ok) {
-                const warnings = [];
-                const exactRating = ratingOf(exactRes.data);
-                if (min > 0 && (exactRating === null || exactRating < min)) {
-                    warnings.push("Su nota (" + (exactRes.data.rating || "sin nota") + ") está por debajo de tu filtro de " + min + ".");
-                }
-                if (genre && String(exactRes.data.genre || "").toLowerCase().indexOf(genre.toLowerCase()) === -1) {
-                    warnings.push("Su género no coincide con tu filtro.");
-                }
-                setResult(exactRes.data);
-                setResultWarning(warnings.length > 0 ? warnings.join(" ") : null);
-            }
-            if (listRes.ok) {
-                let items = Array.isArray(listRes.data.results) ? listRes.data.results : [];
-                if ((min > 0 || genre !== "") && items.length > 0) {
-                    setLoadingDetails(true);
-                    try {
-                        items = await enrichWithDetails(items);
-                    } finally {
-                        setLoadingDetails(false);
-                    }
-                }
-                setExplore(applySort(applyClientFilters(items, year, min, genre, omdbType), sortBy));
-                setExploreTitle("Resultados de tu búsqueda");
-            }
-            if (!exactRes.ok && !listRes.ok) {
-                throw new Error(exactRes.data.error || listRes.data.error || "Sin resultados");
-            }
-        } catch (err) {
-            setError(err.message);
-            if (err && err.code === "RATE_LIMIT") setCooldown(60);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleClear = () => {
-        setQuery("");
-        setYearFilter("");
-        setMinRating(0);
-        setGenreFilter("");
-        setSortBy("relevance");
-        setResult(null);
-        setResultWarning(null);
-        setError(null);
-        setSuccess(null);
-        setExploreTitle("Popular ahora");
-        loadDefaults();
-    };
-
-    const handleSave = async (seriesToSave) => {
-        const serie = seriesToSave || result;
-        if (!serie) return;
-        setSaving(true);
-        setError(null);
-        setSuccess(null);
-        try {
-            const res = await fetch("/api/series", {
-                method: "POST",
-                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
-                body: JSON.stringify(serie)
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                const saveErr = new Error(data.error || "Error al guardar");
-                saveErr.status = res.status;
-                throw saveErr;
-            }
-            setSuccess("¡Guardada en tu colección!");
-            setResult(null);
-            setResultWarning(null);
-            setDetail(null);
-            setQuery("");
-            await onRefresh();
-        } catch (err) {
-            setError(err.message);
-            if (err.status === 401) onNavigate("login");
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const openDetail = async (serie) => {
-        if (serie.plot || serie.director) {
-            setDetail(serie);
-            return;
-        }
-        setDetailLoading(true);
-        try {
-            const url = serie.imdbID
-                ? "/api/series/search?i=" + encodeURIComponent(serie.imdbID)
-                : "/api/series/search?t=" + encodeURIComponent(serie.title);
-            const res = await fetch(url);
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "No se pudo cargar el detalle");
-            setDetail(data);
-        } catch (err) {
-            setDetail(serie);
-        } finally {
-            setDetailLoading(false);
-        }
-    };
-
-    const filtersActive = String(yearFilter).trim() !== "" || Number(minRating) > 0 || genreFilter !== "";
-
-    return h("div", { className: "movies-page" },
-        h("div", { className: "page-head" },
-            h("h1", null, "Series"),
-            h("p", { className: "muted" }, "Busca tus favoritas, guárdalas y vuelve a verlas cuando quieras.")
-        ),
-        h("form", { onSubmit: handleSearch, className: "search-form" },
-            h("input", {
-                type: "text",
-                value: query,
-                onChange: (e) => setQuery(e.target.value),
-                placeholder: "Buscar series... (ej. Breaking Bad)",
-                maxLength: 100
-            }),
-            h("button", { type: "submit", disabled: loading || cooldown > 0 }, loading ? "Buscando..." : (cooldown > 0 ? "Espera " + cooldown + "s" : "Buscar"))
-        ),
-        h("div", { className: "filters" },
-            h("label", { className: "filter" },
-                h("span", null, "Año"),
-                h("input", {
-                    type: "number",
-                    value: yearFilter,
-                    onChange: (e) => setYearFilter(e.target.value),
-                    placeholder: "Ej. 2010",
-                    min: 1900,
-                    max: 2100
-                })
-            ),
-            h("label", { className: "filter" },
-                h("span", null, "Nota mínima"),
-                h("select", {
-                    value: String(minRating),
-                    onChange: (e) => setMinRating(Number(e.target.value))
-                },
-                    h("option", { value: "0" }, "Sin filtro"),
-                    h("option", { value: "6" }, "★ 6 o más"),
-                    h("option", { value: "7" }, "★ 7 o más"),
-                    h("option", { value: "8" }, "★ 8 o más"),
-                    h("option", { value: "9" }, "★ 9 o más")
-                )
-            ),
-            h("label", { className: "filter" },
-                h("span", null, "Género"),
-                h("select", {
-                    value: genreFilter,
-                    onChange: (e) => setGenreFilter(e.target.value)
-                },
-                    GENRES.map((g) => h("option", { key: g[0], value: g[0] }, g[1]))
-                )
-            ),
-            h("label", { className: "filter" },
-                h("span", null, "Ordenar"),
-                h("select", {
-                    value: sortBy,
-                    onChange: (e) => setSortBy(e.target.value)
-                },
-                    h("option", { value: "relevance" }, "Relevancia"),
-                    h("option", { value: "rating-desc" }, "Mejor nota"),
-                    h("option", { value: "year-desc" }, "Más recientes"),
-                    h("option", { value: "year-asc" }, "Más antiguas")
-                )
-            ),
-            filtersActive
-                ? h("button", { type: "button", className: "btn-ghost btn-small", onClick: handleClear }, "Limpiar")
-                : null
-        ),
-        h("p", { className: "muted hint" }, "Consejo: puedes buscar solo con filtros, sin escribir ningún título."),
-        error ? h("p", { className: "error" }, error) : null,
-        success ? h("p", { className: "success" }, success) : null,
-        (detailLoading || loadingDetails) ? h("p", { className: "muted" }, "Cargando detalles...") : null,
-        result ? h("div", { className: "result" },
-            h("div", { className: "result-content" },
-                h("img", {
-                    src: result.poster || "https://via.placeholder.com/300x450?text=Sin+imagen",
-                    alt: result.title,
-                    className: "poster",
-                    loading: "lazy"
-                }),
-                h("div", { className: "result-info" },
-                    h("h2", null, result.title + " (" + result.year + ")"),
-                    h("p", null, h("strong", null, "Director:"), " " + result.director),
-                    h("p", null, h("strong", null, "Género:"), " " + result.genre),
-                    result.actors ? h("p", null, h("strong", null, "Actores:"), " " + result.actors) : null,
-                    result.rating ? h("p", null, h("strong", null, "Nota IMDb:"), " ★ " + result.rating) : null,
-                    h("p", null, h("strong", null, "Sinopsis:"), " " + result.plot),
-                    resultWarning ? h("p", { className: "muted" }, "ℹ " + resultWarning) : null,
-                    h("div", { className: "result-actions" },
-                        h("button", { onClick: handleSave, disabled: saving }, saving ? "Guardando..." : "Guardar en mi colección"),
-                        h("button", { className: "btn-ghost", type: "button", onClick: () => { setResult(null); setResultWarning(null); } }, "Descartar")
-                    )
-                )
-            )
-        ) : null,
-        loadingDefaults
-            ? h("p", { className: "muted" }, "Cargando series...")
-            : h(MovieCarousel, {
-                title: exploreTitle + " · Series",
-                subtitle: "Desliza para descubrir",
-                movies: explore,
-                onDetail: openDetail,
-                showDelete: false,
-                emptyText: "Haz una búsqueda para ver aquí más resultados."
-            }),
-        h("p", { className: "muted hint" }, user ? "Lo que guardes lo encontrarás en tu página personal." : "Entra en tu cuenta para tener tu página personal con tu colección."),
+        h("p", { className: "muted hint" }, user ? "Lo que guardes lo encontrarás en tu página personal." : "Entra en tu cuenta para tener tu página personal con tu colección"),
         detail ? h("div", { className: "modal-backdrop", onClick: () => setDetail(null) },
             h("div", { className: "modal", onClick: (e) => e.stopPropagation() },
                 h("button", { className: "modal-close", onClick: () => setDetail(null) }, "✕"),
@@ -2211,7 +1660,7 @@ function MiCuenta(props) {
             onDelete: onDelete,
             onDetail: openDetail,
             showDelete: true,
-            emptyText: "Aún no guardaste películas. Explora Películas y pulsa Guardar."
+            emptyText: "Aún no guardaste películas. Explora Películas y pulsa Guardar"
         }),
         h("h2", null, "Todas tus películas"),
         loadingList ? h("p", { className: "muted" }, "Cargando lista...") : null,
@@ -2293,12 +1742,6 @@ function App() {
     const loadingListState = useState(true);
     const loadingList = loadingListState[0];
     const setLoadingList = loadingListState[1];
-    const seriesState = useState([]);
-    const series = seriesState[0];
-    const setSeries = seriesState[1];
-    const loadingSeriesState = useState(true);
-    const loadingSeries = loadingSeriesState[0];
-    const setLoadingSeries = loadingSeriesState[1];
     const toastState = useState(null);
     const toast = toastState[0];
     const setToast = toastState[1];
@@ -2337,7 +1780,6 @@ function App() {
 
     useEffect(() => {
         fetchMovies();
-        fetchSeries();
         restoreSession();
     }, []);
 
@@ -2372,43 +1814,6 @@ function App() {
             }
             setToast({ type: "success", text: "Eliminado de tu colección" });
             await fetchMovies();
-        } catch (e) {
-            setToast({ type: "error", text: e.message });
-            if (e.status === 401) navigate("login");
-        }
-    };
-
-    const fetchSeries = async () => {
-        setLoadingSeries(true);
-        try {
-            const res = await fetch("/api/series", { headers: authHeaders() });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Error al cargar series");
-            setSeries(Array.isArray(data) ? data : []);
-        } catch (e) {
-            console.error("Error al cargar series:", e);
-            setSeries([]);
-            setToast({ type: "error", text: e.message });
-        } finally {
-            setLoadingSeries(false);
-        }
-    };
-
-    const handleDeleteSeries = async (id) => {
-        if (!window.confirm("¿Eliminar esta serie?")) return;
-        try {
-            const res = await fetch("/api/series/" + encodeURIComponent(id), {
-                method: "DELETE",
-                headers: authHeaders()
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                const err = new Error(data.error || "Error al eliminar");
-                err.status = res.status;
-                throw err;
-            }
-            setToast({ type: "success", text: "Eliminada de tu colección" });
-            await fetchSeries();
         } catch (e) {
             setToast({ type: "error", text: e.message });
             if (e.status === 401) navigate("login");
@@ -2495,16 +1900,6 @@ function App() {
                 ? (user
                     ? h(MiCuenta, { user: user, movies: movies, loadingList: loadingList, onDelete: handleDelete })
                     : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
-                : page === "series"
-                ? h(SeriesPage, {
-                    key: page,
-                    user: user,
-                    series: series,
-                    loadingList: loadingSeries,
-                    onRefresh: fetchSeries,
-                    onDelete: handleDeleteSeries,
-                    onNavigate: navigate
-                })
                 : h(MediaPage, {
                     key: page,
                     user: user,

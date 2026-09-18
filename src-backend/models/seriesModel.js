@@ -4,6 +4,7 @@
 // Soporta credenciales por .env o por firebase-key.json (legacy).
 const firebaseConn = require("./firebase");
 const db = firebaseConn.getDb();
+const { enrichWithScraping } = require("../services/scrapingService");
 
 // Almacén en memoria para que el modo local sí persista mientras el servidor corre.
 const localSeries = [];
@@ -102,16 +103,34 @@ const SeriesModel = {
         }
     },
 
+    // Enriquece los datos de una serie con scraping si faltan campos críticos.
+    // Prioriza datos de OMDb/Firestore; el scraping solo rellena huecos.
+    enrichSeriesData: async (serie) => {
+        if (!serie || !serie.title) return serie;
+        try {
+            const enriched = await enrichWithScraping(serie, serie.title, "series");
+            return enriched;
+        } catch (error) {
+            console.warn(`[seriesModel] Error enriqueciendo "${serie.title}":`, error.message);
+            return serie;
+        }
+    },
+
     findCatalogSeries: async ({ title, year, imdbID }) => {
         const series = await SeriesModel.getCatalogSeries();
         const wantedId = String(imdbID || "").trim().toLowerCase();
         const wantedTitle = String(title || "").trim().toLowerCase();
         const wantedYear = String(year || "").trim();
-        return series.find((serie) => {
+        const found = series.find((serie) => {
             if (wantedId && String(serie.imdbID || "").toLowerCase() !== wantedId) return false;
             if (!wantedId && String(serie.title || "").trim().toLowerCase() !== wantedTitle) return false;
             return !wantedYear || String(serie.year || "").includes(wantedYear);
         }) || null;
+
+        if (found) {
+            return await SeriesModel.enrichSeriesData(found);
+        }
+        return null;
     },
 
     searchCatalog: async ({ query, year, page }) => {
@@ -329,8 +348,18 @@ const SeriesModel = {
 
         if (unique.length === 0) return [];
 
-        const withPoster = unique.filter((m) => !!m.poster);
-        const pool = withPoster.length >= want ? withPoster : unique;
+        // Enriquecer los items seleccionados con scraping si faltan datos críticos (solo póster y género para rendimiento)
+        const enriched = await Promise.all(
+            unique.slice(0, want * 2).map(async (m) => {
+                if (!m.poster || !m.genre || m.genre === "Sin género") {
+                    return await SeriesModel.enrichSeriesData(m);
+                }
+                return m;
+            })
+        );
+
+        const withPoster = enriched.filter((m) => !!m.poster);
+        const pool = withPoster.length >= want ? withPoster : enriched;
 
         return shuffleInPlace([...pool]).slice(0, want).map(toPopularItem);
     }
