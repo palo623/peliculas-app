@@ -59,7 +59,7 @@ router.get("/auth/me", async (req, res) => {
 });
 
 // PUT /api/auth/prefs { favoriteGenres, likesMovies, onboardingDone }
-router.put("/auth/prefs", async (req, res) => {
+router.put("/api/auth/prefs", async (req, res) => {
     try {
         const token = tokenFromHeader(req);
         const body = req.body || {};
@@ -77,6 +77,131 @@ router.put("/auth/prefs", async (req, res) => {
         res.json({ ok: true, prefs });
     } catch (error) {
         res.status(400).json({ error: error.message || "No se pudo actualizar" });
+    }
+});
+
+// PUT /api/auth/profile { nickname, colorTheme }
+router.put("/auth/profile", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        const body = req.body || {};
+        if (typeof body !== "object") {
+            return res.status(400).json({ error: "Cuerpo de petición inválido" });
+        }
+        const prefs = await authService.updateProfile(token, {
+            nickname: body.nickname,
+            colorTheme: body.colorTheme
+        });
+        if (!prefs) {
+            return res.status(401).json({ error: "Sesión no válida" });
+        }
+        res.json({ ok: true, prefs });
+    } catch (error) {
+        res.status(400).json({ error: error.message || "No se pudo actualizar el perfil" });
+    }
+});
+
+// GET /api/users/:id — Perfil público de un usuario
+router.get("/users/:id", async (req, res) => {
+    try {
+        const user = await authService.getPublicProfile(req.params.id);
+        if (!user) {
+            return res.status(404).json({ error: "Usuario no encontrado" });
+        }
+        res.json({ user });
+    } catch (error) {
+        res.status(500).json({ error: "No se pudo obtener el perfil" });
+    }
+});
+
+// GET /api/users/:id/movies — Películas guardadas de un usuario (público)
+router.get("/users/:id/movies", async (req, res) => {
+    try {
+        const movies = await authService.getUserMovies(req.params.id);
+        res.json({ movies: Array.isArray(movies) ? movies : [] });
+    } catch (error) {
+        res.status(500).json({ error: "No se pudo obtener las películas" });
+    }
+});
+
+// GET /api/users/search?q=texto — Buscar usuarios
+router.get("/users/search", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        let currentUserId = null;
+        if (token) {
+            const me = await authService.me(token);
+            if (me) currentUserId = me.id;
+        }
+        const q = req.query.q || "";
+        const users = await authService.searchUsers(q, currentUserId);
+        res.json({ users });
+    } catch (error) {
+        res.status(500).json({ error: "No se pudo buscar usuarios" });
+    }
+});
+
+// POST /api/users/:id/follow — Seguir a un usuario
+router.post("/users/:id/follow", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        if (!token) return res.status(401).json({ error: "Requiere iniciar sesión" });
+        const result = await authService.followUser(token, req.params.id);
+        if (!result) return res.status(401).json({ error: "Sesión no válida" });
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message || "No se pudo seguir al usuario" });
+    }
+});
+
+// DELETE /api/users/:id/follow — Dejar de seguir a un usuario
+router.delete("/users/:id/follow", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        if (!token) return res.status(401).json({ error: "Requiere iniciar sesión" });
+        const result = await authService.unfollowUser(token, req.params.id);
+        if (!result) return res.status(401).json({ error: "Sesión no válida" });
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message || "No se pudo dejar de seguir" });
+    }
+});
+
+// GET /api/users/me/following — Usuarios que sigo
+router.get("/users/me/following", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        if (!token) return res.status(401).json({ error: "Requiere iniciar sesión" });
+        const following = await authService.getFollowing(token);
+        if (following === null) return res.status(401).json({ error: "Sesión no válida" });
+        res.json({ users: following });
+    } catch (error) {
+        res.status(500).json({ error: "No se pudo obtener seguidos" });
+    }
+});
+
+// GET /api/users/me/followers — Mis seguidores
+router.get("/users/me/followers", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        if (!token) return res.status(401).json({ error: "Requiere iniciar sesión" });
+        const followers = await authService.getFollowers(token);
+        if (followers === null) return res.status(401).json({ error: "Sesión no válida" });
+        res.json({ users: followers });
+    } catch (error) {
+        res.status(500).json({ error: "No se pudo obtener seguidores" });
+    }
+});
+
+// GET /api/users/:id/is-following — Comprobar si sigo a un usuario
+router.get("/users/:id/is-following", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        if (!token) return res.status(401).json({ error: "Requiere iniciar sesión" });
+        const following = await authService.isFollowing(token, req.params.id);
+        res.json({ following });
+    } catch (error) {
+        res.status(500).json({ error: "No se pudo comprobar" });
     }
 });
 

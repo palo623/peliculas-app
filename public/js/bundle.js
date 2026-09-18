@@ -11,6 +11,82 @@ const h = React.createElement;
 const BRAND = "CineAIros";
 const SLOGAN = "Descubre, explora y guarda tus películas favoritas";
 
+// Temas de color disponibles
+const COLOR_THEMES = {
+    default: {
+        name: "Predeterminado",
+        primary: "#2563eb",
+        primaryHover: "#1d4ed8",
+        primaryLight: "#dbeafe",
+        accent: "#f59e0b",
+        background: "#ffffff",
+        surface: "#f8fafc",
+        text: "#1e293b",
+        textMuted: "#64748b",
+        border: "#e2e8f0",
+        success: "#10b981",
+        error: "#ef4444",
+        primaryRgb: "37, 99, 235"
+    },
+    vibrant: {
+        name: "Colores vivos",
+        primary: "#ec4899",
+        primaryHover: "#db2777",
+        primaryLight: "#fce7f3",
+        accent: "#f97316",
+        background: "#fff7ed",
+        surface: "#ffffff",
+        text: "#9d174d",
+        textMuted: "#be185d",
+        border: "#fbcfe8",
+        success: "#10b981",
+        error: "#ef4444",
+        primaryRgb: "236, 72, 153"
+    },
+    neon: {
+        name: "Neón",
+        primary: "#a855f7",
+        primaryHover: "#9333ea",
+        primaryLight: "#f3e8ff",
+        accent: "#06b6d4",
+        background: "#0f0f1a",
+        surface: "#1a1a2e",
+        text: "#fafafa",
+        textMuted: "#a1a1aa",
+        border: "#3f3f5c",
+        success: "#22d3ee",
+        error: "#f87171",
+        primaryRgb: "168, 85, 247"
+    },
+    pastel: {
+        name: "Pastel",
+        primary: "#8b5cf6",
+        primaryHover: "#7c3aed",
+        primaryLight: "#ede9fe",
+        accent: "#f472b6",
+        background: "#fafafa",
+        surface: "#ffffff",
+        text: "#4c1d95",
+        textMuted: "#7e69a3",
+        border: "#ddd6fe",
+        success: "#4ade80",
+        error: "#fca5a5",
+        primaryRgb: "139, 92, 246"
+    }
+};
+
+// Aplica el tema al document.documentElement (CSS variables)
+function applyColorTheme(themeKey) {
+    const theme = COLOR_THEMES[themeKey] || COLOR_THEMES.default;
+    const root = document.documentElement;
+    Object.entries(theme).forEach(([key, value]) => {
+        if (key !== "name") {
+            root.style.setProperty("--color-" + key, value);
+        }
+    });
+    root.setAttribute("data-theme", themeKey);
+}
+
 // "Popular ahora" se carga desde Firebase a través de /api/movies/popular.
 
 // Único origen del token: localStorage (así fetchMovies siempre lo ve actualizado).
@@ -167,9 +243,13 @@ function SiteHeader(props) {
     const openState = React.useState(false);
     const open = openState[0];
     const setOpen = openState[1];
+    const userMenuState = React.useState(false);
+    const userMenuOpen = userMenuState[0];
+    const setUserMenuOpen = userMenuState[1];
 
     const go = (target) => {
         setOpen(false);
+        setUserMenuOpen(false);
         onNavigate(target);
     };
 
@@ -193,7 +273,18 @@ function SiteHeader(props) {
                     peliCount > 0 ? h("span", { className: "badge" }, String(peliCount)) : null
                 ),
                 user
-                    ? h("button", { className: "user-chip", title: "Mi cuenta", onClick: () => go("cuenta") }, user.name)
+                    ? h("div", { className: "user-menu" },
+                        h("button", { className: "user-chip", title: "Mi cuenta", onClick: () => setUserMenuOpen(!userMenuOpen) }, user.nickname || user.name),
+                        userMenuOpen && h("div", { className: "user-dropdown" },
+                            h("button", { className: "dropdown-item", onClick: () => go("cuenta") }, "Mi cuenta"),
+                            h("button", { className: "dropdown-item", onClick: () => go("perfil") }, "Mi perfil público"),
+                            h("button", { className: "dropdown-item", onClick: () => go("buscar-usuarios") }, "Buscar usuarios"),
+                            h("button", { className: "dropdown-item", onClick: () => go("amigos") }, "Amigos"),
+                            h("button", { className: "dropdown-item", onClick: () => go("configuracion") }, "Configuración"),
+                            h("hr", { className: "dropdown-divider" }),
+                            h("button", { className: "dropdown-item danger", onClick: () => { setUserMenuOpen(false); onLogout(); } }, "Cerrar sesión")
+                        )
+                    )
                     : null,
                 user
                     ? h("button", { className: "nav-link", onClick: () => { setOpen(false); onLogout(); } }, "Salir")
@@ -1694,6 +1785,520 @@ function MiCuenta(props) {
     );
 }
 
+/* ---------- UserProfile: perfil público de otro usuario ---------- */
+function UserProfile(props) {
+    const userId = props.userId;
+    const currentUser = props.currentUser;
+    const onNavigate = props.onNavigate;
+    const profileState = React.useState(null);
+    const profile = profileState[0];
+    const setProfile = profileState[1];
+    const moviesState = React.useState([]);
+    const movies = moviesState[0];
+    const setMovies = moviesState[1];
+    const loadingState = React.useState(true);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+    const followingState = React.useState(false);
+    const isFollowing = followingState[0];
+    const setIsFollowing = followingState[1];
+    const followLoadingState = React.useState(false);
+    const followLoading = followLoadingState[0];
+    const setFollowLoading = followLoadingState[1];
+    const detailState = React.useState(null);
+    const detail = detailState[0];
+    const setDetail = detailState[1];
+    const detailLoadingState = React.useState(false);
+    const detailLoading = detailLoadingState[0];
+    const setDetailLoading = detailLoadingState[1];
+
+    const loadProfile = async () => {
+        try {
+            const res = await fetch("/api/users/" + encodeURIComponent(userId));
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Usuario no encontrado");
+            setProfile(data.user);
+            if (currentUser) {
+                const followRes = await fetch("/api/users/" + encodeURIComponent(userId) + "/is-following", {
+                    headers: authHeaders()
+                });
+                const followData = await followRes.json();
+                setIsFollowing(followData.following || false);
+            }
+        } catch (e) {
+            setProfile(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadMovies = async () => {
+        try {
+            const res = await fetch("/api/users/" + encodeURIComponent(userId) + "/movies");
+            const data = await res.json();
+            setMovies(Array.isArray(data.movies) ? data.movies : []);
+        } catch (e) {
+            setMovies([]);
+        }
+    };
+
+    React.useEffect(() => {
+        loadProfile();
+        loadMovies();
+    }, [userId]);
+
+    const handleFollow = async () => {
+        if (!currentUser) {
+            onNavigate("auth");
+            return;
+        }
+        setFollowLoading(true);
+        try {
+            if (isFollowing) {
+                await fetch("/api/users/" + encodeURIComponent(userId) + "/follow", {
+                    method: "DELETE",
+                    headers: authHeaders()
+                });
+                setIsFollowing(false);
+            } else {
+                await fetch("/api/users/" + encodeURIComponent(userId) + "/follow", {
+                    method: "POST",
+                    headers: authHeaders()
+                });
+                setIsFollowing(true);
+            }
+        } catch (e) {
+            // error silencioso
+        } finally {
+            setFollowLoading(false);
+        }
+    };
+
+    const openDetail = async (movie) => {
+        if (movie.plot || movie.director) {
+            setDetail(movie);
+            return;
+        }
+        setDetailLoading(true);
+        try {
+            const url = movie.imdbID
+                ? "/api/movies/search?i=" + encodeURIComponent(movie.imdbID)
+                : "/api/movies/search?t=" + encodeURIComponent(movie.title);
+            const res = await fetch(url);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "No se pudo cargar el detalle");
+            setDetail(data);
+        } catch (err) {
+            setDetail(movie);
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
+    if (loading) return h("div", { className: "movies-page" }, h("p", { className: "muted" }, "Cargando perfil..."));
+    if (!profile) return h("div", { className: "movies-page" }, h("p", { className: "error" }, "Usuario no encontrado"));
+
+    const isOwnProfile = currentUser && currentUser.id === profile.id;
+    const shown = movies || [];
+    const recent = shown.slice(0, 10);
+
+    return h("div", { className: "movies-page" },
+        h("div", { className: "profile-header" },
+            h("div", { className: "profile-avatar" },
+                profile.photoURL ? h("img", { src: profile.photoURL, alt: profile.nickname || profile.name }) : h("span", null, (profile.nickname || profile.name || "U")[0].toUpperCase())
+            ),
+            h("div", { className: "profile-info" },
+                h("h1", null, profile.nickname || profile.name),
+                h("p", { className: "muted" }, "@" + (profile.id.split("@")[0] || profile.id)),
+                !isOwnProfile && currentUser && h("button", {
+                    className: "btn-primary" + (isFollowing ? " following" : ""),
+                    onClick: handleFollow,
+                    disabled: followLoading
+                }, followLoading ? "..." : (isFollowing ? "Dejar de seguir" : "Seguir"))
+            )
+        ),
+        h("div", { className: "hero-stats account-stats" },
+            h("div", null, h("strong", null, String(shown.length)), h("span", null, "películas")),
+            h("div", null, h("strong", null, profile.prefs?.followers?.length || 0), h("span", null, "seguidores")),
+            h("div", null, h("strong", null, profile.prefs?.following?.length || 0), h("span", null, "siguiendo"))
+        ),
+        detailLoading ? h("p", { className: "muted" }, "Cargando detalle...") : null,
+        h(MovieCarousel, {
+            title: "Guardadas recientemente",
+            subtitle: "Películas de " + (profile.nickname || profile.name),
+            movies: recent,
+            onDelete: null,
+            onDetail: openDetail,
+            showDelete: false,
+            emptyText: "Aún no ha guardado películas"
+        }),
+        h("h2", null, "Todas las películas"),
+        h("div", { className: "movies-grid" },
+            shown.map((movie) =>
+                h(MovieCard, { key: movie.id, movie: movie, onDelete: null, onDetail: openDetail, showDelete: false })
+            )
+        ),
+        detail ? h("div", { className: "modal-backdrop", onClick: () => setDetail(null) },
+            h("div", { className: "modal", onClick: (e) => e.stopPropagation() },
+                h("button", { className: "modal-close", onClick: () => setDetail(null) }, "✕"),
+                h("div", { className: "modal-content" },
+                    h("img", {
+                        src: detail.poster || "https://via.placeholder.com/300x450?text=Sin+imagen",
+                        alt: detail.title
+                    }),
+                    h("div", null,
+                        h("h2", null, detail.title + " (" + detail.year + ")"),
+                        detail.genre ? h("p", null, h("strong", null, "Género:"), " " + detail.genre) : null,
+                        detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
+                        detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
+                        detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
+                        detail.plot ? h("p", null, detail.plot) : null
+                    )
+                )
+            )
+        ) : null
+    );
+}
+
+/* ---------- UserSearch: buscar y seguir usuarios ---------- */
+function UserSearch(props) {
+    const currentUser = props.currentUser;
+    const onNavigate = props.onNavigate;
+    const queryState = React.useState("");
+    const query = queryState[0];
+    const setQuery = queryState[1];
+    const resultsState = React.useState([]);
+    const results = resultsState[0];
+    const setResults = resultsState[1];
+    const loadingState = React.useState(false);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+    const followingMapState = React.useState({});
+    const followingMap = followingMapState[0];
+    const setFollowingMap = followingMapState[1];
+
+    const search = async (q) => {
+        if (!q || !q.trim()) {
+            setResults([]);
+            return;
+        }
+        setLoading(true);
+        try {
+            const res = await fetch("/api/users/search?q=" + encodeURIComponent(q.trim()));
+            const data = await res.json();
+            setResults(Array.isArray(data.users) ? data.users : []);
+            // Cargar estado de seguimiento
+            if (currentUser && data.users.length > 0) {
+                const ids = data.users.map(u => u.id);
+                const followRes = await fetch("/api/users/me/following", { headers: authHeaders() });
+                const followData = await followRes.json();
+                const followingIds = (followData.users || []).map(u => u.id);
+                const map = {};
+                followingIds.forEach(id => map[id] = true);
+                setFollowingMap(map);
+            }
+        } catch (e) {
+            setResults([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        const timer = setTimeout(() => search(query), 300);
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    const handleFollow = async (targetUserId) => {
+        if (!currentUser) {
+            onNavigate("auth");
+            return;
+        }
+        const isF = followingMap[targetUserId];
+        try {
+            if (isF) {
+                await fetch("/api/users/" + encodeURIComponent(targetUserId) + "/follow", {
+                    method: "DELETE",
+                    headers: authHeaders()
+                });
+            } else {
+                await fetch("/api/users/" + encodeURIComponent(targetUserId) + "/follow", {
+                    method: "POST",
+                    headers: authHeaders()
+                });
+            }
+            setFollowingMap(prev => ({ ...prev, [targetUserId]: !isF }));
+        } catch (e) {
+            // error silencioso
+        }
+    };
+
+    return h("div", { className: "movies-page" },
+        h("div", { className: "page-head" },
+            h("h1", null, "Buscar usuarios"),
+            h("p", { className: "muted" }, "Encuentra amigos y descubre sus colecciones")
+        ),
+        h("div", { className: "search-bar" },
+            h("input", {
+                type: "text",
+                placeholder: "Buscar por nombre, apodo o email...",
+                value: query,
+                onChange: (e) => setQuery(e.target.value),
+                autoFocus: true
+            })
+        ),
+        loading ? h("p", { className: "muted" }, "Buscando...") : null,
+        !loading && query && results.length === 0 ? h("p", { className: "muted" }, "No se encontraron usuarios") : null,
+        h("div", { className: "user-list" },
+            results.map((u) =>
+                h("div", { key: u.id, className: "user-item" },
+                    h("div", { className: "user-avatar" },
+                        u.photoURL ? h("img", { src: u.photoURL, alt: u.nickname || u.name }) : h("span", null, (u.nickname || u.name || "U")[0].toUpperCase())
+                    ),
+                    h("div", { className: "user-info" },
+                        h("strong", null, u.nickname || u.name),
+                        h("span", { className: "muted" }, "@" + (u.id.split("@")[0] || u.id))
+                    ),
+                    u.id !== currentUser?.id && h("button", {
+                        className: "btn-primary btn-small" + (followingMap[u.id] ? " following" : ""),
+                        onClick: () => handleFollow(u.id)
+                    }, followingMap[u.id] ? "Siguiendo" : "Seguir")
+                )
+            )
+        )
+    );
+}
+
+/* ---------- FriendsPage: mis amigos (following/followers) ---------- */
+function FriendsPage(props) {
+    const currentUser = props.currentUser;
+    const onNavigate = props.onNavigate;
+    const tabState = React.useState("following");
+    const tab = tabState[0];
+    const setTab = tabState[1];
+    const followingState = React.useState([]);
+    const following = followingState[0];
+    const setFollowing = followingState[1];
+    const followersState = React.useState([]);
+    const followers = followersState[0];
+    const setFollowers = followersState[1];
+    const loadingState = React.useState(true);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+    const followingMapState = React.useState({});
+    const followingMap = followingMapState[0];
+    const setFollowingMap = followingMapState[1];
+
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [followRes, followerRes] = await Promise.all([
+                fetch("/api/users/me/following", { headers: authHeaders() }),
+                fetch("/api/users/me/followers", { headers: authHeaders() })
+            ]);
+            const followData = await followRes.json();
+            const followerData = await followerRes.json();
+            setFollowing(Array.isArray(followData.users) ? followData.users : []);
+            setFollowers(Array.isArray(followerData.users) ? followerData.users : []);
+            const ids = [...(followData.users || []).map(u => u.id), ...(followerData.users || []).map(u => u.id)];
+            const uniqueIds = [...new Set(ids)];
+            const map = {};
+            uniqueIds.forEach(id => map[id] = true);
+            setFollowingMap(map);
+        } catch (e) {
+            setFollowing([]);
+            setFollowers([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        loadData();
+    }, []);
+
+    const handleUnfollow = async (targetUserId) => {
+        try {
+            await fetch("/api/users/" + encodeURIComponent(targetUserId) + "/follow", {
+                method: "DELETE",
+                headers: authHeaders()
+            });
+            setFollowing(prev => prev.filter(u => u.id !== targetUserId));
+            setFollowers(prev => prev.filter(u => u.id !== targetUserId));
+            setFollowingMap(prev => ({ ...prev, [targetUserId]: false }));
+        } catch (e) {
+            // error silencioso
+        }
+    };
+
+    const handleFollow = async (targetUserId) => {
+        try {
+            await fetch("/api/users/" + encodeURIComponent(targetUserId) + "/follow", {
+                method: "POST",
+                headers: authHeaders()
+            });
+            setFollowingMap(prev => ({ ...prev, [targetUserId]: true }));
+            loadData();
+        } catch (e) {
+            // error silencioso
+        }
+    };
+
+    const currentList = tab === "following" ? following : followers;
+    const currentListTitle = tab === "following" ? "Siguiendo" : "Seguidores";
+
+    if (loading) return h("div", { className: "movies-page" }, h("p", { className: "muted" }, "Cargando..."));
+
+    return h("div", { className: "movies-page" },
+        h("div", { className: "page-head" },
+            h("h1", null, "Mis amigos"),
+            h("p", { className: "muted" }, "Gestiona a quién sigues y quién te sigue")
+        ),
+        h("div", { className: "tabs" },
+            h("button", { className: "tab" + (tab === "following" ? " active" : ""), onClick: () => setTab("following") }, "Siguiendo (" + following.length + ")"),
+            h("button", { className: "tab" + (tab === "followers" ? " active" : ""), onClick: () => setTab("followers") }, "Seguidores (" + followers.length + ")")
+        ),
+        currentList.length === 0 ? h("p", { className: "muted" }, tab === "following" ? "No sigues a nadie todavía. Busca usuarios para empezar." : "Aún no tienes seguidores") : null,
+        h("div", { className: "user-list" },
+            currentList.map((u) =>
+                h("div", { key: u.id, className: "user-item" },
+                    h("div", { className: "user-avatar" },
+                        u.photoURL ? h("img", { src: u.photoURL, alt: u.nickname || u.name }) : h("span", null, (u.nickname || u.name || "U")[0].toUpperCase())
+                    ),
+                    h("div", { className: "user-info" },
+                        h("strong", null, u.nickname || u.name),
+                        h("span", { className: "muted" }, "@" + (u.id.split("@")[0] || u.id))
+                    ),
+                    u.id !== currentUser.id && h("button", {
+                        className: "btn-primary btn-small" + (followingMap[u.id] ? " following" : ""),
+                        onClick: () => followingMap[u.id] ? handleUnfollow(u.id) : handleFollow(u.id)
+                    }, followingMap[u.id] ? "Dejar de seguir" : "Seguir")
+                )
+            )
+        )
+    );
+}
+
+/* ---------- ProfileSettings: configuración de perfil ---------- */
+function ProfileSettings(props) {
+    const currentUser = props.currentUser;
+    const onNavigate = props.onNavigate;
+    const nicknameState = React.useState(currentUser?.nickname || currentUser?.name || "");
+    const nickname = nicknameState[0];
+    const setNickname = nicknameState[1];
+    const themeState = React.useState(currentUser?.colorTheme || "default");
+    const theme = themeState[0];
+    const setTheme = themeState[1];
+    const errorState = React.useState(null);
+    const error = errorState[0];
+    const setError = errorState[1];
+    const successState = React.useState(null);
+    const success = successState[0];
+    const setSuccess = successState[1];
+    const loadingState = React.useState(false);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+
+    React.useEffect(() => {
+        if (currentUser) {
+            setNickname(currentUser.nickname || currentUser.name || "");
+            setTheme(currentUser.colorTheme || "default");
+        }
+    }, [currentUser]);
+
+    React.useEffect(() => {
+        applyColorTheme(theme);
+    }, [theme]);
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setError(null);
+        setSuccess(null);
+        const cleanNickname = nickname.trim();
+        if (cleanNickname.length < 2) {
+            setError("El apodo debe tener al menos 2 caracteres");
+            return;
+        }
+        if (cleanNickname.length > 30) {
+            setError("El apodo no puede exceder 30 caracteres");
+            return;
+        }
+        setLoading(true);
+        try {
+            const res = await fetch("/api/auth/profile", {
+                method: "PUT",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify({ nickname: cleanNickname, colorTheme: theme })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "No se pudo actualizar");
+            setSuccess("Perfil actualizado correctamente");
+            // Actualizar usuario en estado global
+            if (props.onUpdateUser) {
+                props.onUpdateUser({ ...currentUser, nickname: cleanNickname, colorTheme: theme, prefs: { ...currentUser.prefs, nickname: cleanNickname, colorTheme: theme } });
+            }
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return h("div", { className: "movies-page" },
+        h("div", { className: "page-head" },
+            h("h1", null, "Configuración de perfil"),
+            h("p", { className: "muted" }, "Personaliza tu apodo visible y el tema de color")
+        ),
+        error ? h("div", { className: "error-toast" }, error) : null,
+        success ? h("div", { className: "success-toast" }, success) : null,
+        h("form", { className: "settings-form", onSubmit: handleSave },
+            h("div", { className: "settings-section" },
+                h("h2", null, "Apodo visible"),
+                h("div", { className: "auth-field" },
+                    h("label", null, "Apodo (nombre público)"),
+                    h("input", {
+                        type: "text",
+                        value: nickname,
+                        onChange: (e) => setNickname(e.target.value),
+                        placeholder: "Tu apodo",
+                        maxLength: 30,
+                        autoComplete: "nickname"
+                    }),
+                    h("small", { className: "muted" }, "Este nombre será visible para otros usuarios. Mínimo 2, máximo 30 caracteres.")
+                )
+            ),
+            h("div", { className: "settings-section" },
+                h("h2", null, "Tema de color"),
+                h("p", { className: "muted" }, "Elige una paleta de colores para la interfaz (botones, enlaces, acentos)"),
+                h("div", { className: "theme-options" },
+                    Object.entries(COLOR_THEMES).map(([key, t]) =>
+                        h("button", {
+                            key: key,
+                            type: "button",
+                            className: "theme-option" + (theme === key ? " selected" : ""),
+                            onClick: () => setTheme(key),
+                            style: {
+                                borderColor: t.primary,
+                                backgroundColor: theme === key ? t.primaryLight : "transparent"
+                            }
+                        },
+                            h("div", { className: "theme-preview", style: { backgroundColor: t.primary } }),
+                            h("div", null,
+                                h("strong", null, t.name),
+                                h("br"),
+                                h("small", { className: "muted" }, "Principal: " + t.primary + " · Acento: " + t.accent)
+                            )
+                        )
+                    )
+                )
+            ),
+            h("button", { className: "btn-primary", type: "submit", disabled: loading },
+                loading ? "Guardando..." : "Guardar cambios"
+            )
+        )
+    );
+}
+
 /* ---------- CookieConsentBanner ---------- */
 function CookieConsentBanner() {
     const consentState = React.useState(false);
@@ -1782,6 +2387,15 @@ function App() {
         fetchMovies();
         restoreSession();
     }, []);
+
+    // Aplicar tema de color del usuario al cargar y cuando cambia
+    useEffect(() => {
+        if (user && user.colorTheme) {
+            applyColorTheme(user.colorTheme);
+        } else {
+            applyColorTheme("default");
+        }
+    }, [user]);
 
     const fetchMovies = async () => {
         setLoadingList(true);
@@ -1899,6 +2513,22 @@ function App() {
                 : page === "cuenta"
                 ? (user
                     ? h(MiCuenta, { user: user, movies: movies, loadingList: loadingList, onDelete: handleDelete })
+                    : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
+                : page === "perfil"
+                ? (user
+                    ? h(UserProfile, { userId: new URLSearchParams(window.location.search).get("id") || user.id, currentUser: user, onNavigate: navigate, onDetail: (m) => { /* handled by parent */ } })
+                    : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
+                : page === "buscar-usuarios"
+                ? (user
+                    ? h(UserSearch, { currentUser: user, onNavigate: navigate })
+                    : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
+                : page === "amigos"
+                ? (user
+                    ? h(FriendsPage, { currentUser: user, onNavigate: navigate })
+                    : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
+                : page === "configuracion"
+                ? (user
+                    ? h(ProfileSettings, { currentUser: user, onNavigate: navigate, onUpdateUser: (u) => setUser(u) })
                     : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
                 : h(MediaPage, {
                     key: page,
