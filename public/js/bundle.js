@@ -9,7 +9,7 @@ const { useState, useEffect } = React;
 const h = React.createElement;
 
 const BRAND = "CineAIros";
-const SLOGAN = "Descubre, explora y guarda tus películas favoritas.";
+const SLOGAN = "¡Descubre, explora y guarda tus películas favoritas!";
 
 // "Popular ahora" se carga desde Firebase a través de /api/movies/popular.
 
@@ -353,7 +353,7 @@ function LandingPage(props) {
         h("section", { className: "hero" },
             h("div", { className: "hero-text" },
                 h("p", { className: "hero-kicker" }, BRAND),
-                h("h1", null, "Descubre, explora", h("br", null), "y guarda tus favoritas."),
+                h("h1", null, "Descubre, explora", h("br", null), "y guarda tus favoritas"),
                 h("p", { className: "hero-sub" }, SLOGAN),
                 h("div", { className: "hero-actions" },
                     h("button", { className: "btn-primary btn-big", onClick: onExplore }, "Continuar ahora →")
@@ -382,7 +382,7 @@ function LandingPage(props) {
             h("div", { className: "feature" },
                 h("span", { className: "feature-icon" }, "01"),
                 h("h3", null, "Encuentra tu próxima favorita"),
-                h("p", null, "Busca entre miles de películas por su título.")
+                h("p", null, "Busca entre miles de películas por su título")
             ),
             h("div", { className: "feature" },
                 h("span", { className: "feature-icon" }, "02"),
@@ -392,12 +392,12 @@ function LandingPage(props) {
             h("div", { className: "feature" },
                 h("span", { className: "feature-icon" }, "03"),
                 h("h3", null, "Guarda tu colección"),
-                h("p", null, "Guarda las que te gusten y tenlas siempre a mano.")
+                h("p", null, "Guarda las que te gusten y tenlas siempre a mano")
             )
         ),
         h("section", { className: "cta-band" },
             h("h2", null, "¿Empezamos?"),
-            h("p", null, "Busca tu primera película, guárdala y aparecerá en tu colección."),
+            h("p", null, "Busca tu primera película, guárdala y aparecerá en tu colección"),
             h("button", { className: "btn-primary btn-big", onClick: onExplore }, "Continuar ahora")
         )
     );
@@ -1335,7 +1335,7 @@ function MediaPage(props) {
         const genre = genreFilter || "";
         const hasFilters = year !== null || min > 0 || genre !== "";
         if (!q && !hasFilters) {
-            setError("Escribe un título o elige algún filtro para explorar.");
+            setError("Escribe un título o elige algún filtro para explorar");
             return;
         }
         setLoading(true);
@@ -1576,7 +1576,7 @@ function MediaPage(props) {
                 showDelete: false,
                 emptyText: "Haz una búsqueda para ver aquí más resultados."
             }),
-        h("p", { className: "muted hint" }, user ? "Lo que guardes lo encontrarás en tu página personal." : "Entra en tu cuenta para tener tu página personal con tu colección."),
+        h("p", { className: "muted hint" }, user ? "Lo que guardes lo encontrarás en tu página personal." : "Entra en tu cuenta para tener tu página personal con tu colección"),
         detail ? h("div", { className: "modal-backdrop", onClick: () => setDetail(null) },
             h("div", { className: "modal", onClick: (e) => e.stopPropagation() },
                 h("button", { className: "modal-close", onClick: () => setDetail(null) }, "✕"),
@@ -1660,7 +1660,7 @@ function MiCuenta(props) {
             onDelete: onDelete,
             onDetail: openDetail,
             showDelete: true,
-            emptyText: "Aún no guardaste películas. Explora Películas y pulsa Guardar."
+            emptyText: "Aún no guardaste películas. Explora Películas y pulsa Guardar"
         }),
         h("h2", null, "Todas tus películas"),
         loadingList ? h("p", { className: "muted" }, "Cargando lista...") : null,
@@ -1696,31 +1696,20 @@ function MiCuenta(props) {
 
 /* ---------- CookieConsentBanner ---------- */
 function CookieConsentBanner() {
-    const consentState = React.useState(() => {
-        try {
-            return window.localStorage.getItem("cineairos_cookie_consent");
-        } catch (e) {
-            return null;
-        }
-    });
+    const consentState = React.useState(false);
     const consent = consentState[0];
     const setConsent = consentState[1];
 
     if (consent) return null;
 
     const handleChoice = (choice) => {
-        try {
-            window.localStorage.setItem("cineairos_cookie_consent", choice);
-        } catch (e) {
-            /* sin almacenamiento */
-        }
-        setConsent(choice);
+        setConsent(true);
     };
 
     return h("div", { className: "cookie-banner" },
         h("div", { className: "cookie-content" },
             h("p", { className: "cookie-text" },
-                "Utilizamos cookies propias y de terceros para asegurar el funcionamiento de la web, analizar el tráfico y personalizar la experiencia. Puedes aceptar todas o elegir solo las esenciales."
+                "Utilizamos cookies propias y de terceros para asegurar el funcionamiento de la web, analizar el tráfico y personalizar la experiencia. Puedes aceptar todas o elegir solo las esenciales!"
             ),
             h("div", { className: "cookie-actions" },
                 h("button", {
