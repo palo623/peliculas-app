@@ -1012,7 +1012,7 @@ function RegisterPage(props) {
     );
 
     const renderStep2 = () => h("form", { onSubmit: handleQuestionnaire },
-        h("p", { className: "muted" }, "Solo 2 preguntas rápidas para personalizar tu experiencia."),
+        h("p", { className: "muted" }, "Solo 3 preguntas rápidas para personalizar tu experiencia."),
         verificationSent
             ? h("div", { className: "success" },
                 "Te hemos enviado un correo de verificación. No se abrirá tu sesión hasta que confirmes tu dirección.",
@@ -1078,7 +1078,7 @@ function RegisterPage(props) {
             ) : (
                 React.createElement(React.Fragment, null,
                     h("h1", null, "Cuéntanos tus gustos"),
-                    h("p", { className: "muted" }, "Paso 2 de 2: preferencias"),
+                    h("p", { className: "muted" }, "Paso 2 de 3: preferencias."),
                     error ? h("p", { className: "error" }, error) : null,
                     renderStep2()
                 )
