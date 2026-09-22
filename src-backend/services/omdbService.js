@@ -84,19 +84,47 @@ function normalizeType(t) {
 }
 
 const omdbService = {
+    OMDB_BASE_URL: "https://www.omdbapi.com/",
     // Detalle exacto por IMDb ID. El catálogo se carga con este método.
     getById: async (imdbID) => {
         const id = (imdbID || "").trim();
         if (!/^tt\d+$/i.test(id)) {
             throw new Error("IMDb ID inválido");
         }
-        const url = `${OMDB_BASE_URL}?i=${encodeURIComponent(id)}&apikey=${OMDB_API_KEY}`;
+        const url = `${omdbService.OMDB_BASE_URL}?i=${encodeURIComponent(id)}&apikey=${OMDB_API_KEY}`;
         const data = await fetchWithTimeout(url);
 
         if (data.Response === "False") {
             throw new Error(data.Error || "Película no encontrada");
         }
         return data;
+    },
+
+    // Obtiene episodios de una temporada específica.
+    getEpisodesBySeason: async (imdbID, season) => {
+        const id = (imdbID || "").trim();
+        if (!/^tt\d+$/i.test(id)) {
+            throw new Error("IMDb ID inválido");
+        }
+        const seasonNum = Number.parseInt(season, 10);
+        if (!Number.isInteger(seasonNum) || seasonNum < 1) {
+            throw new Error("Temporada inválida");
+        }
+        const url = `${omdbService.OMDB_BASE_URL}?i=${encodeURIComponent(id)}&Season=${seasonNum}&type=series&apikey=${OMDB_API_KEY}`;
+        const data = await fetchWithTimeout(url);
+
+        if (data.Response === "False") {
+            throw new Error(data.Error || "Episodios no encontrados");
+        }
+        return (data.Episodes || []).map((ep) => ({
+            Episode: Number.parseInt(ep.Episode, 10) || 0,
+            Title: ep.Title || "Sin título",
+            Released: ep.Released || "N/A",
+            imdbRating: ep.imdbRating && ep.imdbRating !== "N/A" ? ep.imdbRating : null,
+            Runtime: ep.Runtime && ep.Runtime !== "N/A" ? ep.Runtime : null,
+            Plot: ep.Plot && ep.Plot !== "N/A" ? ep.Plot : "Sin sinopsis disponible.",
+            imdbID: ep.imdbID || null
+        }));
     },
 
     // Búsqueda por lista. Solo la usan los scripts de carga del catálogo.
@@ -106,7 +134,7 @@ const omdbService = {
         const safePage = Math.min(Math.max(p, 1), 100);
         const year = normalizeYear(opts.year);
         const type = normalizeType(opts.type);
-        let url = `${OMDB_BASE_URL}?s=${encodeURIComponent(q)}&page=${safePage}&apikey=${OMDB_API_KEY}`;
+        let url = `${omdbService.OMDB_BASE_URL}?s=${encodeURIComponent(q)}&page=${safePage}&apikey=${OMDB_API_KEY}`;
         if (year) url += `&y=${year}`;
         if (type) url += `&type=${type}`;
         const data = await fetchWithTimeout(url);
