@@ -2473,6 +2473,25 @@ function MiCuenta(props) {
     const detailLoadingState = React.useState(false);
     const detailLoading = detailLoadingState[0];
     const setDetailLoading = detailLoadingState[1];
+    // Reviews state
+    const showReviewsState = React.useState(false);
+    const showReviews = showReviewsState[0];
+    const setShowReviews = showReviewsState[1];
+    const reviewsSortState = React.useState("relevance");
+    const reviewsSort = reviewsSortState[0];
+    const setReviewsSort = reviewsSortState[1];
+    const reviewsState = React.useState([]);
+    const reviews = reviewsState[0];
+    const setReviews = reviewsState[1];
+    const writingReviewState = React.useState(false);
+    const writingReview = writingReviewState[0];
+    const setWritingReview = writingReviewState[1];
+    const newReviewTextState = React.useState("");
+    const newReviewText = newReviewTextState[0];
+    const setNewReviewText = newReviewTextState[1];
+    const submittingReviewState = React.useState(false);
+    const submittingReview = submittingReviewState[0];
+    const setSubmittingReview = submittingReviewState[1];
     const shown = movies || [];
     const recent = shown.slice(0, 10);
 
@@ -2541,7 +2560,139 @@ function MiCuenta(props) {
                         detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
                         detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
                         detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
-                        detail.plot ? h("p", null, detail.plot) : null
+                        detail.plot ? h("p", null, detail.plot) : null,
+                        h("div", { className: "result-actions" },
+                            h("button", { className: "btn-ghost", type: "button", onClick: () => { setShowReviews(true); setWritingReview(false); } }, "Reseñas"),
+                            h("button", { className: "btn-ghost", type: "button", onClick: () => setDetail(null) }, "Cerrar")
+                        )
+                    )
+                )
+            )
+        ) : null,
+        detail && showReviews ? h("div", { className: "modal-backdrop", onClick: () => { setShowReviews(false); setWritingReview(false); } },
+            h("div", { className: "modal modal-reviews", onClick: (e) => e.stopPropagation() },
+                h("button", { className: "modal-close", onClick: () => { setShowReviews(false); setWritingReview(false); } }, "✕"),
+                h("div", { className: "modal-content" },
+                    h("h2", null, "Reseñas de " + detail.title),
+                    writingReview ? h("div", { className: "review-form" },
+                        user ? h("div", null,
+                            h("h3", null, "Escribe tu reseña"),
+                            h("textarea", {
+                                value: newReviewText,
+                                onChange: (e) => setNewReviewText(e.target.value),
+                                placeholder: "¿Qué te pareció? (mín. 50 caracteres)",
+                                rows: 4,
+                                maxLength: 2000
+                            }),
+                            newReviewText.length > 0 && newReviewText.length < 50 ? h("p", { className: "muted" }, "Mínimo 50 caracteres (" + newReviewText.length + "/50)") : null,
+                            h("div", { className: "result-actions" },
+                                h("button", {
+                                    className: "btn-primary",
+                                    onClick: () => {
+                                        if (newReviewText.trim().length >= 50) {
+                                            setSubmittingReview(true);
+                                            const newReview = {
+                                                id: Date.now().toString(),
+                                                user: user.name || user.email,
+                                                userId: user.id,
+                                                text: newReviewText.trim(),
+                                                createdAt: new Date().toISOString(),
+                                                upvotes: 0,
+                                                downvotes: 0,
+                                                userVote: 0,
+                                                replies: []
+                                            };
+                                            setReviews([newReview, ...reviews]);
+                                            setNewReviewText("");
+                                            setWritingReview(false);
+                                            setSubmittingReview(false);
+                                        }
+                                    },
+                                    disabled: submittingReview || newReviewText.trim().length < 50
+                                }, submittingReview ? "Publicando..." : "Publicar reseña"),
+                                h("button", { className: "btn-ghost", type: "button", onClick: () => { setWritingReview(false); setNewReviewText(""); } }, "Cancelar")
+                            )
+                        ) : h("div", { className: "auth-prompt" },
+                            h("p", null, "Para escribir una reseña necesitas iniciar sesión")
+                        )
+                    ) : h("div", { className: "reviews-section" },
+                        h("div", { className: "reviews-header" },
+                            h("h3", null, "Reseñas (" + reviews.length + ")"),
+                            h("button", {
+                                className: "btn-ghost btn-small",
+                                onClick: () => setWritingReview(true)
+                            }, "Escribir reseña")
+                        ),
+                        h("div", { className: "reviews-sort" },
+                            h("label", null, "Ordenar: "),
+                            h("select", {
+                                value: reviewsSort,
+                                onChange: (e) => setReviewsSort(e.target.value)
+                            },
+                                h("option", { value: "relevance" }, "Mayor relevancia"),
+                                h("option", { value: "votes" }, "Más votados"),
+                                h("option", { value: "recent" }, "Más recientes")
+                            )
+                        ),
+                        reviews.length === 0 ? h("p", { className: "muted" }, "Aún no hay reseñas. ¡Sé el primero en escribir una!") : h("div", { className: "reviews-list" },
+                            reviews
+                                .slice()
+                                .sort((a, b) => {
+                                    if (reviewsSort === "votes") return (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes);
+                                    if (reviewsSort === "recent") return new Date(b.createdAt) - new Date(a.createdAt);
+                                    return (b.upvotes - b.downvotes + (b.replies?.length || 0)) - (a.upvotes - a.downvotes + (a.replies?.length || 0));
+                                })
+                                .map((review) => h("div", { key: review.id, className: "review-item" },
+                                    h("div", { className: "review-header" },
+                                        h("strong", null, review.user),
+                                        h("span", { className: "review-date" }, new Date(review.createdAt).toLocaleDateString("es-ES"))
+                                    ),
+                                    h("p", { className: "review-text" }, review.text),
+                                    h("div", { className: "review-actions" },
+                                        h("button", {
+                                            className: "vote-btn" + (review.userVote === 1 ? " voted" : ""),
+                                            onClick: () => {
+                                                const updated = reviews.map(r => {
+                                                    if (r.id === review.id) {
+                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
+                                                        if (uv === 1) { up--; uv = 0; }
+                                                        else { up++; if (uv === -1) { down--; } uv = 1; }
+                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
+                                                    }
+                                                    return r;
+                                                });
+                                                setReviews(updated);
+                                            }
+                                        }, "👍 " + review.upvotes),
+                                        h("button", {
+                                            className: "vote-btn" + (review.userVote === -1 ? " voted" : ""),
+                                            onClick: () => {
+                                                const updated = reviews.map(r => {
+                                                    if (r.id === review.id) {
+                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
+                                                        if (uv === -1) { down--; uv = 0; }
+                                                        else { down++; if (uv === 1) { up--; } uv = -1; }
+                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
+                                                    }
+                                                    return r;
+                                                });
+                                                setReviews(updated);
+                                            }
+                                        }, "👎 " + review.downvotes),
+                                        h("button", {
+                                            className: "btn-ghost btn-small",
+                                            onClick: () => alert("Responder a reseña - próximamente")
+                                        }, "Responder (" + (review.replies?.length || 0) + ")")
+                                    ),
+                                    review.replies && review.replies.length > 0 ? h("div", { className: "review-replies" },
+                                        review.replies.map((reply) => h("div", { key: reply.id, className: "reply-item" },
+                                            h("strong", null, reply.user),
+                                            h("span", { className: "reply-date" }, new Date(reply.createdAt).toLocaleDateString("es-ES")),
+                                            h("p", null, reply.text)
+                                        ))
+                                    ) : null
+                                ))
+                        )
                     )
                 )
             )

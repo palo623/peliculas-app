@@ -67,7 +67,8 @@ function toPopularItem(doc) {
         poster: doc.poster || null,
         rating: doc.rating || null,
         genre: doc.genre || null,
-        plot: doc.plot || null
+        plot: doc.plot || null,
+        runtime: doc.runtime || null
     };
 }
 

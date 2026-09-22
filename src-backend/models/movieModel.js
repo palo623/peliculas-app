@@ -70,7 +70,8 @@ function toPopularItem(doc) {
         // Extras si existen en Firestore (el front los ignora si no los usa).
         rating: doc.rating || null,
         genre: doc.genre || null,
-        plot: doc.plot || null
+        plot: doc.plot || null,
+        runtime: doc.runtime || null
     };
 }
 
