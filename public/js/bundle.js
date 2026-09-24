@@ -2542,19 +2542,25 @@ function SeriesPage(props) {
 }
 
 /* ---------- MiCuenta: pantalla personal del usuario ----------
-   Props: user, movies, loadingList, onDelete(id) */
+   Props: user, movies, series, loadingList, loadingSeries, onDelete(id), onDeleteSeries(id) */
 // MI_CUENTA_MARKER
 function MiCuenta(props) {
     const user = props.user;
     const movies = props.movies;
+    const series = props.series || [];
     const loadingList = props.loadingList;
+    const loadingSeries = props.loadingSeries;
     const onDelete = props.onDelete;
+    const onDeleteSeries = props.onDeleteSeries;
     const detailState = React.useState(null);
     const detail = detailState[0];
     const setDetail = detailState[1];
     const detailLoadingState = React.useState(false);
     const detailLoading = detailLoadingState[0];
     const setDetailLoading = detailLoadingState[1];
+    const detailTypeState = React.useState("movie");
+    const detailType = detailTypeState[0];
+    const setDetailType = detailTypeState[1];
     // Reviews state
     const showReviewsState = React.useState(false);
     const showReviews = showReviewsState[0];
@@ -2574,8 +2580,10 @@ function MiCuenta(props) {
     const submittingReviewState = React.useState(false);
     const submittingReview = submittingReviewState[0];
     const setSubmittingReview = submittingReviewState[1];
-    const shown = movies || [];
-    const recent = shown.slice(0, 10);
+    const shownMovies = movies || [];
+    const recentMovies = shownMovies.slice(0, 10);
+    const shownSeries = series || [];
+    const recentSeries = shownSeries.slice(0, 10);
 
     // Amistades state
     const friendsTabState = React.useState("friends"); // friends, requests, search
@@ -2606,22 +2614,24 @@ function MiCuenta(props) {
     const shareLink = shareLinkState[0];
     const setShareLink = shareLinkState[1];
 
-    const openDetail = async (movie) => {
-        if (movie.plot || movie.director) {
-            setDetail(movie);
+    const openDetail = async (item) => {
+        if (item.plot || item.director) {
+            setDetail(item);
             return;
         }
         setDetailLoading(true);
         try {
-            const url = movie.imdbID
-                ? "/api/movies/search?i=" + encodeURIComponent(movie.imdbID)
-                : "/api/movies/search?t=" + encodeURIComponent(movie.title);
+            const isSeries = detailType === "series" || item.type === "series";
+            const baseUrl = isSeries ? "/api/series/search" : "/api/movies/search";
+            const url = item.imdbID
+                ? baseUrl + "?i=" + encodeURIComponent(item.imdbID)
+                : baseUrl + "?t=" + encodeURIComponent(item.title);
             const res = await fetch(url);
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "No se pudo cargar el detalle");
             setDetail(data);
         } catch (err) {
-            setDetail(movie);
+            setDetail(item);
         } finally {
             setDetailLoading(false);
         }
@@ -2763,32 +2773,56 @@ function MiCuenta(props) {
 
     return h("div", { className: "movies-page" },
         h("div", { className: "page-head" },
-            h("h1", null, "Hola, " + user.name),
+            h("h1", null, "Hola, " + (user.nickname ? "@" + user.nickname : user.name)),
             h("p", { className: "muted" }, user.email),
-            user.nickname ? h("p", { className: "muted" }, "Nickname: @" + user.nickname) : null
+            user.nickname ? h("p", { className: "muted" }, "Nombre: " + user.name) : null
         ),
         h("div", { className: "hero-stats account-stats" },
-            h("div", null, h("strong", null, String((movies || []).length)), h("span", null, "guardadas")),
-            h("div", null, h("strong", null, String(shown.length)), h("span", null, "películas"))
+            h("div", null, h("strong", null, String((movies || []).length)), h("span", null, "películas")),
+            h("div", null, h("strong", null, String((series || []).length)), h("span", null, "series"))
         ),
-        detailLoading ? h("p", { className: "muted" }, "Cargando detalle...") : null,
+
+        /* ----- Películas recientes ----- */
+        h("h2", null, "Películas guardadas recientemente"),
         h(MovieCarousel, {
-            title: "Guardadas recientemente",
-            subtitle: "Tus últimas películas",
-            movies: recent,
+            title: "Últimas películas",
+            subtitle: "Tus últimas adiciones",
+            movies: recentMovies,
             onDelete: onDelete,
-            onDetail: openDetail,
+            onDetail: (m) => { setDetail(m); setDetailType("movie"); },
             showDelete: true,
             emptyText: "Aún no guardaste películas. Explora Películas y pulsa Guardar."
         }),
         h("h2", null, "Todas tus películas"),
         loadingList ? h("p", { className: "muted" }, "Cargando lista...") : null,
-        (!loadingList && shown.length === 0)
+        (!loadingList && shownMovies.length === 0)
             ? h("p", { className: "muted" }, "Vacío por ahora.")
             : null,
         h("div", { className: "movies-grid" },
-            shown.map((movie) =>
-                h(MovieCard, { key: movie.id, movie: movie, onDelete: onDelete, onDetail: openDetail, showDelete: true })
+            shownMovies.map((movie) =>
+                h(MovieCard, { key: movie.id, movie: movie, onDelete: onDelete, onDetail: (m) => { setDetail(m); setDetailType("movie"); }, showDelete: true })
+            )
+        ),
+
+        /* ----- Series recientes ----- */
+        h("h2", null, "Series guardadas recientemente"),
+        h(MovieCarousel, {
+            title: "Últimas series",
+            subtitle: "Tus últimas adiciones",
+            movies: recentSeries,
+            onDelete: onDeleteSeries,
+            onDetail: (s) => { setDetail(s); setDetailType("series"); },
+            showDelete: true,
+            emptyText: "Aún no guardaste series. Explora Series y pulsa Guardar."
+        }),
+        h("h2", null, "Todas tus series"),
+        loadingSeries ? h("p", { className: "muted" }, "Cargando lista...") : null,
+        (!loadingSeries && shownSeries.length === 0)
+            ? h("p", { className: "muted" }, "Vacío por ahora.")
+            : null,
+        h("div", { className: "movies-grid" },
+            shownSeries.map((serie) =>
+                h(MovieCard, { key: serie.id, movie: serie, onDelete: onDeleteSeries, onDetail: (s) => { setDetail(s); setDetailType("series"); }, showDelete: true })
             )
         ),
 
@@ -3295,7 +3329,15 @@ function App() {
                 ? h(RegisterPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), questionnaireOnly: true })
                 : page === "cuenta"
                 ? (user
-                    ? h(MiCuenta, { user: user, movies: movies, loadingList: loadingList, onDelete: handleDelete })
+                    ? h(MiCuenta, { 
+                        user: user, 
+                        movies: movies, 
+                        series: series, 
+                        loadingList: loadingList, 
+                        loadingSeries: loadingSeries,
+                        onDelete: handleDelete,
+                        onDeleteSeries: handleDeleteSeries
+                    })
                     : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
                 : page === "series"
                 ? h(SeriesPage, {
