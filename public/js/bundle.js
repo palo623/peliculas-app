@@ -2870,10 +2870,24 @@ function MiCuenta(props) {
             h("p", { className: "muted" }, user.email),
             user.nickname ? h("p", { className: "muted" }, "Nickname: @" + user.nickname) : null
         ),
+
+        /* ----- Índice / Tabla de contenidos ----- */
+        h("nav", { className: "profile-toc" },
+            h("h3", null, "📋 Índice"),
+            h("ul", null,
+                h("li", null, h("a", { href: "#peliculas-recientes", onClick: (e) => { e.preventDefault(); document.getElementById("peliculas-recientes")?.scrollIntoView({ behavior: "smooth" }); } }, "🎬 Películas recientes")),
+                h("li", null, h("a", { href: "#todas-peliculas", onClick: (e) => { e.preventDefault(); document.getElementById("todas-peliculas")?.scrollIntoView({ behavior: "smooth" }); } }, "📁 Todas las películas")),
+                h("li", null, h("a", { href: "#series-recientes", onClick: (e) => { e.preventDefault(); document.getElementById("series-recientes")?.scrollIntoView({ behavior: "smooth" }); } }, "📺 Series recientes")),
+                h("li", null, h("a", { href: "#todas-series", onClick: (e) => { e.preventDefault(); document.getElementById("todas-series")?.scrollIntoView({ behavior: "smooth" }); } }, "📁 Todas las series")),
+                h("li", null, h("a", { href: "#amistades", onClick: (e) => { e.preventDefault(); document.getElementById("amistades")?.scrollIntoView({ behavior: "smooth" }); } }, "👥 Amistades"))
+            )
+        ),
+
         h("div", { className: "hero-stats account-stats" },
             h("div", null, h("strong", null, String((movies || []).length)), h("span", null, "guardadas")),
             h("div", null, h("strong", null, String(shown.length)), h("span", null, "películas"))
         ),
+        h("h2", { id: "peliculas-recientes" }, "Películas guardadas recientemente"),
         detailLoading ? h("p", { className: "muted" }, "Cargando detalle...") : null,
         h(MovieCarousel, {
             title: "Guardadas recientemente",
@@ -2884,7 +2898,7 @@ function MiCuenta(props) {
             showDelete: true,
             emptyText: "Aún no guardaste películas. Explora Películas y pulsa Guardar"
         }),
-        h("h2", null, "Todas tus películas"),
+        h("h2", { id: "todas-peliculas" }, "Todas tus películas"),
         loadingList ? h("p", { className: "muted" }, "Cargando lista...") : null,
         (!loadingList && shown.length === 0)
             ? h("p", { className: "muted" }, "Vacío por ahora.")
@@ -2896,7 +2910,7 @@ function MiCuenta(props) {
         ),
 
         // Amistades section
-        h("section", { className: "friends-section", style: { marginTop: "3rem" } },
+        h("section", { id: "amistades", className: "friends-section", style: { marginTop: "3rem" } },
             h("h2", null, "Amistades"),
             h("div", { className: "friends-tabs" },
                 h("button", { className: "tab-btn" + (friendsTab === "friends" ? " active" : ""), onClick: () => setFriendsTab("friends") }, "Mis amigos (" + friends.length + ")"),

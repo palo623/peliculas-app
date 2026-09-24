@@ -1246,6 +1246,57 @@ a.footer-link:hover, button.footer-link:hover { color: var(--sky-bright); }
 .vote-btn:hover { border-color: var(--accent); color: var(--text); }
 .vote-btn.voted { background: var(--accent); border-color: var(--accent); color: #fff; }
 .review-replies { margin-top: 1rem; padding-left: 1rem; border-left: 2px solid var(--line); }
+
+/* ---------- Profile Table of Contents ---------- */
+.profile-toc {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1rem 1.5rem;
+    margin: 1.5rem 0;
+    position: sticky;
+    top: 80px;
+    z-index: 10;
+}
+.profile-toc h3 {
+    margin: 0 0 0.75rem;
+    font-size: 0.95rem;
+    color: var(--bronze-bright);
+    border-left: 3px solid var(--bronze);
+    padding-left: 0.75rem;
+}
+.profile-toc ul {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin: 0;
+    padding: 0;
+}
+.profile-toc li {
+    flex: 1;
+    min-width: 160px;
+}
+.profile-toc a {
+    color: var(--sky);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: block;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s;
+}
+.profile-toc a:hover {
+    color: var(--sky-bright);
+    border-bottom-color: var(--accent);
+    padding-left: 0.5rem;
+}
+@media (max-width: 600px) {
+    .profile-toc { position: static; }
+    .profile-toc ul { flex-direction: column; gap: 0.25rem; }
+    .profile-toc li { min-width: 0; }
+}
 .reply-item { margin-bottom: 0.75rem; }
 .reply-item strong { font-size: 0.9rem; }
 .reply-date { color: var(--muted-dim); font-size: 0.8rem; margin-left: 0.5rem; }
