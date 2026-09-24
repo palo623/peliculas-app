@@ -2830,13 +2830,26 @@ function MiCuenta(props) {
             h("p", { className: "muted" }, user.email),
             user.nickname ? h("p", { className: "muted" }, "Nombre: " + user.name) : null
         ),
+        
+        /* ----- Índice / Tabla de contenidos ----- */
+        h("nav", { className: "profile-toc" },
+            h("h3", null, "📋 Índice"),
+            h("ul", null,
+                h("li", null, h("a", { href: "#peliculas-recientes", onClick: (e) => { e.preventDefault(); document.getElementById("peliculas-recientes")?.scrollIntoView({ behavior: "smooth" }); } }, "🎬 Películas recientes")),
+                h("li", null, h("a", { href: "#todas-peliculas", onClick: (e) => { e.preventDefault(); document.getElementById("todas-peliculas")?.scrollIntoView({ behavior: "smooth" }); } }, "📁 Todas las películas")),
+                h("li", null, h("a", { href: "#series-recientes", onClick: (e) => { e.preventDefault(); document.getElementById("series-recientes")?.scrollIntoView({ behavior: "smooth" }); } }, "📺 Series recientes")),
+                h("li", null, h("a", { href: "#todas-series", onClick: (e) => { e.preventDefault(); document.getElementById("todas-series")?.scrollIntoView({ behavior: "smooth" }); } }, "📁 Todas las series")),
+                h("li", null, h("a", { href: "#amistades", onClick: (e) => { e.preventDefault(); document.getElementById("amistades")?.scrollIntoView({ behavior: "smooth" }); } }, "👥 Amistades"))
+            )
+        ),
+
         h("div", { className: "hero-stats account-stats" },
             h("div", null, h("strong", null, String((movies || []).length)), h("span", null, "películas")),
             h("div", null, h("strong", null, String((series || []).length)), h("span", null, "series"))
         ),
 
         /* ----- Películas recientes ----- */
-        h("h2", null, "Películas guardadas recientemente"),
+        h("h2", { id: "peliculas-recientes" }, "Películas guardadas recientemente"),
         h(MovieCarousel, {
             title: "Últimas películas",
             subtitle: "Tus últimas adiciones",
@@ -2846,7 +2859,7 @@ function MiCuenta(props) {
             showDelete: true,
             emptyText: "Aún no guardaste películas. Explora Películas y pulsa Guardar."
         }),
-        h("h2", null, "Todas tus películas"),
+        h("h2", { id: "todas-peliculas" }, "Todas tus películas"),
         loadingList ? h("p", { className: "muted" }, "Cargando lista...") : null,
         (!loadingList && shownMovies.length === 0)
             ? h("p", { className: "muted" }, "Vacío por ahora.")
@@ -2858,7 +2871,7 @@ function MiCuenta(props) {
         ),
 
         /* ----- Series recientes ----- */
-        h("h2", null, "Series guardadas recientemente"),
+        h("h2", { id: "series-recientes" }, "Series guardadas recientemente"),
         h(MovieCarousel, {
             title: "Últimas series",
             subtitle: "Tus últimas adiciones",
@@ -2868,7 +2881,7 @@ function MiCuenta(props) {
             showDelete: true,
             emptyText: "Aún no guardaste series. Explora Series y pulsa Guardar."
         }),
-        h("h2", null, "Todas tus series"),
+        h("h2", { id: "todas-series" }, "Todas tus series"),
         loadingSeries ? h("p", { className: "muted" }, "Cargando lista...") : null,
         (!loadingSeries && shownSeries.length === 0)
             ? h("p", { className: "muted" }, "Vacío por ahora.")
@@ -2880,7 +2893,7 @@ function MiCuenta(props) {
         ),
 
         // Amistades section
-        h("section", { className: "friends-section", style: { marginTop: "3rem" } },
+        h("section", { id: "amistades", className: "friends-section", style: { marginTop: "3rem" } },
             h("h2", null, "Amistades"),
             h("div", { className: "friends-tabs" },
                 h("button", { className: "tab-btn" + (friendsTab === "friends" ? " active" : ""), onClick: () => setFriendsTab("friends") }, "Mis amigos (" + friends.length + ")"),
@@ -2929,18 +2942,6 @@ function MiCuenta(props) {
             ) : null,
 
             friendsTab === "search" ? h("div", { className: "friends-content" },
-                h("div", { className: "share-link-box" },
-                    h("h3", null, "Tu enlace de invitación"),
-                    user.nickname ? h("div", { className: "share-link-row" },
-                        h("input", {
-                            type: "text",
-                            value: window.location.origin + "/?friend=" + user.nickname,
-                            readOnly: true,
-                            className: "share-link-input"
-                        }),
-                        h("button", { className: "btn-primary btn-small", onClick: copyShareLink }, shareLink ? "¡Copiado!" : "Copiar enlace")
-                    ) : h("p", { className: "muted" }, "Configura tu nickname en el registro para poder compartir tu enlace.")
-                ),
                 h("form", { onSubmit: handleSearch, className: "friend-search-form" },
                     h("input", {
                         type: "text",
