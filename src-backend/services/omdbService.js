@@ -115,6 +115,50 @@ const omdbService = {
             throw new Error(data.Error || "Sin resultados");
         }
         return data; // { Search: [...], totalResults, Response }
+    },
+
+    // Episodios de una temporada concreta (?i=tt...&Season=N).
+    // Devuelve { Season, Episodes: [...] }.
+    getSeason: async (imdbID, seasonNumber) => {
+        const id = (imdbID || "").trim();
+        if (!/^tt\d+$/i.test(id)) {
+            throw new Error("IMDb ID inválido");
+        }
+        const season = Number.parseInt(seasonNumber, 10);
+        if (!Number.isInteger(season) || season < 1) {
+            throw new Error("Número de temporada inválido");
+        }
+        const url = `${OMDB_BASE_URL}?i=${encodeURIComponent(id)}&Season=${season}&apikey=${OMDB_API_KEY}`;
+        const data = await fetchWithTimeout(url);
+
+        if (data.Response === "False") {
+            throw new Error(data.Error || "Temporada no encontrada");
+        }
+        return data;
+    },
+
+    // Cuenta los episodios de cada temporada de una serie leyendo OMDb
+    // temporada a temporada. Secuencial y con pausa para respetar la cuota.
+    // Devuelve [{ season, episodes }].
+    getSeasonCounts: async (imdbID, totalSeasons, delayMs = 300) => {
+        const total = Number.parseInt(totalSeasons, 10) || 0;
+        const counts = [];
+        if (total <= 0) return counts;
+        for (let season = 1; season <= total; season++) {
+            try {
+                const seasonData = await omdbService.getSeason(imdbID, season);
+                const episodes = Array.isArray(seasonData.Episodes) ? seasonData.Episodes.length : 0;
+                if (episodes > 0) {
+                    counts.push({ season, episodes });
+                }
+            } catch (error) {
+                console.warn(`[omdb] Temporada ${season} de ${imdbID} no disponible: ${error.message || error}`);
+            }
+            if (season < total) {
+                await new Promise((resolve) => setTimeout(resolve, delayMs));
+            }
+        }
+        return counts;
     }
 };
 

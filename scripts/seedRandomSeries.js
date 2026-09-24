@@ -1,5 +1,5 @@
 /**
- * Añade series aleatorias de OMDb a la colección movies (type: series) de Firestore.
+ * Añade series aleatorias de OMDb a la colección series de Firestore.
  * No borra series existentes.
  *
  * Uso:
@@ -69,7 +69,7 @@ function candidateKey(item) {
 }
 
 async function existingIds() {
-    const snapshot = await db.collection("movies").where("type", "==", "series").select("imdbID").get();
+    const snapshot = await db.collection("series").select("imdbID").get();
     return new Set(snapshot.docs.map((doc) => String(doc.data().imdbID || "").toLowerCase()).filter(Boolean));
 }
 
