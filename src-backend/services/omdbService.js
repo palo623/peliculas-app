@@ -74,12 +74,11 @@ function normalizeYear(y) {
     return n;
 }
 
-    // La app solo admite películas.
 function normalizeType(t) {
     if (t === undefined || t === null || String(t).trim() === "") return "movie";
     const v = String(t).toLowerCase().trim();
-    if (v !== "movie") {
-        throw new Error("Tipo inválido (solo se admiten películas)");
+    if (v !== "movie" && v !== "series") {
+        throw new Error("Tipo inválido (solo se admiten movie o series)");
     }
     return v;
 }
