@@ -2929,18 +2929,6 @@ function MiCuenta(props) {
             ) : null,
 
             friendsTab === "search" ? h("div", { className: "friends-content" },
-                h("div", { className: "share-link-box" },
-                    h("h3", null, "Tu enlace de invitación"),
-                    user.nickname ? h("div", { className: "share-link-row" },
-                        h("input", {
-                            type: "text",
-                            value: window.location.origin + "/?friend=" + user.nickname,
-                            readOnly: true,
-                            className: "share-link-input"
-                        }),
-                        h("button", { className: "btn-primary btn-small", onClick: copyShareLink }, shareLink ? "¡Copiado!" : "Copiar enlace")
-                    ) : h("p", { className: "muted" }, "Configura tu nickname en el registro para poder compartir tu enlace.")
-                ),
                 h("form", { onSubmit: handleSearch, className: "friend-search-form" },
                     h("input", {
                         type: "text",
