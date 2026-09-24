@@ -2773,7 +2773,7 @@ function MiCuenta(props) {
 
     return h("div", { className: "movies-page" },
         h("div", { className: "page-head" },
-            h("h1", null, "Hola, " + (user.nickname ? "@" + user.nickname : user.name)),
+            h("h1", null, "Hola, " + (user.nickname ? user.nickname : user.name)),
             h("p", { className: "muted" }, user.email),
             user.nickname ? h("p", { className: "muted" }, "Nombre: " + user.name) : null
         ),
