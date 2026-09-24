@@ -34,6 +34,7 @@ function publicUser(user) {
         id: user.id,
         name: user.name,
         email: user.email,
+        nickname: user.nickname || null,
         photoURL: user.photoURL || null,
         provider: user.provider || (user.passHash ? "password" : "firebase"),
         prefs: user.prefs || defaultPrefs()
@@ -52,6 +53,54 @@ async function findUserByEmail(email) {
     const doc = await db.collection("users").doc(email).get();
     if (!doc.exists) return null;
     return Object.assign({ id: doc.id }, doc.data());
+}
+
+async function findUserByNickname(nickname) {
+    if (!db) {
+        for (const u of localUsers.values()) {
+            if (u.nickname && u.nickname.toLowerCase() === nickname.toLowerCase()) return u;
+        }
+        return null;
+    }
+    const query = await db.collection("users").where("nickname", "==", nickname).limit(1).get();
+    if (query.empty) return null;
+    const doc = query.docs[0];
+    return Object.assign({ id: doc.id }, doc.data());
+}
+
+async function setUserNickname(userId, nickname) {
+    const cleanNickname = nickname.trim().toLowerCase();
+    if (cleanNickname.length < 3) {
+        const err = new Error("El nickname debe tener al menos 3 caracteres");
+        err.code = "INVALID_NICKNAME";
+        throw err;
+    }
+    if (cleanNickname.length > 30) {
+        const err = new Error("El nickname no puede superar 30 caracteres");
+        err.code = "INVALID_NICKNAME";
+        throw err;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(cleanNickname)) {
+        const err = new Error("El nickname solo puede contener letras, números y guión bajo");
+        err.code = "INVALID_NICKNAME";
+        throw err;
+    }
+    const existing = await findUserByNickname(cleanNickname);
+    if (existing && existing.id !== userId) {
+        const err = new Error("Ese nickname ya está en uso");
+        err.code = "NICKNAME_TAKEN";
+        throw err;
+    }
+    if (!db) {
+        const u = localUsers.get(userId);
+        if (u) {
+            u.nickname = cleanNickname;
+            localUsers.set(userId, u);
+        }
+        return cleanNickname;
+    }
+    await db.collection("users").doc(userId).set({ nickname: cleanNickname }, { merge: true });
+    return cleanNickname;
 }
 
 async function createSession(userId) {
@@ -216,6 +265,10 @@ const authService = {
         return merged;
     },
 
+    readSession: async (token) => {
+        return await readSession(token);
+    }
+
 };
 
-module.exports = { authService };
+module.exports = { authService, findUserByNickname, setUserNickname };
