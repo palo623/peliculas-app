@@ -2638,6 +2638,20 @@ function MiCuenta(props) {
     const shownSeries = series || [];
     const recentSeries = shownSeries.slice(0, 10);
 
+    // Top 5 combinado (películas + series) - estado para que el usuario pueda editarlo
+    const top5State = React.useState([]);
+    const top5 = top5State[0];
+    const setTop5 = top5State[1];
+    const editingTop5State = React.useState(false);
+    const editingTop5 = editingTop5State[0];
+    const setEditingTop5 = editingTop5State[1];
+
+    // Combinar películas y series para selección en Top 5
+    const allItems = [
+        ...shownMovies.map(m => ({ ...m, mediaType: 'movie' })),
+        ...shownSeries.map(s => ({ ...s, mediaType: 'series' }))
+    ];
+
     // Amistades state
     const friendsTabState = React.useState("friends"); // friends, requests, search
     const friendsTab = friendsTabState[0];
@@ -2835,6 +2849,7 @@ function MiCuenta(props) {
         h("nav", { className: "profile-toc" },
             h("h3", null, "📋 Índice"),
             h("ul", null,
+                h("li", null, h("a", { href: "#top5", onClick: (e) => { e.preventDefault(); document.getElementById("top5")?.scrollIntoView({ behavior: "smooth" }); } }, "⭐ Mi Top 5")),
                 h("li", null, h("a", { href: "#peliculas-recientes", onClick: (e) => { e.preventDefault(); document.getElementById("peliculas-recientes")?.scrollIntoView({ behavior: "smooth" }); } }, "🎬 Películas recientes")),
                 h("li", null, h("a", { href: "#todas-peliculas", onClick: (e) => { e.preventDefault(); document.getElementById("todas-peliculas")?.scrollIntoView({ behavior: "smooth" }); } }, "📁 Todas las películas")),
                 h("li", null, h("a", { href: "#series-recientes", onClick: (e) => { e.preventDefault(); document.getElementById("series-recientes")?.scrollIntoView({ behavior: "smooth" }); } }, "📺 Series recientes")),
@@ -2846,6 +2861,87 @@ function MiCuenta(props) {
         h("div", { className: "hero-stats account-stats" },
             h("div", null, h("strong", null, String((movies || []).length)), h("span", null, "películas")),
             h("div", null, h("strong", null, String((series || []).length)), h("span", null, "series"))
+        ),
+
+        /* ----- Top 5 Combinado (Películas + Series) ----- */
+        h("section", { id: "top5", className: "top5-section", style: { marginBottom: "2rem" } },
+            h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" } },
+                h("h2", null, "⭐ Mi Top 5 (Películas + Series)"),
+                !editingTop5 && top5.length < 5 && allItems.length > 0
+                    ? h("button", { className: "btn-primary btn-small", onClick: () => setEditingTop5(true) }, "Crear Top 5")
+                    : editingTop5
+                        ? h("div", { style: { display: "flex", gap: "0.5rem" } },
+                            h("button", { className: "btn-primary btn-small", onClick: () => setEditingTop5(false) }, "Guardar"),
+                            h("button", { className: "btn-ghost btn-small", onClick: () => { setTop5([]); setEditingTop5(false); } }, "Limpiar")
+                        )
+                        : top5.length > 0
+                            ? h("button", { className: "btn-ghost btn-small", onClick: () => setEditingTop5(true) }, "Editar Top 5")
+                            : null
+            ),
+
+            editingTop5 ? h("div", { className: "top5-editor" },
+                h("p", { className: "muted", style: { marginBottom: "1rem" } }, "Arrastra o haz click para añadir/quitar. Máximo 5 items."),
+                h("div", { className: "top5-available", style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "0.75rem", maxHeight: "300px", overflow: "auto" } },
+                    allItems.filter(item => !top5.some(t => t.id === item.id && t.mediaType === item.mediaType)).map(item =>
+                        h("div", {
+                            key: item.id + "-" + item.mediaType,
+                            className: "top5-item-available",
+                            onClick: () => top5.length < 5 && setTop5([...top5, item]),
+                            style: { 
+                                padding: "0.75rem", background: "var(--surface)", border: "1px solid var(--line)", 
+                                borderRadius: "8px", cursor: "pointer", textAlign: "center",
+                                transition: "all 0.2s", opacity: top5.length >= 5 ? 0.5 : 1
+                            }
+                        },
+                            h("img", { 
+                                src: item.poster || "https://via.placeholder.com/150x225?text=Sin+imagen", 
+                                alt: item.title, 
+                                style: { width: "100%", aspectRatio: "2/3", objectFit: "cover", borderRadius: "4px", marginBottom: "0.5rem" }
+                            }),
+                            h("div", { style: { fontWeight: 600, fontSize: "0.85rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, item.title),
+                            h("span", { className: "watching-badge", style: { fontSize: "0.7rem", marginTop: "0.25rem", display: "inline-block" } }, item.mediaType === "movie" ? "🎬 Película" : "📺 Serie")
+                        )
+                    )
+                )
+            ) : top5.length > 0 ? h("div", { className: "top5-display" },
+                h("ol", { style: { display: "flex", flexDirection: "column", gap: "0.75rem", counterReset: "top5" } },
+                    top5.map((item, idx) =>
+                        h("li", { 
+                            key: item.id + "-" + item.mediaType + "-" + idx,
+                            style: { 
+                                display: "flex", gap: "1rem", padding: "1rem", background: "var(--surface)", 
+                                border: "1px solid var(--line)", borderRadius: "8px",
+                                position: "relative"
+                            }
+                        },
+                            h("span", { 
+                                style: { 
+                                    fontSize: "2rem", fontWeight: 900, color: "var(--bronze)", 
+                                    minWidth: "50px", textAlign: "center",
+                                    display: "flex", alignItems: "center", justifyContent: "center"
+                                } 
+                            }, idx + 1),
+                            h("img", { 
+                                src: item.poster || "https://via.placeholder.com/100x150?text=Sin+imagen", 
+                                alt: item.title, 
+                                style: { width: "80px", aspectRatio: "2/3", objectFit: "cover", borderRadius: "6px", flexShrink: 0 }
+                            }),
+                            h("div", { style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" } },
+                                h("strong", { style: { fontSize: "1.1rem" } }, item.title),
+                                h("span", { className: "watching-badge", style: { width: "fit-content", fontSize: "0.75rem" } }, item.mediaType === "movie" ? "🎬 Película" : "📺 Serie"),
+                                item.rating && h("span", { style: { color: "var(--bronze-bright)", fontSize: "0.9rem" } }, "★ " + item.rating)
+                            ),
+                            h("button", { 
+                                className: "btn-ghost btn-small",
+                                onClick: () => setTop5(top5.filter((_, i) => i !== idx)),
+                                style: { alignSelf: "flex-start" }
+                            }, "Quitar")
+                        )
+                    )
+                )
+            ) : h("p", { className: "muted", style: { textAlign: "center", padding: "2rem" } }, 
+                "Aún no has creado tu Top 5. ¡Añade tus películas y series favoritas!"
+            )
         ),
 
         /* ----- Películas recientes ----- */
