@@ -307,19 +307,6 @@ node scripts/enrichSeriesSeasons.js --ids=tt0944947,tt4574334
 
 Rellena `totalSeasons` y `seasons[]` de cada serie del catálogo consultando OMDb temporada a temporada. Como OMDb Free tiene cuota diaria, se recomienda procesar en tandas con `--limit`. Ignora las series ya enriquecidas y actualiza también las copias guardadas por usuarios.
 
-### Enriquecimiento automático
-
-El servidor lanza una tanda diaria en segundo plano (una al arrancar y otra a la hora fijada) sin bloquear la web. Se configura con variables del `.env`:
-
-```env
-SEASON_ENRICH_ENABLED=true
-SEASON_ENRICH_DAILY_LIMIT=25
-SEASON_ENRICH_HOUR=4
-SEASON_ENRICH_DELAY=300
-```
-
-Con `SEASON_ENRICH_ENABLED=false` se desactiva por completo.
-
 ## Modelo de datos
 
 ### `users/{email}`
