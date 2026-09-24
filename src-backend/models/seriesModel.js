@@ -1,5 +1,7 @@
-// Este modelo separa dos usos de la colección movies:
-// catálogo público (búsqueda y populares) y colección personal (userId).
+// Las series viven en su propia colección "series" de Firestore.
+// La colección separa el catálogo público (búsqueda y populares)
+// de la colección personal mediante el campo userId.
+// Las películas usan la colección "movies" (ver movieModel.js).
 // La conexión se centraliza en ./firebase.js.
 // Soporta credenciales por .env o por firebase-key.json (legacy).
 const firebaseConn = require("./firebase");
@@ -68,7 +70,8 @@ function toPopularItem(doc) {
         rating: doc.rating || null,
         genre: doc.genre || null,
         plot: doc.plot || null,
-        runtime: doc.runtime || null
+        totalSeasons: doc.totalSeasons || null,
+        seasons: Array.isArray(doc.seasons) ? doc.seasons : null
     };
 }
 
@@ -76,6 +79,8 @@ const SeriesModel = {
     isFirestoreConnected: () => firebaseConn.isFirestoreConnected(),
 
     formatData: (rawJson) => {
+        const totalSeasonsRaw = rawJson.totalSeasons || rawJson.TotalSeasons;
+        const totalSeasons = Number.parseInt(totalSeasonsRaw, 10);
         return {
             title: rawJson.Title || "Sin título",
             year: rawJson.Year || "----",
@@ -88,6 +93,8 @@ const SeriesModel = {
             rating: rawJson.imdbRating && rawJson.imdbRating !== "N/A" ? rawJson.imdbRating : null,
             type: rawJson.Type || null,
             imdbID: rawJson.imdbID || null,
+            totalSeasons: !Number.isNaN(totalSeasons) && totalSeasons > 0 ? totalSeasons : null,
+            seasons: Array.isArray(rawJson.seasons) ? rawJson.seasons : [],
             createdAt: new Date().toISOString()
         };
     },
@@ -95,7 +102,7 @@ const SeriesModel = {
     getCatalogSeries: async () => {
         if (!db) return [];
         try {
-            const snapshot = await db.collection("movies").where("type", "==", "series").limit(5000).get();
+            const snapshot = await db.collection("series").limit(5000).get();
             return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             console.error("Error al leer el catálogo de series:", error.message || error);
@@ -162,7 +169,7 @@ const SeriesModel = {
         }
 
         try {
-            const docRef = db.collection("movies").doc(seriesId);
+            const docRef = db.collection("series").doc(seriesId);
             const existing = await docRef.get();
 
             if (existing.exists) {
@@ -188,7 +195,7 @@ const SeriesModel = {
         }
 
         try {
-            const snapshot = await db.collection("movies").where("userId", "==", userId).get();
+            const snapshot = await db.collection("series").where("userId", "==", userId).get();
             const series = [];
             snapshot.forEach((doc) => {
                 const data = doc.data() || {};
@@ -217,7 +224,7 @@ const SeriesModel = {
             return claimed;
         }
         try {
-            const snapshot = await db.collection("movies").get();
+            const snapshot = await db.collection("series").get();
             const batch = db.batch();
             let claimed = 0;
             snapshot.forEach((doc) => {
@@ -243,7 +250,7 @@ const SeriesModel = {
         if (!db) {
             return localSeries.find((m) => m.id === id && m.userId === userId) || null;
         }
-        const doc = await db.collection("movies").doc(id).get();
+        const doc = await db.collection("series").doc(id).get();
         if (!doc.exists) return null;
         const data = doc.data() || {};
         if (data.userId !== userId) return null;
@@ -258,13 +265,34 @@ const SeriesModel = {
             localSeries.splice(idx, 1);
             return true;
         }
-        const docRef = db.collection("movies").doc(id);
+        const docRef = db.collection("series").doc(id);
         const doc = await docRef.get();
         if (!doc.exists) return false;
         const data = doc.data() || {};
         if (data.userId !== userId) return false;
         await docRef.delete();
         return true;
+    },
+
+    updateSeasonsByImdbID: async (imdbID, totalSeasons, seasons) => {
+        if (!db || !imdbID) return 0;
+        try {
+            const snapshot = await db.collection("series").where("imdbID", "==", imdbID).get();
+            if (snapshot.empty) return 0;
+            const batch = db.batch();
+            snapshot.forEach((doc) => {
+                batch.update(doc.ref, {
+                    totalSeasons,
+                    seasons,
+                    dateEnriched: new Date().toISOString()
+                });
+            });
+            await batch.commit();
+            return snapshot.size;
+        } catch (error) {
+            console.error("Error al actualizar temporadas:", error.message || error);
+            return 0;
+        }
     },
 
     getPopularFromDb: async ({ year, limit }) => {
@@ -277,7 +305,7 @@ const SeriesModel = {
         } else {
             try {
                 const snapshot = await db
-                    .collection("movies")
+                    .collection("series")
                     .where("type", "==", "series")
                     .limit(500)
                     .get();
@@ -303,7 +331,7 @@ const SeriesModel = {
 
         if (filtered.length === 0 && db && !yearStr) {
             try {
-                const fallback = await db.collection("movies").limit(500).get();
+                const fallback = await db.collection("series").limit(500).get();
                 const all = [];
                 fallback.forEach((d) => {
                     all.push({ id: d.id, ...d.data() });

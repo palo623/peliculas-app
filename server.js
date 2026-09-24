@@ -36,6 +36,8 @@ const express = require("express");
 const cors = require("cors");
 const movieRoutes = require("./src-backend/routes/movieRoutes");
 const seriesRoutes = require("./src-backend/routes/seriesRoutes");
+const reviewRoutes = require("./src-backend/routes/reviewRoutes");
+const { startDailyEnrichment } = require("./src-backend/services/seasonEnrichmentService");
 
 const app = express();
 const PORT = Number.parseInt(process.env.PORT, 10) || 8080;
@@ -102,6 +104,7 @@ app.use("/api/series/search", (req, res, next) => {
 
 app.use("/api", movieRoutes);
 app.use("/api", seriesRoutes);
+app.use("/api", reviewRoutes);
 
 // Anti fuerza bruta en login/registro: 20 intentos por IP y minuto.
 const authHits = new Map();
@@ -164,3 +167,10 @@ if (!process.env.OMDB_API_KEY) {
 app.listen(PORT, () => {
     console.log(`Servidor arrancado en http://localhost:${PORT}`);
 });
+
+// Rellena temporadas/episodios de las series desde OMDb en segundo plano:
+// una tanda al arrancar (si hoy no se ha hecho ninguna) y una diaria a la hora
+// configurada. No bloquea el servidor. Se controla con las variables
+// SEASON_ENRICH_ENABLED, SEASON_ENRICH_DAILY_LIMIT, SEASON_ENRICH_HOUR y
+// SEASON_ENRICH_DELAY del .env.
+startDailyEnrichment();
