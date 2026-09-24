@@ -112,15 +112,30 @@ router.get("/auth/nickname/check/:nickname", async (req, res) => {
     }
 });
 
-// Amistades
-function friendsCollection(userId) {
+// Amistades: se almacenan en una colección global para que cada relación
+// tenga un único documento con from, to y status.
+function friendshipsCollection() {
     if (!db) return null;
-    return db.collection("users").doc(userId).collection("friends");
+    return db.collection("friendships");
 }
 
-function requestsCollection(userId) {
-    if (!db) return null;
-    return db.collection("users").doc(userId).collection("friendRequests");
+async function friendshipDocsForUser(userId, status) {
+    const [fromSnap, toSnap] = await Promise.all([
+        friendshipsCollection().where("from", "==", userId).get(),
+        friendshipsCollection().where("to", "==", userId).get()
+    ]);
+    const docs = new Map();
+    [...fromSnap.docs, ...toSnap.docs]
+        .filter((doc) => doc.data().status === status)
+        .forEach((doc) => docs.set(doc.id, doc));
+    return [...docs.values()];
+}
+
+async function userSummary(userId) {
+    const userDoc = await db.collection("users").doc(userId).get();
+    if (!userDoc.exists) return null;
+    const user = userDoc.data() || {};
+    return { id: user.id || userDoc.id, name: user.name, nickname: user.nickname, photoURL: user.photoURL };
 }
 
 // GET /api/auth/friends — lista de amigos aceptados
@@ -130,15 +145,13 @@ router.get("/auth/friends", async (req, res) => {
         const session = await authService.readSession ? await authService.readSession(token) : null;
         if (!session) return res.status(401).json({ error: "Sesión no válida" });
         if (!db) return res.json({ friends: [] });
-        const snap = await friendsCollection(session.userId).where("status", "==", "accepted").get();
+        const docs = await friendshipDocsForUser(session.userId, "accepted");
         const friends = [];
-        for (const doc of snap.docs) {
+        for (const doc of docs) {
             const data = doc.data();
-            const friendDoc = await db.collection("users").doc(data.friendId).get();
-            if (friendDoc.exists) {
-                const f = friendDoc.data();
-                friends.push({ id: f.id, name: f.name, nickname: f.nickname, photoURL: f.photoURL });
-            }
+            const friendId = data.from === session.userId ? data.to : data.from;
+            const friend = await userSummary(friendId);
+            if (friend) friends.push(friend);
         }
         res.json({ friends });
     } catch (error) {
@@ -153,15 +166,12 @@ router.get("/auth/friends/requests", async (req, res) => {
         const session = await authService.readSession ? await authService.readSession(token) : null;
         if (!session) return res.status(401).json({ error: "Sesión no válida" });
         if (!db) return res.json({ requests: [] });
-        const snap = await requestsCollection(session.userId).where("status", "==", "pending").get();
+        const snap = await friendshipsCollection().where("to", "==", session.userId).get();
         const requests = [];
-        for (const doc of snap.docs) {
+        for (const doc of snap.docs.filter((item) => item.data().status === "pending")) {
             const data = doc.data();
-            const fromDoc = await db.collection("users").doc(data.fromId).get();
-            if (fromDoc.exists) {
-                const f = fromDoc.data();
-                requests.push({ id: doc.id, fromId: f.id, name: f.name, nickname: f.nickname, photoURL: f.photoURL, createdAt: data.createdAt });
-            }
+            const from = await userSummary(data.from);
+            if (from) requests.push({ id: doc.id, fromId: from.id, name: from.name, nickname: from.nickname, photoURL: from.photoURL, createdAt: data.createdAt });
         }
         res.json({ requests });
     } catch (error) {
@@ -182,20 +192,28 @@ router.post("/auth/friends/request", async (req, res) => {
         const target = await findUserByNickname(toNickname);
         if (!target) return res.status(404).json({ error: "Usuario no encontrado" });
         if (target.id === session.userId) return res.status(400).json({ error: "No te puedes agregar a ti mismo" });
-        // Verificar si ya son amigos
-        const existingFriend = await friendsCollection(session.userId).doc(target.id).get();
-        if (existingFriend.exists && existingFriend.data().status === "accepted") {
+        const [outgoing, incoming] = await Promise.all([
+            friendshipsCollection().where("from", "==", session.userId).get(),
+            friendshipsCollection().where("to", "==", session.userId).get()
+        ]);
+        const related = [...outgoing.docs, ...incoming.docs].map((doc) => doc.data());
+        const existingFriend = related.find((item) =>
+            ((item.from === session.userId && item.to === target.id) || (item.to === session.userId && item.from === target.id)) &&
+            item.status === "accepted"
+        );
+        if (existingFriend) {
             return res.status(400).json({ error: "Ya sois amigos" });
         }
-        // Verificar si ya hay solicitud pendiente
-        const existingReq = await requestsCollection(target.id).where("fromId", "==", session.userId).where("status", "==", "pending").limit(1).get();
-        if (!existingReq.empty) return res.status(400).json({ error: "Ya enviaste una solicitud a este usuario" });
-        // Crear solicitud
-        const reqRef = requestsCollection(target.id).doc();
+        const existingRequest = related.find((item) => item.from === session.userId && item.to === target.id && item.status === "pending");
+        if (existingRequest) return res.status(400).json({ error: "Ya enviaste una solicitud a este usuario" });
+        // Crear la solicitud en la colección global.
+        const reqRef = friendshipsCollection().doc(encodeURIComponent(`${session.userId}__${target.id}`));
         await reqRef.set({
-            fromId: session.userId,
+            from: session.userId,
+            to: target.id,
             status: "pending",
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
         });
         res.json({ ok: true, requestId: reqRef.id });
     } catch (error) {
@@ -213,17 +231,11 @@ router.post("/auth/friends/request/accept", async (req, res) => {
         const requestId = body.requestId;
         if (!requestId) return res.status(400).json({ error: "ID de solicitud requerido" });
         if (!db) return res.status(503).json({ error: "Función no disponible en modo local" });
-        const reqDoc = await requestsCollection(session.userId).doc(requestId).get();
+        const reqDoc = await friendshipsCollection().doc(requestId).get();
         if (!reqDoc.exists) return res.status(404).json({ error: "Solicitud no encontrada" });
         const reqData = reqDoc.data();
-        if (reqData.status !== "pending") return res.status(400).json({ error: "La solicitud ya fue procesada" });
-        const fromId = reqData.fromId;
-        // Crear amistad mutua
-        const batch = db.batch();
-        batch.set(friendsCollection(session.userId).doc(fromId), { friendId: fromId, status: "accepted", createdAt: new Date().toISOString() });
-        batch.set(friendsCollection(fromId).doc(session.userId), { friendId: session.userId, status: "accepted", createdAt: new Date().toISOString() });
-        batch.update(reqDoc.ref, { status: "accepted" });
-        await batch.commit();
+        if (reqData.status !== "pending" || reqData.to !== session.userId) return res.status(400).json({ error: "La solicitud ya fue procesada" });
+        await reqDoc.ref.update({ status: "accepted", updatedAt: new Date().toISOString() });
         res.json({ ok: true });
     } catch (error) {
         res.status(400).json({ error: error.message || "No se pudo aceptar la solicitud" });
@@ -240,9 +252,10 @@ router.post("/auth/friends/request/decline", async (req, res) => {
         const requestId = body.requestId;
         if (!requestId) return res.status(400).json({ error: "ID de solicitud requerido" });
         if (!db) return res.status(503).json({ error: "Función no disponible en modo local" });
-        const reqDoc = await requestsCollection(session.userId).doc(requestId).get();
+        const reqDoc = await friendshipsCollection().doc(requestId).get();
         if (!reqDoc.exists) return res.status(404).json({ error: "Solicitud no encontrada" });
-        await reqDoc.ref.update({ status: "declined" });
+        if (reqDoc.data().to !== session.userId) return res.status(403).json({ error: "Solicitud no válida" });
+        await reqDoc.ref.update({ status: "declined", updatedAt: new Date().toISOString() });
         res.json({ ok: true });
     } catch (error) {
         res.status(400).json({ error: error.message || "No se pudo rechazar la solicitud" });
@@ -257,9 +270,19 @@ router.delete("/auth/friends/:friendId", async (req, res) => {
         if (!session) return res.status(401).json({ error: "Sesión no válida" });
         const friendId = req.params.friendId;
         if (!db) return res.status(503).json({ error: "Función no disponible en modo local" });
+        const [outgoing, incoming] = await Promise.all([
+            friendshipsCollection().where("from", "==", session.userId).get(),
+            friendshipsCollection().where("from", "==", friendId).get()
+        ]);
         const batch = db.batch();
-        batch.delete(friendsCollection(session.userId).doc(friendId));
-        batch.delete(friendsCollection(friendId).doc(session.userId));
+        [...outgoing.docs, ...incoming.docs]
+            .filter((doc) => {
+                const data = doc.data();
+                return data.status === "accepted" &&
+                    ((data.from === session.userId && data.to === friendId) ||
+                        (data.from === friendId && data.to === session.userId));
+            })
+            .forEach((doc) => batch.delete(doc.ref));
         await batch.commit();
         res.json({ ok: true });
     } catch (error) {
