@@ -36,7 +36,30 @@ function publicUser(user) {
         email: user.email,
         photoURL: user.photoURL || null,
         provider: user.provider || (user.passHash ? "password" : "firebase"),
-        prefs: user.prefs || defaultPrefs()
+        prefs: user.prefs || defaultPrefs(),
+        top5: Array.isArray(user.top5) ? user.top5 : []
+    };
+}
+
+// Errores con código para que las rutas traduzcan a 400/403/404/409.
+function codedError(code, message) {
+    const err = new Error(message);
+    err.code = code;
+    return err;
+}
+
+function normalizeUserId(value) {
+    return String(value || "").trim().toLowerCase();
+}
+
+// Perfil mínimo para listas (búsqueda, amigos): sin prefs ni datos sensibles.
+function cardUser(user) {
+    return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        photoURL: user.photoURL || null,
+        provider: user.provider || (user.passHash ? "password" : "firebase")
     };
 }
 
@@ -107,6 +130,46 @@ async function updateUserPrefs(userId, prefs) {
     }
     await db.collection("users").doc(userId).set({ prefs: merged }, { merge: true });
     return merged;
+}
+
+async function getUserById(userId) {
+    const id = normalizeUserId(userId);
+    if (!id) return null;
+    if (!db) {
+        for (const u of localUsers.values()) {
+            if (normalizeUserId(u.id) === id) return u;
+        }
+        return null;
+    }
+    const doc = await db.collection("users").doc(id).get();
+    if (!doc.exists) return null;
+    return Object.assign({ id: doc.id }, doc.data());
+}
+
+function cleanTop5Item(item) {
+    if (!item || typeof item !== "object") {
+        throw codedError("BAD_REQUEST", "Cada favorita del Top 5 debe ser un objeto");
+    }
+    const title = String(item.title || "").trim().slice(0, 200);
+    const imdbID = String(item.imdbID || "").trim();
+    if (!title && !imdbID) {
+        throw codedError("BAD_REQUEST", "Cada favorita necesita 'title' o 'imdbID'");
+    }
+    if (imdbID && !/^tt\d+$/i.test(imdbID)) {
+        throw codedError("BAD_REQUEST", "IMDb ID inválido en el Top 5");
+    }
+    const type = String(item.type || "movie").toLowerCase().trim();
+    if (type !== "movie" && type !== "series") {
+        throw codedError("BAD_REQUEST", "Tipo inválido en el Top 5 (solo movie o series)");
+    }
+    return {
+        movieId: String(item.movieId || "").trim().slice(0, 300) || null,
+        imdbID: imdbID || null,
+        title: title || imdbID,
+        year: String(item.year || "").trim().slice(0, 9) || null,
+        poster: String(item.poster || "").trim().slice(0, 500) || null,
+        type
+    };
 }
 
 const authService = {
@@ -216,6 +279,92 @@ const authService = {
         return merged;
     },
 
+    // Devuelve el usuario completo por id (email). Null si no existe.
+    getById: async (userId) => {
+        return getUserById(userId);
+    },
+
+    // Busca usuarios por nombre o email para añadir amigos. Excluye al propio usuario.
+    searchUsers: async (query, opts) => {
+        const q = String(query || "").trim().toLowerCase();
+        if (q.length < 2) {
+            throw codedError("BAD_REQUEST", "La búsqueda necesita al menos 2 caracteres");
+        }
+        if (q.length > 80) {
+            throw codedError("BAD_REQUEST", "El texto de búsqueda es demasiado largo");
+        }
+        const options = opts || {};
+        const excludeId = normalizeUserId(options.excludeId);
+        const max = Math.min(Math.max(Number.parseInt(options.limit, 10) || 20, 1), 50);
+        let users = [];
+        if (!db) {
+            users = [...localUsers.values()];
+        } else {
+            const snapshot = await db.collection("users").limit(200).get();
+            snapshot.forEach((doc) => {
+                users.push(Object.assign({ id: doc.id }, doc.data()));
+            });
+        }
+        return users
+            .filter((u) => {
+                if (!u || !u.id || normalizeUserId(u.id) === excludeId) return false;
+                const haystack = (String(u.name || "") + " " + String(u.email || "")).toLowerCase();
+                return haystack.includes(q);
+            })
+            .slice(0, max)
+            .map(cardUser);
+    },
+
+    // Top 5 de favoritas. Se guarda como referencias ligeras en users/{email}.top5
+    // (imdbID/title/year/poster/type) para reutilizar las películas ya guardadas
+    // sin duplicar su ficha completa.
+    getTop5: async (userId) => {
+        const user = await getUserById(userId);
+        if (!user) {
+            throw codedError("NOT_FOUND", "Usuario no encontrado");
+        }
+        return Array.isArray(user.top5) ? user.top5 : [];
+    },
+
+    setTop5: async (userId, items) => {
+        const id = normalizeUserId(userId);
+        if (!id) {
+            throw codedError("BAD_REQUEST", "Falta el usuario");
+        }
+        if (!Array.isArray(items)) {
+            throw codedError("BAD_REQUEST", "El Top 5 debe ser un array");
+        }
+        if (items.length > 5) {
+            throw codedError("BAD_REQUEST", "El Top 5 admite como máximo 5 películas");
+        }
+        const cleaned = items.map(cleanTop5Item);
+        const seen = new Set();
+        const unique = [];
+        for (const item of cleaned) {
+            const key = String(item.imdbID || item.title).toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            unique.push({ ...item, addedAt: new Date().toISOString() });
+        }
+        const stamp = new Date().toISOString();
+        if (!db) {
+            const user = await getUserById(id);
+            if (!user) {
+                throw codedError("NOT_FOUND", "Usuario no encontrado");
+            }
+            user.top5 = unique;
+            user.top5UpdatedAt = stamp;
+            localUsers.set(user.email || user.id, user);
+        } else {
+            const doc = await db.collection("users").doc(id).get();
+            if (!doc.exists) {
+                throw codedError("NOT_FOUND", "Usuario no encontrado");
+            }
+            await db.collection("users").doc(id).set({ top5: unique, top5UpdatedAt: stamp }, { merge: true });
+        }
+        return unique;
+    },
+
 };
 
-module.exports = { authService };
+module.exports = { authService, publicUser, cardUser };

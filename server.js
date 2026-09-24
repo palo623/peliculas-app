@@ -140,6 +140,9 @@ app.get("/api/firebase-config", (req, res) => {
 const authRoutes = require("./src-backend/routes/authRoutes");
 app.use("/api", authRoutes);
 
+const friendsRoutes = require("./src-backend/routes/friendsRoutes");
+app.use("/api", friendsRoutes);
+
 // 404 solo para la API (devuelve JSON, no HTML)
 app.use("/api", (req, res) => {
     res.status(404).json({ error: "Ruta de API no encontrada" });

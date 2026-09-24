@@ -213,6 +213,29 @@ Si la colección `movies` está vacía, el buscador y “Popular ahora” no obt
 | `GET` | `/api/movies/:id` | Obtiene una película personal. |
 | `DELETE` | `/api/movies/:id` | Elimina una película personal. |
 
+### Amistades
+
+Todas requieren `Authorization: Bearer <token>`. La información privada de otro
+usuario solo se devuelve si existe una amistad aceptada (o es el propio usuario).
+
+| Método | Ruta | Función |
+|---|---|---|
+| `GET` | `/api/users/search?q=...` | Busca usuarios por nombre o email para añadir amigos. |
+| `POST` | `/api/friends/requests` | Envía una solicitud (`{ to: "email" }`). |
+| `GET` | `/api/friends/requests/received` | Solicitudes pendientes recibidas. |
+| `GET` | `/api/friends/requests/sent` | Solicitudes pendientes enviadas. |
+| `POST` | `/api/friends/requests/:id/accept` | Acepta una solicitud (solo el destinatario). |
+| `POST` | `/api/friends/requests/:id/reject` | Rechaza una solicitud (solo el destinatario). |
+| `DELETE` | `/api/friends/requests/:id` | Cancela una solicitud enviada. |
+| `GET` | `/api/friends` | Lista de amigos del usuario autenticado. |
+| `DELETE` | `/api/friends/:friendId` | Elimina a un amigo. |
+| `GET` | `/api/friends/:friendId/profile` | Perfil visible para amigos, con Top 5 y contadores. |
+| `GET` | `/api/friends/:friendId/full-profile` | Perfil completo: usuario + Top 5 + películas y series guardadas. |
+| `GET` | `/api/friends/:friendId/movies` | Películas guardadas del amigo. |
+| `GET` | `/api/friends/:friendId/series` | Series guardadas del amigo. |
+| `GET` | `/api/users/me/top5` | Top 5 propio. |
+| `PUT` | `/api/users/me/top5` | Guarda el Top 5 (`{ top5: [...] }`, máx. 5 referencias). |
+
 Las rutas privadas reciben el token propio en:
 
 ```text
@@ -313,6 +336,32 @@ expiresAt
 
 Son sesiones técnicas del backend, independientes de la sesión interna que mantiene Firebase Authentication en el navegador.
 
+### `friendships/{from__to}`
+
+```text
+from        # email del remitente (minúsculas)
+to          # email del destinatario (minúsculas)
+status      # "pending" | "accepted"
+createdAt
+updatedAt
+```
+
+El id es direccional (`emisor__receptor`). Solo se guarda la solicitud pendiente
+o la amistad aceptada; rechazar o eliminar borra el documento. Las lecturas usan
+`where()` de un solo campo y filtran en memoria, igual que `movies`.
+
+### Top 5 (`users/{email}.top5`)
+
+```text
+top5[]      # hasta 5 referencias: { movieId?, imdbID?, title, year?, poster?, type?, addedAt }
+top5UpdatedAt
+```
+
+Son referencias ligeras a películas/series ya guardadas, no fichas duplicadas.
+El perfil de amigo (`GET /api/friends/:friendId/profile`) lo devuelve junto a
+contadores de películas/series. Preparado para el futuro chat entre amigos
+(la relación de amistad aceptada será la condición de acceso).
+
 ## Seguridad y límites conocidos
 
 - `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL` y `.env` son secretos; no deben exponerse en el frontend ni subirse a Git.
@@ -322,3 +371,71 @@ Son sesiones técnicas del backend, independientes de la sesión interna que man
 - El buscador realiza coincidencias en memoria después de leer el catálogo; para catálogos mucho mayores convendría añadir índices o un motor de búsqueda.
 - OMDb tiene cuota y límites de peticiones. Por eso la carga se hace mediante scripts progresivos y no durante las búsquedas normales.
 - `firebase-key.json` está incluido en `.gitignore`; debe mantenerse fuera del control de versiones.
+
+## Diseño recomendado para Chat entre amigos (no implementado)
+
+### Identificación de conversación
+- Una conversación es **1-a-1** entre dos usuarios amigos.
+- ID determinista: `chat_<email1>__<email2>` (emails en minúsculas, ordenados lexicográficamente).
+- Ejemplo: `chat_a@x.com__b@y.com`.
+
+### Almacenamiento en Firestore
+- Colección `chats/{chatId}` — metadatos de la conversación:
+  ```text
+  chatId
+  participants: [email1, email2]
+  createdAt
+  updatedAt
+  lastMessage: { text, senderId, sentAt }  # opcional, para listar conversaciones
+  ```
+- Subcolección `chats/{chatId}/messages/{messageId}` — mensajes:
+  ```text
+  messageId (auto)
+  senderId        # email del remitente
+  text            # contenido (máx. 4000 chars)
+  type            # "text" | "movie_ref" | "series_ref" (futuro)
+  ref             # { imdbID, title, type } opcional para compartir fichas
+  sentAt
+  readAt          # timestamp de lectura (para check azul / visto)
+  ```
+
+### Control de acceso
+- **Crear/abrir chat**: solo si `FriendshipModel.areFriends(a, b) === true`.
+- **Enviar mensaje**: verificar que el `senderId` es uno de los `participants` y que la amistad sigue vigente.
+- **Listar conversaciones**: leer `chats` donde `participants` incluye `me` (query `array-contains`).
+- **Historial**: leer `messages` ordenados por `sentAt` (paginado con cursor).
+
+### Tiempo real (futuro)
+- **Opción A (Firebase Realtime Database)**: migrar solo `messages` a RTDB para `onSnapshot` listeners. Requiere habilitar RTDB en el proyecto.
+- **Opción B (Firestore `onSnapshot`)**: escuchar `chats/{chatId}/messages` con `orderBy("sentAt")`. Firestore soporta listeners en tiempo real nativamente; escalabilidad suficiente para chats 1-a-1 moderados.
+- **Opción C (WebSockets propio)**: añadir `socket.io` o `ws` + Redis pub/sub. Más control, pero nueva infraestructura.
+
+### Cambios necesarios en Firebase/Firestore
+1. Habilitar índice compuesto para `chats`: `participants` (array-contains) + `updatedAt` (desc) para listar conversaciones recientes.
+2. Índice para `messages`: `chatId` + `sentAt` (asc) ya lo crea Firestore automáticamente en subcolección.
+3. Reglas de seguridad (`firestore.rules`):
+   ```javascript
+   match /chats/{chatId} {
+     allow read, write: if request.auth != null
+       && request.auth.token.email in resource.data.participants;
+     match /messages/{messageId} {
+       allow read: if request.auth != null
+         && request.auth.token.email in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+       allow create: if request.auth != null
+         && request.auth.token.email == request.resource.data.senderId
+         && request.auth.token.email in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+     }
+   }
+   ```
+4. Endpoints backend (REST, sin WebSockets por ahora):
+   - `GET /api/chats` — lista mis conversaciones (con `lastMessage`).
+   - `POST /api/chats` — crea/obtiene chat con amigo (`{ friendId }`).
+   - `GET /api/chats/:chatId/messages` — historial paginado.
+   - `POST /api/chats/:chatId/messages` — envía mensaje (`{ text, ref? }`).
+   - `PUT /api/chats/:chatId/messages/:messageId/read` — marca como leído.
+
+### Preparación actual
+- `FriendshipModel.areFriends(a,b)` ya expone la comprobación atómica.
+- `users/{email}` usa email como ID, compatible con `participants`.
+- Colección `friendships` ya valida amistad aceptada.
+- El backend usa transacciones para operaciones críticas (aceptar/eliminar amistad), patrón reutilizable para crear chat + primer mensaje atómicamente.
