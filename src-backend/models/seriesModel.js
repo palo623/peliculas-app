@@ -203,41 +203,6 @@ const SeriesModel = {
         }
     },
 
-    claimOrphanSeries: async (userId) => {
-        if (!userId) return 0;
-        if (!db) {
-            let claimed = 0;
-            localSeries.forEach((m) => {
-                if (!m.userId) {
-                    m.userId = userId;
-                    claimed++;
-                }
-            });
-            if (claimed) console.log(`Reclamadas ${claimed} locales para ${userId}`);
-            return claimed;
-        }
-        try {
-            const snapshot = await db.collection("movies").get();
-            const batch = db.batch();
-            let claimed = 0;
-            snapshot.forEach((doc) => {
-                const data = doc.data() || {};
-                if (!data.userId && String(data.type || "").toLowerCase() === "series") {
-                    batch.update(doc.ref, { userId });
-                    claimed++;
-                }
-            });
-            if (claimed) {
-                await batch.commit();
-                console.log(`Reclamadas ${claimed} en Firestore para ${userId}`);
-            }
-            return claimed;
-        } catch (error) {
-            console.error("Error al reclamar series:", error.message || error);
-            return 0;
-        }
-    },
-
     getSeriesById: async (id, userId) => {
         if (!id) throw new Error("Falta el id");
         if (!db) {

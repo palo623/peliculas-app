@@ -99,13 +99,7 @@ router.get("/series", async (req, res) => {
         if (!user) {
             return res.json([]);
         }
-        let series = await SeriesModel.getAllSeries(user.id);
-        if (series.length === 0) {
-            const claimed = await SeriesModel.claimOrphanSeries(user.id);
-            if (claimed > 0) {
-                series = await SeriesModel.getAllSeries(user.id);
-            }
-        }
+        const series = await SeriesModel.getAllSeries(user.id);
         res.json(Array.isArray(series) ? series : []);
     } catch (error) {
         res.status(500).json({ error: error.message });

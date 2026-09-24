@@ -145,6 +145,19 @@ function voteDocId(reviewId, userId) {
     return `${reviewId}__${slugify(String(userId))}`;
 }
 
+async function deleteQueryInBatches(query) {
+    let pageQuery = query;
+    while (true) {
+        const snapshot = await pageQuery.limit(500).get();
+        if (snapshot.empty) return;
+        const batch = db.batch();
+        snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+        await batch.commit();
+        if (snapshot.size < 500) return;
+        pageQuery = query.startAfter(snapshot.docs[snapshot.docs.length - 1]);
+    }
+}
+
 const ReviewModel = {
     isFirestoreConnected: () => firebaseConn.isFirestoreConnected(),
 
@@ -294,23 +307,21 @@ const ReviewModel = {
             return publicReview(doc, 0);
         }
 
-        // Unicidad (mediaKey + userId): Firestore no tiene unique, se comprueba antes de crear.
-        // Solo un where(): con dos campos haría falta un índice compuesto manual.
-        const dupSnap = await db.collection("reviews")
-            .where("mediaKey", "==", clean.mediaKey)
-            .get();
-        if (dupSnap.docs.some((d) => (d.data() || {}).userId === userId)) {
-            const err = new Error("Ya publicaste una reseña de esta obra (puedes editarla)");
-            err.code = "REVIEW_DUPLICATE";
-            throw err;
-        }
         const ref = db.collection("reviews").doc();
         const doc = {
             ...clean, userId, userName: displayName,
             upvotes: 0, downvotes: 0, score: 0, replyCount: 0,
             createdAt: now, updatedAt: now
         };
-        await ref.set(doc);
+        await db.runTransaction(async (tx) => {
+            const dupSnap = await tx.get(db.collection("reviews").where("mediaKey", "==", clean.mediaKey));
+            if (dupSnap.docs.some((d) => (d.data() || {}).userId === userId)) {
+                const err = new Error("Ya publicaste una reseña de esta obra (puedes editarla)");
+                err.code = "REVIEW_DUPLICATE";
+                throw err;
+            }
+            tx.create(ref, doc);
+        });
         return publicReview({ id: ref.id, ...doc }, 0);
     },
 
@@ -384,14 +395,9 @@ const ReviewModel = {
             err.code = "FORBIDDEN";
             throw err;
         }
-        // Borrado en cascada: votos + respuestas (por lotes de 500).
-        const batchVotes = await db.collection("review_votes").where("reviewId", "==", id).limit(500).get();
-        const repliesSnap = await ref.collection("replies").limit(500).get();
-        const batch = db.batch();
-        batchVotes.forEach((d) => batch.delete(d.ref));
-        repliesSnap.forEach((d) => batch.delete(d.ref));
-        batch.delete(ref);
-        await batch.commit();
+        await deleteQueryInBatches(db.collection("review_votes").where("reviewId", "==", id));
+        await deleteQueryInBatches(ref.collection("replies"));
+        await ref.delete();
         return true;
     },
 
