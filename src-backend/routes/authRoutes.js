@@ -204,6 +204,9 @@ router.get("/users/:id/is-following", async (req, res) => {
         res.json({ following });
     } catch (error) {
         res.status(500).json({ error: "No se pudo comprobar" });
+    }
+});
+
 // POST /api/auth/nickname { nickname } — establece/actualiza el nickname único
 router.post("/auth/nickname", async (req, res) => {
     try {
