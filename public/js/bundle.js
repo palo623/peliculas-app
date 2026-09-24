@@ -785,6 +785,15 @@ function RegisterPage(props) {
     const pass2State = React.useState("");
     const password2 = pass2State[0];
     const setPassword2 = pass2State[1];
+    const nicknameState = React.useState("");
+    const nickname = nicknameState[0];
+    const setNickname = nicknameState[1];
+    const nicknameErrorState = React.useState(null);
+    const nicknameError = nicknameErrorState[0];
+    const setNicknameError = nicknameErrorState[1];
+    const checkingNicknameState = React.useState(false);
+    const checkingNickname = checkingNicknameState[0];
+    const setCheckingNickname = checkingNicknameState[1];
 
     // Cuestionario
     const genresState = React.useState([]);
@@ -818,6 +827,36 @@ function RegisterPage(props) {
                     ? [...prev, g]
                     : prev
         );
+    };
+
+    const checkNickname = async (value) => {
+        const clean = value.trim().toLowerCase();
+        if (clean.length < 3) {
+            setNicknameError("El nickname debe tener al menos 3 caracteres");
+            return;
+        }
+        if (clean.length > 30) {
+            setNicknameError("El nickname no puede superar 30 caracteres");
+            return;
+        }
+        if (!/^[a-zA-Z0-9_]+$/.test(clean)) {
+            setNicknameError("Solo letras, números y guión bajo");
+            return;
+        }
+        setCheckingNickname(true);
+        setNicknameError(null);
+        try {
+            const res = await fetch("/api/auth/nickname/check/" + encodeURIComponent(clean));
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al comprobar");
+            if (!data.available) {
+                setNicknameError("Ese nickname ya está en uso");
+            }
+        } catch (err) {
+            setNicknameError(err.message);
+        } finally {
+            setCheckingNickname(false);
+        }
     };
 
     const fbState = React.useState(null); // null | "ready" | "unavailable"
@@ -889,10 +928,14 @@ function RegisterPage(props) {
         e.preventDefault();
         const cleanName = name.trim();
         const cleanEmail = email.trim().toLowerCase();
+        const cleanNickname = nickname.trim().toLowerCase();
         if (cleanName.length < 2) { setError("Escribe tu nombre."); return; }
         if (!cleanEmail) { setError("Escribe tu email."); return; }
         if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres."); return; }
         if (password !== password2) { setError("Las contraseñas no coinciden."); return; }
+        if (cleanNickname.length < 3) { setError("El nickname debe tener al menos 3 caracteres."); return; }
+        if (cleanNickname.length > 30) { setError("El nickname no puede superar 30 caracteres."); return; }
+        if (!/^[a-zA-Z0-9_]+$/.test(cleanNickname)) { setError("El nickname solo puede contener letras, números y guión bajo."); return; }
 
         setLoading(true);
         setError(null);
@@ -903,6 +946,21 @@ function RegisterPage(props) {
                 await cred.user.updateProfile({ displayName: cleanName });
             } catch (updErr) { /* nombre opcional */ }
             await cred.user.sendEmailVerification(firebaseActionSettings("verifyEmail"));
+            // Set nickname after verification
+            const token = getStoredToken();
+            if (token) {
+                const nicknameRes = await fetch("/api/auth/nickname", {
+                    method: "POST",
+                    headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                    body: JSON.stringify({ nickname: cleanNickname })
+                });
+                if (!nicknameRes.ok) {
+                    const data = await nicknameRes.json();
+                    setError(data.error || "No se pudo guardar el nickname");
+                    setLoading(false);
+                    return;
+                }
+            }
             setVerificationSent(true);
             setStep(2);
         } catch (err) {
@@ -1014,6 +1072,25 @@ function RegisterPage(props) {
                     onChange: (e) => setPassword2(e.target.value),
                     placeholder: "Otra vez", autoComplete: "new-password"
                 })
+            ),
+            h("div", { className: "auth-field" },
+                h("label", null, "Nickname (único)"),
+                h("div", { className: "nickname-field" },
+                    h("span", { className: "nickname-prefix" }, "@"),
+                    h("input", {
+                        type: "text", value: nickname,
+                        onChange: (e) => {
+                            const v = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                            setNickname(v);
+                            if (v.length >= 3) checkNickname(v);
+                            else setNicknameError(null);
+                        },
+                        placeholder: "min. 3 chars, letras, números, _", autoComplete: "username", maxLength: 30
+                    }),
+                    checkingNickname ? h("span", { className: "nickname-checking" }, "⟳") : null
+                ),
+                nicknameError ? h("p", { className: "error hint" }, nicknameError) : null,
+                h("p", { className: "hint" }, "Tu identidad única para que te encuentren tus amigos")
             ),
             h("button", { className: "btn-primary", type: "submit", disabled: loading || googleLoading },
                 loading ? "Creando cuenta..." : "Continuar"
@@ -1197,6 +1274,25 @@ function MediaPage(props) {
     const detailLoadingState = React.useState(false);
     const detailLoading = detailLoadingState[0];
     const setDetailLoading = detailLoadingState[1];
+    // Reviews state
+    const showReviewsState = React.useState(false);
+    const showReviews = showReviewsState[0];
+    const setShowReviews = showReviewsState[1];
+    const reviewsSortState = React.useState("relevance");
+    const reviewsSort = reviewsSortState[0];
+    const setReviewsSort = reviewsSortState[1];
+    const reviewsState = React.useState([]);
+    const reviews = reviewsState[0];
+    const setReviews = reviewsState[1];
+    const writingReviewState = React.useState(false);
+    const writingReview = writingReviewState[0];
+    const setWritingReview = writingReviewState[1];
+    const newReviewTextState = React.useState("");
+    const newReviewText = newReviewTextState[0];
+    const setNewReviewText = newReviewTextState[1];
+    const submittingReviewState = React.useState(false);
+    const submittingReview = submittingReviewState[0];
+    const setSubmittingReview = submittingReviewState[1];
     // Segundos de espera cuando el servidor nos frena (429): el botón se
     // desactiva con cuenta atrás para no realimentar el bloqueo.
     const cooldownState = React.useState(0);
@@ -1233,6 +1329,7 @@ function MediaPage(props) {
                             plot: data.plot,
                             director: data.director,
                             actors: data.actors,
+                            runtime: data.runtime,
                             type: data.type || item.type,
                         }),
                         limited: false
@@ -1602,6 +1699,7 @@ function MediaPage(props) {
                     h("h2", null, result.title + " (" + result.year + ")"),
                     h("p", null, h("strong", null, "Director:"), " " + result.director),
                     h("p", null, h("strong", null, "Género:"), " " + result.genre),
+                    result.runtime ? h("p", null, h("strong", null, "Duración:"), " " + result.runtime) : null,
                     result.actors ? h("p", null, h("strong", null, "Actores:"), " " + result.actors) : null,
                     result.rating ? h("p", null, h("strong", null, "Nota IMDb:"), " ★ " + result.rating) : null,
                     h(SeasonsBlock, { serie: result }),
@@ -1636,6 +1734,7 @@ function MediaPage(props) {
                     h("div", null,
                         h("h2", null, detail.title + " (" + detail.year + ")"),
                         detail.genre ? h("p", null, h("strong", null, "Género:"), " " + detail.genre) : null,
+                        detail.runtime ? h("p", null, h("strong", null, "Duración:"), " " + detail.runtime) : null,
                         detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
                         detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
                         detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
@@ -1646,7 +1745,139 @@ function MediaPage(props) {
                                 onClick: () => handleSave(detail),
                                 disabled: saving
                             }, saving ? "Guardando..." : (user ? "Guardar en mi colección" : "Entrar para guardar")),
+                            h("button", { className: "btn-ghost", type: "button", onClick: () => { setShowReviews(true); setWritingReview(false); } }, "Reseñas"),
                             h("button", { className: "btn-ghost", type: "button", onClick: () => setDetail(null) }, "Cerrar")
+                        )
+                    )
+                )
+            )
+        ) : null,
+        detail && showReviews ? h("div", { className: "modal-backdrop", onClick: () => { setShowReviews(false); setWritingReview(false); } },
+            h("div", { className: "modal modal-reviews", onClick: (e) => e.stopPropagation() },
+                h("button", { className: "modal-close", onClick: () => { setShowReviews(false); setWritingReview(false); } }, "✕"),
+                h("div", { className: "modal-content" },
+                    h("h2", null, "Reseñas de " + detail.title),
+                    writingReview ? h("div", { className: "review-form" },
+                        user ? h("div", null,
+                            h("h3", null, "Escribe tu reseña"),
+                            h("textarea", {
+                                value: newReviewText,
+                                onChange: (e) => setNewReviewText(e.target.value),
+                                placeholder: "¿Qué te pareció? (mín. 50 caracteres)",
+                                rows: 4,
+                                maxLength: 2000
+                            }),
+                            newReviewText.length > 0 && newReviewText.length < 50 ? h("p", { className: "muted" }, "Mínimo 50 caracteres (" + newReviewText.length + "/50)") : null,
+                            h("div", { className: "result-actions" },
+                                h("button", {
+                                    className: "btn-primary",
+                                    onClick: () => {
+                                        if (newReviewText.trim().length >= 50) {
+                                            setSubmittingReview(true);
+                                            const newReview = {
+                                                id: Date.now().toString(),
+                                                user: user.name || user.email,
+                                                userId: user.id,
+                                                text: newReviewText.trim(),
+                                                createdAt: new Date().toISOString(),
+                                                upvotes: 0,
+                                                downvotes: 0,
+                                                userVote: 0,
+                                                replies: []
+                                            };
+                                            setReviews([newReview, ...reviews]);
+                                            setNewReviewText("");
+                                            setWritingReview(false);
+                                            setSubmittingReview(false);
+                                        }
+                                    },
+                                    disabled: submittingReview || newReviewText.trim().length < 50
+                                }, submittingReview ? "Publicando..." : "Publicar reseña"),
+                                h("button", { className: "btn-ghost", type: "button", onClick: () => { setWritingReview(false); setNewReviewText(""); } }, "Cancelar")
+                            )
+                        ) : h("div", { className: "auth-prompt" },
+                            h("p", null, "Para escribir una reseña necesitas "),
+                            h("button", { onClick: () => { onNavigate("login"); setShowReviews(false); } }, "iniciar sesión"),
+                            h("p", null, " o "),
+                            h("button", { onClick: () => { onNavigate("register"); setShowReviews(false); } }, "crear cuenta")
+                        )
+                    ) : h("div", { className: "reviews-section" },
+                        h("div", { className: "reviews-header" },
+                            h("h3", null, "Reseñas (" + reviews.length + ")"),
+                            h("button", {
+                                className: "btn-ghost btn-small",
+                                onClick: () => setWritingReview(true)
+                            }, "Escribir reseña")
+                        ),
+                        h("div", { className: "reviews-sort" },
+                            h("label", null, "Ordenar: "),
+                            h("select", {
+                                value: reviewsSort,
+                                onChange: (e) => setReviewsSort(e.target.value)
+                            },
+                                h("option", { value: "relevance" }, "Mayor relevancia"),
+                                h("option", { value: "votes" }, "Más votados"),
+                                h("option", { value: "recent" }, "Más recientes")
+                            )
+                        ),
+                        reviews.length === 0 ? h("p", { className: "muted" }, "Aún no hay reseñas. ¡Sé el primero en escribir una!") : h("div", { className: "reviews-list" },
+                            reviews
+                                .slice()
+                                .sort((a, b) => {
+                                    if (reviewsSort === "votes") return (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes);
+                                    if (reviewsSort === "recent") return new Date(b.createdAt) - new Date(a.createdAt);
+                                    return (b.upvotes - b.downvotes + (b.replies?.length || 0)) - (a.upvotes - a.downvotes + (a.replies?.length || 0));
+                                })
+                                .map((review) => h("div", { key: review.id, className: "review-item" },
+                                    h("div", { className: "review-header" },
+                                        h("strong", null, review.user),
+                                        h("span", { className: "review-date" }, new Date(review.createdAt).toLocaleDateString("es-ES"))
+                                    ),
+                                    h("p", { className: "review-text" }, review.text),
+                                    h("div", { className: "review-actions" },
+                                        h("button", {
+                                            className: "vote-btn" + (review.userVote === 1 ? " voted" : ""),
+                                            onClick: () => {
+                                                const updated = reviews.map(r => {
+                                                    if (r.id === review.id) {
+                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
+                                                        if (uv === 1) { up--; uv = 0; }
+                                                        else { up++; if (uv === -1) { down--; } uv = 1; }
+                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
+                                                    }
+                                                    return r;
+                                                });
+                                                setReviews(updated);
+                                            }
+                                        }, "👍 " + review.upvotes),
+                                        h("button", {
+                                            className: "vote-btn" + (review.userVote === -1 ? " voted" : ""),
+                                            onClick: () => {
+                                                const updated = reviews.map(r => {
+                                                    if (r.id === review.id) {
+                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
+                                                        if (uv === -1) { down--; uv = 0; }
+                                                        else { down++; if (uv === 1) { up--; } uv = -1; }
+                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
+                                                    }
+                                                    return r;
+                                                });
+                                                setReviews(updated);
+                                            }
+                                        }, "👎 " + review.downvotes),
+                                        h("button", {
+                                            className: "btn-ghost btn-small",
+                                            onClick: () => alert("Responder a reseña - próximamente")
+                                        }, "Responder (" + (review.replies?.length || 0) + ")")
+                                    ),
+                                    review.replies && review.replies.length > 0 ? h("div", { className: "review-replies" },
+                                        review.replies.map((reply) => h("div", { key: reply.id, className: "reply-item" },
+                                            h("strong", null, reply.user),
+                                            h("span", { className: "reply-date" }, new Date(reply.createdAt).toLocaleDateString("es-ES")),
+                                            h("p", null, reply.text)
+                                        ))
+                                    ) : null
+                                ))
                         )
                     )
                 )
@@ -1741,6 +1972,25 @@ function SeriesPage(props) {
     const detailLoadingState = React.useState(false);
     const detailLoading = detailLoadingState[0];
     const setDetailLoading = detailLoadingState[1];
+    // Reviews state
+    const showReviewsState = React.useState(false);
+    const showReviews = showReviewsState[0];
+    const setShowReviews = showReviewsState[1];
+    const reviewsSortState = React.useState("relevance");
+    const reviewsSort = reviewsSortState[0];
+    const setReviewsSort = reviewsSortState[1];
+    const reviewsState = React.useState([]);
+    const reviews = reviewsState[0];
+    const setReviews = reviewsState[1];
+    const writingReviewState = React.useState(false);
+    const writingReview = writingReviewState[0];
+    const setWritingReview = writingReviewState[1];
+    const newReviewTextState = React.useState("");
+    const newReviewText = newReviewTextState[0];
+    const setNewReviewText = newReviewTextState[1];
+    const submittingReviewState = React.useState(false);
+    const submittingReview = submittingReviewState[0];
+    const setSubmittingReview = submittingReviewState[1];
     const cooldownState = React.useState(0);
     const cooldown = cooldownState[0];
     const setCooldown = cooldownState[1];
@@ -2176,7 +2426,139 @@ function SeriesPage(props) {
                                 onClick: () => handleSave(detail),
                                 disabled: saving
                             }, saving ? "Guardando..." : (user ? "Guardar en mi colección" : "Entrar para guardar")),
+                            h("button", { className: "btn-ghost", type: "button", onClick: () => { setShowReviews(true); setWritingReview(false); } }, "Reseñas"),
                             h("button", { className: "btn-ghost", type: "button", onClick: () => setDetail(null) }, "Cerrar")
+                        )
+                    )
+                )
+            )
+        ) : null,
+        detail && showReviews ? h("div", { className: "modal-backdrop", onClick: () => { setShowReviews(false); setWritingReview(false); } },
+            h("div", { className: "modal modal-reviews", onClick: (e) => e.stopPropagation() },
+                h("button", { className: "modal-close", onClick: () => { setShowReviews(false); setWritingReview(false); } }, "✕"),
+                h("div", { className: "modal-content" },
+                    h("h2", null, "Reseñas de " + detail.title),
+                    writingReview ? h("div", { className: "review-form" },
+                        user ? h("div", null,
+                            h("h3", null, "Escribe tu reseña"),
+                            h("textarea", {
+                                value: newReviewText,
+                                onChange: (e) => setNewReviewText(e.target.value),
+                                placeholder: "¿Qué te pareció? (mín. 50 caracteres)",
+                                rows: 4,
+                                maxLength: 2000
+                            }),
+                            newReviewText.length > 0 && newReviewText.length < 50 ? h("p", { className: "muted" }, "Mínimo 50 caracteres (" + newReviewText.length + "/50)") : null,
+                            h("div", { className: "result-actions" },
+                                h("button", {
+                                    className: "btn-primary",
+                                    onClick: () => {
+                                        if (newReviewText.trim().length >= 50) {
+                                            setSubmittingReview(true);
+                                            const newReview = {
+                                                id: Date.now().toString(),
+                                                user: user.name || user.email,
+                                                userId: user.id,
+                                                text: newReviewText.trim(),
+                                                createdAt: new Date().toISOString(),
+                                                upvotes: 0,
+                                                downvotes: 0,
+                                                userVote: 0,
+                                                replies: []
+                                            };
+                                            setReviews([newReview, ...reviews]);
+                                            setNewReviewText("");
+                                            setWritingReview(false);
+                                            setSubmittingReview(false);
+                                        }
+                                    },
+                                    disabled: submittingReview || newReviewText.trim().length < 50
+                                }, submittingReview ? "Publicando..." : "Publicar reseña"),
+                                h("button", { className: "btn-ghost", type: "button", onClick: () => { setWritingReview(false); setNewReviewText(""); } }, "Cancelar")
+                            )
+                        ) : h("div", { className: "auth-prompt" },
+                            h("p", null, "Para escribir una reseña necesitas "),
+                            h("button", { onClick: () => { onNavigate("login"); setShowReviews(false); } }, "iniciar sesión"),
+                            h("p", null, " o "),
+                            h("button", { onClick: () => { onNavigate("register"); setShowReviews(false); } }, "crear cuenta")
+                        )
+                    ) : h("div", { className: "reviews-section" },
+                        h("div", { className: "reviews-header" },
+                            h("h3", null, "Reseñas (" + reviews.length + ")"),
+                            h("button", {
+                                className: "btn-ghost btn-small",
+                                onClick: () => setWritingReview(true)
+                            }, "Escribir reseña")
+                        ),
+                        h("div", { className: "reviews-sort" },
+                            h("label", null, "Ordenar: "),
+                            h("select", {
+                                value: reviewsSort,
+                                onChange: (e) => setReviewsSort(e.target.value)
+                            },
+                                h("option", { value: "relevance" }, "Mayor relevancia"),
+                                h("option", { value: "votes" }, "Más votados"),
+                                h("option", { value: "recent" }, "Más recientes")
+                            )
+                        ),
+                        reviews.length === 0 ? h("p", { className: "muted" }, "Aún no hay reseñas. ¡Sé el primero en escribir una!") : h("div", { className: "reviews-list" },
+                            reviews
+                                .slice()
+                                .sort((a, b) => {
+                                    if (reviewsSort === "votes") return (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes);
+                                    if (reviewsSort === "recent") return new Date(b.createdAt) - new Date(a.createdAt);
+                                    return (b.upvotes - b.downvotes + (b.replies?.length || 0)) - (a.upvotes - a.downvotes + (a.replies?.length || 0));
+                                })
+                                .map((review) => h("div", { key: review.id, className: "review-item" },
+                                    h("div", { className: "review-header" },
+                                        h("strong", null, review.user),
+                                        h("span", { className: "review-date" }, new Date(review.createdAt).toLocaleDateString("es-ES"))
+                                    ),
+                                    h("p", { className: "review-text" }, review.text),
+                                    h("div", { className: "review-actions" },
+                                        h("button", {
+                                            className: "vote-btn" + (review.userVote === 1 ? " voted" : ""),
+                                            onClick: () => {
+                                                const updated = reviews.map(r => {
+                                                    if (r.id === review.id) {
+                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
+                                                        if (uv === 1) { up--; uv = 0; }
+                                                        else { up++; if (uv === -1) { down--; } uv = 1; }
+                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
+                                                    }
+                                                    return r;
+                                                });
+                                                setReviews(updated);
+                                            }
+                                        }, "👍 " + review.upvotes),
+                                        h("button", {
+                                            className: "vote-btn" + (review.userVote === -1 ? " voted" : ""),
+                                            onClick: () => {
+                                                const updated = reviews.map(r => {
+                                                    if (r.id === review.id) {
+                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
+                                                        if (uv === -1) { down--; uv = 0; }
+                                                        else { down++; if (uv === 1) { up--; } uv = -1; }
+                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
+                                                    }
+                                                    return r;
+                                                });
+                                                setReviews(updated);
+                                            }
+                                        }, "👎 " + review.downvotes),
+                                        h("button", {
+                                            className: "btn-ghost btn-small",
+                                            onClick: () => alert("Responder a reseña - próximamente")
+                                        }, "Responder (" + (review.replies?.length || 0) + ")")
+                                    ),
+                                    review.replies && review.replies.length > 0 ? h("div", { className: "review-replies" },
+                                        review.replies.map((reply) => h("div", { key: reply.id, className: "reply-item" },
+                                            h("strong", null, reply.user),
+                                            h("span", { className: "reply-date" }, new Date(reply.createdAt).toLocaleDateString("es-ES")),
+                                            h("p", null, reply.text)
+                                        ))
+                                    ) : null
+                                ))
                         )
                     )
                 )
@@ -2198,8 +2580,56 @@ function MiCuenta(props) {
     const detailLoadingState = React.useState(false);
     const detailLoading = detailLoadingState[0];
     const setDetailLoading = detailLoadingState[1];
+    // Reviews state
+    const showReviewsState = React.useState(false);
+    const showReviews = showReviewsState[0];
+    const setShowReviews = showReviewsState[1];
+    const reviewsSortState = React.useState("relevance");
+    const reviewsSort = reviewsSortState[0];
+    const setReviewsSort = reviewsSortState[1];
+    const reviewsState = React.useState([]);
+    const reviews = reviewsState[0];
+    const setReviews = reviewsState[1];
+    const writingReviewState = React.useState(false);
+    const writingReview = writingReviewState[0];
+    const setWritingReview = writingReviewState[1];
+    const newReviewTextState = React.useState("");
+    const newReviewText = newReviewTextState[0];
+    const setNewReviewText = newReviewTextState[1];
+    const submittingReviewState = React.useState(false);
+    const submittingReview = submittingReviewState[0];
+    const setSubmittingReview = submittingReviewState[1];
     const shown = movies || [];
     const recent = shown.slice(0, 10);
+
+    // Amistades state
+    const friendsTabState = React.useState("friends"); // friends, requests, search
+    const friendsTab = friendsTabState[0];
+    const setFriendsTab = friendsTabState[1];
+    const friendsState = React.useState([]);
+    const friends = friendsState[0];
+    const setFriends = friendsState[1];
+    const requestsState = React.useState([]);
+    const requests = requestsState[0];
+    const setRequests = requestsState[1];
+    const searchQueryState = React.useState("");
+    const searchQuery = searchQueryState[0];
+    const setSearchQuery = searchQueryState[1];
+    const searchResultsState = React.useState([]);
+    const searchResults = searchResultsState[0];
+    const setSearchResults = searchResultsState[1];
+    const searchingState = React.useState(false);
+    const searching = searchingState[0];
+    const setSearching = searchingState[1];
+    const searchErrorState = React.useState(null);
+    const searchError = searchErrorState[0];
+    const setSearchError = searchErrorState[1];
+    const loadingFriendsState = React.useState(true);
+    const loadingFriends = loadingFriendsState[0];
+    const setLoadingFriends = loadingFriendsState[1];
+    const shareLinkState = React.useState("");
+    const shareLink = shareLinkState[0];
+    const setShareLink = shareLinkState[1];
 
     const openDetail = async (movie) => {
         if (movie.plot || movie.director) {
@@ -2222,10 +2652,143 @@ function MiCuenta(props) {
         }
     };
 
+    const loadFriends = async () => {
+        setLoadingFriends(true);
+        try {
+            const res = await fetch("/api/auth/friends", { headers: authHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al cargar amigos");
+            setFriends(data.friends || []);
+        } catch (err) {
+            console.error("Error loading friends:", err);
+        } finally {
+            setLoadingFriends(false);
+        }
+    };
+
+    const loadRequests = async () => {
+        try {
+            const res = await fetch("/api/auth/friends/requests", { headers: authHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al cargar solicitudes");
+            setRequests(data.requests || []);
+        } catch (err) {
+            console.error("Error loading requests:", err);
+        }
+    };
+
+    const handleSearch = async (e) => {
+        e.preventDefault();
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) { setSearchError("Escribe un nickname"); return; }
+        if (q === (user.nickname || "").toLowerCase()) { setSearchError("No te puedes buscar a ti mismo"); return; }
+        setSearching(true);
+        setSearchError(null);
+        setSearchResults([]);
+        try {
+            const res = await fetch("/api/auth/user/" + encodeURIComponent(q), { headers: authHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Usuario no encontrado");
+            setSearchResults([data.user]);
+        } catch (err) {
+            setSearchError(err.message);
+        } finally {
+            setSearching(false);
+        }
+    };
+
+    const sendRequest = async (targetId) => {
+        try {
+            const res = await fetch("/api/auth/friends/request", {
+                method: "POST",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify({ toNickname: searchResults.find(u => u.id === targetId)?.nickname })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al enviar solicitud");
+            alert("Solicitud enviada");
+            setSearchResults([]);
+            setSearchQuery("");
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    const acceptRequest = async (requestId) => {
+        try {
+            const res = await fetch("/api/auth/friends/request/accept", {
+                method: "POST",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify({ requestId })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al aceptar");
+            loadRequests();
+            loadFriends();
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    const declineRequest = async (requestId) => {
+        try {
+            const res = await fetch("/api/auth/friends/request/decline", {
+                method: "POST",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify({ requestId })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al rechazar");
+            loadRequests();
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    const removeFriend = async (friendId) => {
+        if (!window.confirm("¿Eliminar a este amigo?")) return;
+        try {
+            const res = await fetch("/api/auth/friends/" + encodeURIComponent(friendId), {
+                method: "DELETE",
+                headers: authHeaders()
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al eliminar");
+            loadFriends();
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    const copyShareLink = () => {
+        const link = window.location.origin + "/?friend=" + (user.nickname || "");
+        navigator.clipboard.writeText(link).then(() => {
+            setShareLink(link);
+            setTimeout(() => setShareLink(""), 3000);
+        });
+    };
+
+    React.useEffect(() => {
+        loadFriends();
+        loadRequests();
+    }, []);
+
+    // Handle friend parameter from shared link
+    React.useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const friendParam = params.get("friend");
+        if (friendParam && friendParam !== (user.nickname || "").toLowerCase()) {
+            setFriendsTab("search");
+            setSearchQuery(friendParam);
+            handleSearch({ preventDefault: () => {} });
+        }
+    }, [user]);
+
     return h("div", { className: "movies-page" },
         h("div", { className: "page-head" },
             h("h1", null, "Hola, " + user.name),
-            h("p", { className: "muted" }, user.email)
+            h("p", { className: "muted" }, user.email),
+            user.nickname ? h("p", { className: "muted" }, "Nickname: @" + user.nickname) : null
         ),
         h("div", { className: "hero-stats account-stats" },
             h("div", null, h("strong", null, String((movies || []).length)), h("span", null, "guardadas")),
@@ -2251,6 +2814,98 @@ function MiCuenta(props) {
                 h(MovieCard, { key: movie.id, movie: movie, onDelete: onDelete, onDetail: openDetail, showDelete: true })
             )
         ),
+
+        // Amistades section
+        h("section", { className: "friends-section", style: { marginTop: "3rem" } },
+            h("h2", null, "Amistades"),
+            h("div", { className: "friends-tabs" },
+                h("button", { className: "tab-btn" + (friendsTab === "friends" ? " active" : ""), onClick: () => setFriendsTab("friends") }, "Mis amigos (" + friends.length + ")"),
+                h("button", { className: "tab-btn" + (friendsTab === "requests" ? " active" : ""), onClick: () => setFriendsTab("requests") }, "Solicitudes" + (requests.length > 0 ? " (" + requests.length + ")" : "")),
+                h("button", { className: "tab-btn" + (friendsTab === "search" ? " active" : ""), onClick: () => setFriendsTab("search") }, "Buscar amigos")
+            ),
+
+            friendsTab === "friends" ? h("div", { className: "friends-content" },
+                loadingFriends ? h("p", { className: "muted" }, "Cargando amigos...") : null,
+                !loadingFriends && friends.length === 0 ? h("p", { className: "muted" }, "Aún no tienes amigos. Busca a alguien por su nickname o comparte tu enlace.") : null,
+                !loadingFriends && friends.length > 0 ? h("div", { className: "friends-list" },
+                    friends.map((friend) =>
+                        h("div", { key: friend.id, className: "friend-item" },
+                            h("div", { className: "friend-info" },
+                                friend.photoURL ? h("img", { src: friend.photoURL, alt: "", className: "friend-avatar" }) : null,
+                                h("div", null,
+                                    h("strong", null, friend.name),
+                                    friend.nickname ? h("span", { className: "friend-nickname" }, " @" + friend.nickname) : null
+                                )
+                            ),
+                            h("button", { className: "btn-ghost btn-small", onClick: () => removeFriend(friend.id) }, "Eliminar")
+                        )
+                    )
+                ) : null
+            ) : null,
+
+            friendsTab === "requests" ? h("div", { className: "friends-content" },
+                requests.length === 0 ? h("p", { className: "muted" }, "No tienes solicitudes pendientes.") : null,
+                requests.length > 0 ? h("div", { className: "requests-list" },
+                    requests.map((req) =>
+                        h("div", { key: req.id, className: "request-item" },
+                            h("div", { className: "friend-info" },
+                                req.photoURL ? h("img", { src: req.photoURL, alt: "", className: "friend-avatar" }) : null,
+                                h("div", null,
+                                    h("strong", null, req.name),
+                                    req.nickname ? h("span", { className: "friend-nickname" }, " @" + req.nickname) : null
+                                )
+                            ),
+                            h("div", { className: "request-actions" },
+                                h("button", { className: "btn-primary btn-small", onClick: () => acceptRequest(req.id) }, "Aceptar"),
+                                h("button", { className: "btn-ghost btn-small", onClick: () => declineRequest(req.id) }, "Rechazar")
+                            )
+                        )
+                    )
+                ) : null
+            ) : null,
+
+            friendsTab === "search" ? h("div", { className: "friends-content" },
+                h("div", { className: "share-link-box" },
+                    h("h3", null, "Tu enlace de invitación"),
+                    user.nickname ? h("div", { className: "share-link-row" },
+                        h("input", {
+                            type: "text",
+                            value: window.location.origin + "/?friend=" + user.nickname,
+                            readOnly: true,
+                            className: "share-link-input"
+                        }),
+                        h("button", { className: "btn-primary btn-small", onClick: copyShareLink }, shareLink ? "¡Copiado!" : "Copiar enlace")
+                    ) : h("p", { className: "muted" }, "Configura tu nickname en el registro para poder compartir tu enlace.")
+                ),
+                h("form", { onSubmit: handleSearch, className: "friend-search-form" },
+                    h("input", {
+                        type: "text",
+                        value: searchQuery,
+                        onChange: (e) => setSearchQuery(e.target.value),
+                        placeholder: "Buscar por nickname (ej. @juan)",
+                        maxLength: 30,
+                        autoComplete: "off"
+                    }),
+                    h("button", { type: "submit", disabled: searching || !searchQuery.trim() }, searching ? "Buscando..." : "Buscar")
+                ),
+                searchError ? h("p", { className: "error" }, searchError) : null,
+                searchResults.length > 0 ? h("div", { className: "search-results" },
+                    searchResults.map((result) =>
+                        h("div", { key: result.id, className: "search-result-item" },
+                            h("div", { className: "friend-info" },
+                                result.photoURL ? h("img", { src: result.photoURL, alt: "", className: "friend-avatar" }) : null,
+                                h("div", null,
+                                    h("strong", null, result.name),
+                                    result.nickname ? h("span", { className: "friend-nickname" }, " @" + result.nickname) : null
+                                )
+                            ),
+                            h("button", { className: "btn-primary btn-small", onClick: () => sendRequest(result.id) }, "Agregar")
+                        )
+                    )
+                ) : null
+            ) : null
+        ),
+
         detail ? h("div", { className: "modal-backdrop", onClick: () => setDetail(null) },
             h("div", { className: "modal", onClick: (e) => e.stopPropagation() },
                 h("button", { className: "modal-close", onClick: () => setDetail(null) }, "✕"),
@@ -2262,10 +2917,143 @@ function MiCuenta(props) {
                     h("div", null,
                         h("h2", null, detail.title + " (" + detail.year + ")"),
                         detail.genre ? h("p", null, h("strong", null, "Género:"), " " + detail.genre) : null,
+                        detail.runtime ? h("p", null, h("strong", null, "Duración:"), " " + detail.runtime) : null,
                         detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
                         detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
                         detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
-                        detail.plot ? h("p", null, detail.plot) : null
+                        detail.plot ? h("p", null, detail.plot) : null,
+                        h("div", { className: "result-actions" },
+                            h("button", { className: "btn-ghost", type: "button", onClick: () => { setShowReviews(true); setWritingReview(false); } }, "Reseñas"),
+                            h("button", { className: "btn-ghost", type: "button", onClick: () => setDetail(null) }, "Cerrar")
+                        )
+                    )
+                )
+            )
+        ) : null,
+        detail && showReviews ? h("div", { className: "modal-backdrop", onClick: () => { setShowReviews(false); setWritingReview(false); } },
+            h("div", { className: "modal modal-reviews", onClick: (e) => e.stopPropagation() },
+                h("button", { className: "modal-close", onClick: () => { setShowReviews(false); setWritingReview(false); } }, "✕"),
+                h("div", { className: "modal-content" },
+                    h("h2", null, "Reseñas de " + detail.title),
+                    writingReview ? h("div", { className: "review-form" },
+                        user ? h("div", null,
+                            h("h3", null, "Escribe tu reseña"),
+                            h("textarea", {
+                                value: newReviewText,
+                                onChange: (e) => setNewReviewText(e.target.value),
+                                placeholder: "¿Qué te pareció? (mín. 50 caracteres)",
+                                rows: 4,
+                                maxLength: 2000
+                            }),
+                            newReviewText.length > 0 && newReviewText.length < 50 ? h("p", { className: "muted" }, "Mínimo 50 caracteres (" + newReviewText.length + "/50)") : null,
+                            h("div", { className: "result-actions" },
+                                h("button", {
+                                    className: "btn-primary",
+                                    onClick: () => {
+                                        if (newReviewText.trim().length >= 50) {
+                                            setSubmittingReview(true);
+                                            const newReview = {
+                                                id: Date.now().toString(),
+                                                user: user.name || user.email,
+                                                userId: user.id,
+                                                text: newReviewText.trim(),
+                                                createdAt: new Date().toISOString(),
+                                                upvotes: 0,
+                                                downvotes: 0,
+                                                userVote: 0,
+                                                replies: []
+                                            };
+                                            setReviews([newReview, ...reviews]);
+                                            setNewReviewText("");
+                                            setWritingReview(false);
+                                            setSubmittingReview(false);
+                                        }
+                                    },
+                                    disabled: submittingReview || newReviewText.trim().length < 50
+                                }, submittingReview ? "Publicando..." : "Publicar reseña"),
+                                h("button", { className: "btn-ghost", type: "button", onClick: () => { setWritingReview(false); setNewReviewText(""); } }, "Cancelar")
+                            )
+                        ) : h("div", { className: "auth-prompt" },
+                            h("p", null, "Para escribir una reseña necesitas iniciar sesión")
+                        )
+                    ) : h("div", { className: "reviews-section" },
+                        h("div", { className: "reviews-header" },
+                            h("h3", null, "Reseñas (" + reviews.length + ")"),
+                            h("button", {
+                                className: "btn-ghost btn-small",
+                                onClick: () => setWritingReview(true)
+                            }, "Escribir reseña")
+                        ),
+                        h("div", { className: "reviews-sort" },
+                            h("label", null, "Ordenar: "),
+                            h("select", {
+                                value: reviewsSort,
+                                onChange: (e) => setReviewsSort(e.target.value)
+                            },
+                                h("option", { value: "relevance" }, "Mayor relevancia"),
+                                h("option", { value: "votes" }, "Más votados"),
+                                h("option", { value: "recent" }, "Más recientes")
+                            )
+                        ),
+                        reviews.length === 0 ? h("p", { className: "muted" }, "Aún no hay reseñas. ¡Sé el primero en escribir una!") : h("div", { className: "reviews-list" },
+                            reviews
+                                .slice()
+                                .sort((a, b) => {
+                                    if (reviewsSort === "votes") return (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes);
+                                    if (reviewsSort === "recent") return new Date(b.createdAt) - new Date(a.createdAt);
+                                    return (b.upvotes - b.downvotes + (b.replies?.length || 0)) - (a.upvotes - a.downvotes + (a.replies?.length || 0));
+                                })
+                                .map((review) => h("div", { key: review.id, className: "review-item" },
+                                    h("div", { className: "review-header" },
+                                        h("strong", null, review.user),
+                                        h("span", { className: "review-date" }, new Date(review.createdAt).toLocaleDateString("es-ES"))
+                                    ),
+                                    h("p", { className: "review-text" }, review.text),
+                                    h("div", { className: "review-actions" },
+                                        h("button", {
+                                            className: "vote-btn" + (review.userVote === 1 ? " voted" : ""),
+                                            onClick: () => {
+                                                const updated = reviews.map(r => {
+                                                    if (r.id === review.id) {
+                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
+                                                        if (uv === 1) { up--; uv = 0; }
+                                                        else { up++; if (uv === -1) { down--; } uv = 1; }
+                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
+                                                    }
+                                                    return r;
+                                                });
+                                                setReviews(updated);
+                                            }
+                                        }, "👍 " + review.upvotes),
+                                        h("button", {
+                                            className: "vote-btn" + (review.userVote === -1 ? " voted" : ""),
+                                            onClick: () => {
+                                                const updated = reviews.map(r => {
+                                                    if (r.id === review.id) {
+                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
+                                                        if (uv === -1) { down--; uv = 0; }
+                                                        else { down++; if (uv === 1) { up--; } uv = -1; }
+                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
+                                                    }
+                                                    return r;
+                                                });
+                                                setReviews(updated);
+                                            }
+                                        }, "👎 " + review.downvotes),
+                                        h("button", {
+                                            className: "btn-ghost btn-small",
+                                            onClick: () => alert("Responder a reseña - próximamente")
+                                        }, "Responder (" + (review.replies?.length || 0) + ")")
+                                    ),
+                                    review.replies && review.replies.length > 0 ? h("div", { className: "review-replies" },
+                                        review.replies.map((reply) => h("div", { key: reply.id, className: "reply-item" },
+                                            h("strong", null, reply.user),
+                                            h("span", { className: "reply-date" }, new Date(reply.createdAt).toLocaleDateString("es-ES")),
+                                            h("p", null, reply.text)
+                                        ))
+                                    ) : null
+                                ))
+                        )
                     )
                 )
             )
@@ -2448,6 +3236,15 @@ function App() {
         setPage(target);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
+
+    // Check for friend parameter in URL to auto-open friends tab
+    React.useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const friendParam = params.get("friend");
+        if (friendParam && page === "cuenta" && user) {
+            // The MiCuenta component will handle this via its own effect
+        }
+    }, [page, user]);
 
     const handleAuth = async (tokenValue, userValue) => {
         try {
