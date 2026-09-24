@@ -140,6 +140,31 @@ app.get("/api/firebase-config", (req, res) => {
 const authRoutes = require("./src-backend/routes/authRoutes");
 app.use("/api", authRoutes);
 
+// Anti-spam de reseñas: 30 escrituras por IP y minuto (lecturas sin límite).
+// Debe registrarse ANTES de las rutas para que Express lo ejecute primero.
+const reviewWriteHits = new Map();
+app.use("/api/reviews", (req, res, next) => {
+    if (req.method === "GET") return next();
+    const now = Date.now();
+    const ip = req.ip || "unknown";
+    const windowMs = 60 * 1000;
+    const hits = (reviewWriteHits.get(ip) || []).filter((t) => now - t < windowMs);
+    hits.push(now);
+    reviewWriteHits.set(ip, hits);
+    if (reviewWriteHits.size > 500) {
+        for (const [key, times] of reviewWriteHits) {
+            if (!times.some((t) => now - t < windowMs)) reviewWriteHits.delete(key);
+        }
+    }
+    if (hits.length > 30) {
+        return res.status(429).json({ error: "Demasiadas reseñas seguidas. Espera un minuto." });
+    }
+    next();
+});
+
+const reviewRoutes = require("./src-backend/routes/reviewRoutes");
+app.use("/api", reviewRoutes);
+
 // 404 solo para la API (devuelve JSON, no HTML)
 app.use("/api", (req, res) => {
     res.status(404).json({ error: "Ruta de API no encontrada" });

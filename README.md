@@ -26,9 +26,14 @@ Navegador
 	v
 Express (server.js)
 	|
-	+--> Rutas de películas ------> MovieModel ------> Firestore
-	|
-	+--> Rutas de autenticación -> AuthService -----> Firestore
++--> Rutas de películas ------> MovieModel ------> Firestore
+ 	|
+ 	+--> Rutas de series ---------> SeriesModel -----> Firestore
+ 	|
+ 	+--> Rutas de reseñas --------> ReviewModel -----> Firestore
+ 	|                                   +-> reviews, review_votes, replies
+ 	|
+ 	+--> Rutas de autenticación -> AuthService -----> Firestore
 	|                                  |
 	|                                  +------------> Firebase Authentication Admin
 	|
@@ -79,8 +84,11 @@ La aplicación web consulta películas únicamente desde Firestore. OMDb no part
 |-- src-backend/
 |   |-- models/firebase.js       # Inicialización de Firebase Admin.
 |   |-- models/movieModel.js     # Acceso a películas y catálogo Firestore.
-|   |-- routes/movieRoutes.js    # API de catálogo y colección personal.
-|   |-- routes/authRoutes.js     # API de sincronización y sesión.
+ |   |-- routes/movieRoutes.js    # API de catálogo y colección personal.
+ |   |-- routes/seriesRoutes.js   # API de catálogo y colección personal de series.
+ |   |-- routes/reviewRoutes.js   # API de reseñas, votos y respuestas.
+ |   |-- models/reviewModel.js    # Acceso a reseñas, votos y respuestas.
+ |   |-- routes/authRoutes.js     # API de sincronización y sesión.
 |   `-- services/
 |       |-- authService.js       # Verificación Firebase y sesiones técnicas.
 |       `-- omdbService.js       # Cliente OMDb usado por scripts.
@@ -219,6 +227,30 @@ Las rutas privadas reciben el token propio en:
 Authorization: Bearer <token>
 ```
 
+### Reseñas de películas y series
+
+Lecturas públicas (con `Bearer` opcional se añade `userVote`); escritura solo con sesión.
+
+| Método | Ruta | Función |
+|---|---|---|
+| `GET` | `/api/reviews?mediaType=movie&imdbID=tt0111161&sort=relevance&page=1&limit=20` | Lista reseñas de una obra (`sort`: `relevance`, `votes`, `recent`). También acepta `title`+`year` en vez de `imdbID`. |
+| `GET` | `/api/reviews/summary?mediaType=movie&imdbID=...` | Resumen: `count`, `avgRating`, `ratingsCount`, `score`. |
+| `GET` | `/api/reviews/mine?page=1&limit=20` | Reseñas del usuario autenticado. |
+| `GET` | `/api/reviews/:id` | Detalle de una reseña. |
+| `POST` | `/api/reviews` | Crea reseña `{ mediaType, imdbID?, mediaTitle, mediaYear?, text (50-2000), rating? (1-10) }`. Una por usuario y obra (`409` si duplica). |
+| `PUT` | `/api/reviews/:id` | Edita texto/nota (solo el autor). |
+| `DELETE` | `/api/reviews/:id` | Borra reseña, votos y respuestas (solo el autor). |
+| `POST` | `/api/reviews/:id/vote` | Vota `{ value: 1 \| -1 \| 0 }` (retirar con `0`). Transaccional e idempotente. |
+| `GET` | `/api/reviews/:id/replies` | Lista respuestas. |
+| `POST` | `/api/reviews/:id/replies` | Responde `{ text (1-1000) }`. |
+| `DELETE` | `/api/reviews/:id/replies/:replyId` | Borra respuesta (solo su autor). |
+
+Anti-spam: 30 escrituras (`POST`/`PUT`/`DELETE`) por IP y minuto (`429`).
+
+`mediaKey` identifica la obra: `movie:tt1234567` si hay `imdbID`, o `movie:slug-titulo-yyyy` si no.
+
+El modal de reseñas del front (Películas, Series y MiCuenta) consume esta API mediante el componente compartido `ReviewsModal` de `public/js/bundle.js` (listar, publicar, votar, responder y borrar la reseña propia).
+
 ## Scripts administrativos
 
 Los scripts usan Firebase Admin y deben ejecutarse desde la raíz del proyecto.
@@ -302,6 +334,45 @@ createdAt
 ```
 
 El ID de una película guardada combina título, año y propietario. Así varios usuarios pueden guardar la misma película sin compartir el documento personal.
+
+### `reviews/{reviewId}`
+
+```text
+mediaType: "movie" | "series"
+mediaKey            # ej. "movie:tt0111161" o "series:breaking-bad-2008"
+imdbID | null
+mediaTitle
+mediaYear | null
+userId
+userName
+text (50-2000)
+rating (1-10) | null
+upvotes, downvotes, score (upvotes - downvotes)
+replyCount
+createdAt, updatedAt
+```
+
+Una reseña por pareja (`mediaKey`, `userId`). `score` y `replyCount` están desnormalizados para ordenar por relevancia sin leer subcolecciones.
+
+### `review_votes/{reviewId__userSlug}`
+
+```text
+reviewId
+userId
+value: 1 | -1
+updatedAt
+```
+
+Un voto por usuario y reseña; el cambio de voto se hace en transacción para no descuadrar contadores.
+
+### `reviews/{reviewId}/replies/{replyId}`
+
+```text
+userId
+userName
+text (1-1000)
+createdAt
+```
 
 ### `sessions/{token}`
 
