@@ -1214,6 +1214,7 @@ function RegisterPage(props) {
 /* ---------- MediaPage: Películas con filtros ----------
     Props: movies, loadingList,
    onRefresh(), onDelete(id), onNavigate(page) */
+// MEDIA_PAGE_MARKER
 function MediaPage(props) {
     const user = props.user || null;
     const movies = props.movies;
@@ -1221,6 +1222,7 @@ function MediaPage(props) {
     const onRefresh = props.onRefresh;
     const onDelete = props.onDelete;
     const onNavigate = props.onNavigate;
+    const friends = props.friends || [];
     const omdbType = "movie";
 
     const queryState = React.useState("");
@@ -1886,6 +1888,7 @@ function MediaPage(props) {
 
 /* ---------- SeriesPage: pantalla de búsqueda y descubrimiento de series ----------
    Props: user, series, loadingList, onRefresh(), onDelete(id), onNavigate(page) */
+// SERIES_PAGE_MARKER
 function SeriesPage(props) {
     const user = props.user || null;
     const series = props.series;
@@ -1893,6 +1896,7 @@ function SeriesPage(props) {
     const onRefresh = props.onRefresh;
     const onDelete = props.onDelete;
     const onNavigate = props.onNavigate;
+    const friends = props.friends || [];
     const omdbType = "series";
 
     const queryState = React.useState("");
@@ -2539,6 +2543,7 @@ function SeriesPage(props) {
 
 /* ---------- MiCuenta: pantalla personal del usuario ----------
    Props: user, movies, loadingList, onDelete(id) */
+// MI_CUENTA_MARKER
 function MiCuenta(props) {
     const user = props.user;
     const movies = props.movies;
@@ -2649,8 +2654,10 @@ function MiCuenta(props) {
 
     const handleSearch = async (e) => {
         e.preventDefault();
-        const q = searchQuery.trim().toLowerCase();
+        let q = searchQuery.trim().toLowerCase();
         if (!q) { setSearchError("Escribe un nickname"); return; }
+        // Quitar @ si el usuario lo incluye
+        if (q.startsWith("@")) q = q.slice(1);
         if (q === (user.nickname || "").toLowerCase()) { setSearchError("No te puedes buscar a ti mismo"); return; }
         setSearching(true);
         setSearchError(null);
