@@ -1,5 +1,6 @@
 // Este modelo separa dos usos de la colección movies:
 // catálogo público (búsqueda y populares) y colección personal (userId).
+// Las series viven en su propia colección "series" (ver seriesModel.js).
 // La conexión se centraliza en ./firebase.js.
 // Soporta credenciales por .env o por firebase-key.json (legacy).
 const firebaseConn = require("./firebase");

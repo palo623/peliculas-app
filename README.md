@@ -1,6 +1,6 @@
 # CineAIros
 
-Aplicación web para descubrir, buscar y guardar películas. El catálogo público se almacena en Firestore; la API de OMDb se utiliza únicamente para cargar y mantener ese catálogo mediante scripts administrativos.
+Aplicación web para descubrir, buscar y guardar películas y series. El catálogo público se almacena en Firestore; la API de OMDb se utiliza únicamente para cargar y mantener ese catálogo mediante scripts administrativos.
 
 ## Índice
 
@@ -26,9 +26,11 @@ Navegador
 	v
 Express (server.js)
 	|
-	+--> Rutas de películas ------> MovieModel ------> Firestore
+	+--> Rutas de películas ------> MovieModel ------> Firestore (movies)
 	|
-	+--> Rutas de autenticación -> AuthService -----> Firestore
+	+--> Rutas de series --------> SeriesModel ------> Firestore (series)
+	|
+	+--> Rutas de autenticación -> AuthService ------> Firestore (users/sessions)
 	|                                  |
 	|                                  +------------> Firebase Authentication Admin
 	|
@@ -37,7 +39,7 @@ Express (server.js)
 
 El frontend no está compilado. `public/js/bundle.js` se ejecuta directamente en el navegador y utiliza React mediante CDN. El backend sirve simultáneamente la aplicación web y la API REST.
 
-La aplicación web consulta películas únicamente desde Firestore. OMDb no participa en las búsquedas del usuario ni en “Popular ahora”; solo se consulta desde `scripts/seedRandomMovies.js` para poblar el catálogo.
+La aplicación web consulta películas y series únicamente desde Firestore. OMDb no participa en las búsquedas del usuario ni en “Popular ahora”; solo se consulta desde `scripts/seedRandomMovies.js` y `scripts/seedRandomSeries.js` para poblar los catálogos.
 
 ## Stack tecnológico
 
@@ -60,7 +62,7 @@ La aplicación web consulta películas únicamente desde Firestore. OMDb no part
 ### Servicios externos
 
 - Firebase Authentication: registro, login, Google, verificación de correo y recuperación de contraseña.
-- Cloud Firestore: usuarios, sesiones, catálogo y películas guardadas.
+- Cloud Firestore: usuarios, sesiones, catálogo de películas, catálogo de series y colecciones personales.
 - OMDb API: fuente administrativa para importar películas.
 
 ## Estructura del proyecto
@@ -79,15 +81,20 @@ La aplicación web consulta películas únicamente desde Firestore. OMDb no part
 |-- src-backend/
 |   |-- models/firebase.js       # Inicialización de Firebase Admin.
 |   |-- models/movieModel.js     # Acceso a películas y catálogo Firestore.
+|   |-- models/seriesModel.js    # Acceso a series y catálogo Firestore.
 |   |-- routes/movieRoutes.js    # API de catálogo y colección personal.
+|   |-- routes/seriesRoutes.js   # API de catálogo y colección personal de series.
 |   |-- routes/authRoutes.js     # API de sincronización y sesión.
 |   `-- services/
 |       |-- authService.js       # Verificación Firebase y sesiones técnicas.
 |       `-- omdbService.js       # Cliente OMDb usado por scripts.
 `-- scripts/
-		|-- migrateDatabase.js       # Migración de documentos antiguos.
-		|-- deleteAllMovies.js       # Borrado controlado de movies.
-		`-- seedRandomMovies.js      # Importación aleatoria desde OMDb.
+    |-- migrateDatabase.js           # Migración de documentos antiguos.
+    |-- migrateSeriesToCollection.js # Mueve series de movies a su colección propia.
+    |-- enrichSeriesSeasons.js       # Añade temporadas/episodios desde OMDb.
+    |-- deleteAllMovies.js           # Borrado controlado de movies.
+    |-- seedRandomMovies.js          # Importación aleatoria desde OMDb.
+    `-- seedRandomSeries.js          # Importación aleatoria de series desde OMDb.
 ```
 
 ## Flujos principales
@@ -120,9 +127,9 @@ Si el usuario todavía no tiene `onboardingDone: true`, se abre el cuestionario.
 
 El backend no almacena tokens propios de recuperación ni contraseñas.
 
-### Catálogo de películas
+### Catálogo de películas y series
 
-El buscador, la portada y “Popular ahora” leen Firestore. La colección `movies` contiene tanto las películas del catálogo como las películas guardadas por usuarios; `userId` permite separar la colección personal del catálogo público.
+El buscador, la portada y “Popular ahora” leen Firestore. Las películas viven en la colección `movies` y las series en la colección `series`. En ambas, el campo `userId` permite separar la colección personal del catálogo público.
 
 ## Configuración
 
@@ -197,10 +204,14 @@ Todas las rutas están montadas bajo `/api`.
 | `GET` | `/api/movies/search?t=...&y=...` | Busca una película exacta en Firestore. |
 | `GET` | `/api/movies/search-list?s=...&page=...&y=...` | Lista coincidencias del catálogo Firestore. |
 | `GET` | `/api/movies/popular?limit=12&y=...` | Devuelve una muestra aleatoria de Firestore. |
+| `GET` | `/api/series/health` | Comprueba conexión de Firestore. |
+| `GET` | `/api/series/search?t=...&y=...` | Busca una serie exacta en Firestore. |
+| `GET` | `/api/series/search-list?s=...&page=...&y=...` | Lista coincidencias del catálogo de series. |
+| `GET` | `/api/series/popular?limit=12&y=...` | Devuelve una muestra aleatoria de series. |
 
-Si la colección `movies` está vacía, el buscador y “Popular ahora” no obtienen resultados. Estas rutas no consultan OMDb.
+Si la colección `movies` o `series` está vacía, el buscador y “Popular ahora” no obtienen resultados. Estas rutas no consultan OMDb.
 
-### Sesión y colección personal
+### Sesión y colecciones personales
 
 | Método | Ruta | Función |
 |---|---|---|
@@ -212,6 +223,10 @@ Si la colección `movies` está vacía, el buscador y “Popular ahora” no obt
 | `POST` | `/api/movies` | Guarda una película en la colección personal. |
 | `GET` | `/api/movies/:id` | Obtiene una película personal. |
 | `DELETE` | `/api/movies/:id` | Elimina una película personal. |
+| `GET` | `/api/series` | Lista series guardadas por el usuario autenticado. |
+| `POST` | `/api/series` | Guarda una serie en la colección personal. |
+| `GET` | `/api/series/:id` | Obtiene una serie personal. |
+| `DELETE` | `/api/series/:id` | Elimina una serie personal. |
 
 Las rutas privadas reciben el token propio en:
 
@@ -245,9 +260,9 @@ Borrado real:
 node scripts/deleteAllMovies.js --confirm
 ```
 
-Cuenta los documentos y borra toda la colección `movies` por lotes. No toca `users`, `sessions` ni Firebase Authentication.
+Cuenta los documentos y borra toda la colección `movies` por lotes. No toca `series`, `users`, `sessions` ni Firebase Authentication.
 
-### Poblar el catálogo
+### Poblar el catálogo de películas
 
 ```powershell
 node scripts/seedRandomMovies.js --count=400
@@ -264,6 +279,46 @@ Por defecto utiliza `catalog-seed` como `userId`, lo que permite que las pelícu
 ```powershell
 node scripts/seedRandomMovies.js --count=400 --userId=usuario@example.com
 ```
+
+### Poblar el catálogo de series
+
+```powershell
+node scripts/seedRandomSeries.js --count=200
+```
+
+Añade series aleatorias desde OMDb a la colección `series` sin borrar las existentes. Acepta los mismos parámetros que el de películas (`--count`, `--dry-run`, `--userId`).
+
+### Separar las series en su propia colección
+
+```powershell
+node scripts/migrateSeriesToCollection.js --dry-run
+node scripts/migrateSeriesToCollection.js
+```
+
+Mueve los documentos con `type: "series"` desde la colección `movies` a la colección `series`, conservando sus IDs y sin tocar las películas.
+
+### Añadir temporadas y episodios
+
+```powershell
+node scripts/enrichSeriesSeasons.js --limit=30
+node scripts/enrichSeriesSeasons.js --limit=30 --dry-run
+node scripts/enrichSeriesSeasons.js --ids=tt0944947,tt4574334
+```
+
+Rellena `totalSeasons` y `seasons[]` de cada serie del catálogo consultando OMDb temporada a temporada. Como OMDb Free tiene cuota diaria, se recomienda procesar en tandas con `--limit`. Ignora las series ya enriquecidas y actualiza también las copias guardadas por usuarios.
+
+### Enriquecimiento automático
+
+El servidor lanza una tanda diaria en segundo plano (una al arrancar y otra a la hora fijada) sin bloquear la web. Se configura con variables del `.env`:
+
+```env
+SEASON_ENRICH_ENABLED=true
+SEASON_ENRICH_DAILY_LIMIT=25
+SEASON_ENRICH_HOUR=4
+SEASON_ENRICH_DELAY=300
+```
+
+Con `SEASON_ENRICH_ENABLED=false` se desactiva por completo.
 
 ## Modelo de datos
 
@@ -302,6 +357,29 @@ createdAt
 ```
 
 El ID de una película guardada combina título, año y propietario. Así varios usuarios pueden guardar la misma película sin compartir el documento personal.
+
+### `series/{seriesId}`
+
+```text
+title
+year
+type: "series"
+imdbID
+poster
+director
+genre
+plot
+actors
+runtime
+rating
+totalSeasons     # nº total de temporadas (OMDb)
+seasons[]        # [{ season: 1, episodes: 11 }, ...]
+dateEnriched     # cuándo se rellenaron las temporadas
+userId
+createdAt
+```
+
+Al igual que `movies`, combina el catálogo público (`userId: "catalog-seed"`) con las colecciones personales de cada usuario. El ID combina título, año y propietario. Los campos de temporadas se rellenan con el script de enriquecimiento para no consumir cuota de OMDb durante el uso normal de la web.
 
 ### `sessions/{token}`
 

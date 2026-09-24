@@ -1604,6 +1604,7 @@ function MediaPage(props) {
                     h("p", null, h("strong", null, "Género:"), " " + result.genre),
                     result.actors ? h("p", null, h("strong", null, "Actores:"), " " + result.actors) : null,
                     result.rating ? h("p", null, h("strong", null, "Nota IMDb:"), " ★ " + result.rating) : null,
+                    h(SeasonsBlock, { serie: result }),
                     h("p", null, h("strong", null, "Sinopsis:"), " " + result.plot),
                     resultWarning ? h("p", { className: "muted" }, "ℹ " + resultWarning) : null,
                     h("div", { className: "result-actions" },
@@ -1638,6 +1639,7 @@ function MediaPage(props) {
                         detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
                         detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
                         detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
+                        h(SeasonsBlock, { serie: detail }),
                         detail.plot ? h("p", null, detail.plot) : null,
                         h("div", { className: "result-actions" },
                             h("button", {
@@ -1650,6 +1652,30 @@ function MediaPage(props) {
                 )
             )
         ) : null
+    );
+}
+
+/* ---------- SeasonsBlock: temporadas y episodios de una serie ----------
+   Muestra el total de temporadas y un chip por cada una con sus capítulos.
+   Si los datos aún no están enriquecidos, no pinta nada. */
+function SeasonsBlock(props) {
+    const serie = props.serie || {};
+    const total = Number(serie.totalSeasons) || 0;
+    const seasons = Array.isArray(serie.seasons)
+        ? serie.seasons.filter((s) => s && s.season !== undefined && s.season !== null)
+        : [];
+    if (!total && seasons.length === 0) return null;
+    return h("div", { className: "seasons-block" },
+        total ? h("p", null, h("strong", null, "Temporadas:"), " " + String(total)) : null,
+        seasons.length > 0
+            ? h("div", { className: "season-chips" },
+                seasons.map((s) =>
+                    h("span", { key: String(s.season), className: "season-chip" },
+                        "T" + Number(s.season) + " · " + Number(s.episodes) + (Number(s.episodes) === 1 ? " capítulo" : " capítulos")
+                    )
+                )
+            )
+            : null
     );
 }
 
@@ -1746,6 +1772,8 @@ function SeriesPage(props) {
                             director: data.director,
                             actors: data.actors,
                             type: data.type || item.type,
+                            totalSeasons: data.totalSeasons || null,
+                            seasons: Array.isArray(data.seasons) ? data.seasons : null,
                         }),
                         limited: false
                     };
@@ -2106,6 +2134,7 @@ function SeriesPage(props) {
                     h("p", null, h("strong", null, "Género:"), " " + result.genre),
                     result.actors ? h("p", null, h("strong", null, "Actores:"), " " + result.actors) : null,
                     result.rating ? h("p", null, h("strong", null, "Nota IMDb:"), " ★ " + result.rating) : null,
+                    h(SeasonsBlock, { serie: result }),
                     h("p", null, h("strong", null, "Sinopsis:"), " " + result.plot),
                     resultWarning ? h("p", { className: "muted" }, "ℹ " + resultWarning) : null,
                     h("div", { className: "result-actions" },
@@ -2140,6 +2169,7 @@ function SeriesPage(props) {
                         detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
                         detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
                         detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
+                        h(SeasonsBlock, { serie: detail }),
                         detail.plot ? h("p", null, detail.plot) : null,
                         h("div", { className: "result-actions" },
                             h("button", {
