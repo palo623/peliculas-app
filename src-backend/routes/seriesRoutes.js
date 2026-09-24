@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { SeriesModel } = require("../models/seriesModel");
 const { authService } = require("../services/authService");
+const { omdbService } = require("../services/omdbService");
 
 async function authUser(req) {
     const header = req.headers.authorization || "";
@@ -134,6 +135,43 @@ router.delete("/series/:id", async (req, res) => {
         }
         res.json({ ok: true, id: req.params.id });
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.get("/series/seasons", async (req, res) => {
+    const { imdbID } = req.query;
+    if (!imdbID || !imdbID.trim()) {
+        return res.status(400).json({ error: "Falta el parámetro 'imdbID'" });
+    }
+    try {
+        const data = await SeriesModel.getSeasons(imdbID);
+        res.json(data);
+    } catch (error) {
+        const msg = error.message || "";
+        if (/inválido/i.test(msg)) return res.status(400).json({ error: error.message });
+        if (/no encontrada/i.test(msg)) return res.status(404).json({ error: error.message });
+        if (/HTTP 429|rate limit|demasiadas peticiones/i.test(msg)) return res.status(429).json({ error: "Límite de peticiones excedido en OMDb" });
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.get("/series/episodes", async (req, res) => {
+    const { imdbID, season } = req.query;
+    if (!imdbID || !imdbID.trim()) {
+        return res.status(400).json({ error: "Falta el parámetro 'imdbID'" });
+    }
+    if (season === undefined || season === null || String(season).trim() === "") {
+        return res.status(400).json({ error: "Falta el parámetro 'season'" });
+    }
+    try {
+        const episodes = await SeriesModel.getEpisodes(imdbID, season);
+        res.json(episodes);
+    } catch (error) {
+        const msg = error.message || "";
+        if (/inválido/i.test(msg)) return res.status(400).json({ error: error.message });
+        if (/no encontrada|no encontrados/i.test(msg)) return res.status(404).json({ error: error.message });
+        if (/HTTP 429|rate limit|demasiadas peticiones/i.test(msg)) return res.status(429).json({ error: "Límite de peticiones excedido en OMDb" });
         res.status(500).json({ error: error.message });
     }
 });

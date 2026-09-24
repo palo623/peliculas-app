@@ -46,6 +46,34 @@ function publicUser(user) {
     };
 }
 
+function cardUser(user) {
+    return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        photoURL: user.photoURL || null,
+        provider: user.provider || (user.passHash ? "password" : "firebase")
+    };
+}
+
+function cleanTop5Item(item) {
+    if (!item || typeof item !== "object") throw new Error("Cada favorita del Top 5 debe ser un objeto");
+    const title = String(item.title || "").trim().slice(0, 200);
+    const imdbID = String(item.imdbID || "").trim();
+    if (!title && !imdbID) throw new Error("Cada favorita necesita 'title' o 'imdbID'");
+    if (imdbID && !/^tt\d+$/i.test(imdbID)) throw new Error("IMDb ID inválido en el Top 5");
+    const type = String(item.type || "movie").toLowerCase().trim();
+    if (type !== "movie" && type !== "series") throw new Error("Tipo inválido en el Top 5");
+    return {
+        movieId: String(item.movieId || "").trim().slice(0, 300) || null,
+        imdbID: imdbID || null,
+        title: title || imdbID,
+        year: String(item.year || "").trim().slice(0, 9) || null,
+        poster: String(item.poster || "").trim().slice(0, 500) || null,
+        type
+    };
+}
+
 function cleanDisplayName(raw, emailFallback) {
     const clean = (raw || "").toString().trim().slice(0, 80);
     if (clean.length >= 2) return clean;
@@ -270,6 +298,30 @@ const authService = {
         return merged;
     },
 
+    getById: async (userId) => {
+        return getUserById(userId);
+    },
+
+    getTop5: async (userId) => {
+        const user = await getUserById(userId);
+        return user && Array.isArray(user.top5) ? user.top5 : [];
+    },
+
+    setTop5: async (userId, items) => {
+        if (!userId || !Array.isArray(items)) throw new Error("Top 5 inválido");
+        const top5 = items.slice(0, 5).map(cleanTop5Item);
+        if (!db) {
+            const user = localUsers.get(userId);
+            if (user) {
+                user.top5 = top5;
+                localUsers.set(userId, user);
+            }
+            return top5;
+        }
+        await db.collection("users").doc(userId).set({ top5 }, { merge: true });
+        return top5;
+    },
+
     // Actualiza perfil público (nickname, colorTheme)
     updateProfile: async (token, { nickname, colorTheme }) => {
         const session = await readSession(token);
@@ -310,13 +362,18 @@ const authService = {
     },
 
     // Busca usuarios por nombre/apodo (para añadir amigos)
-    searchUsers: async (query, currentUserId) => {
+    searchUsers: async (query, currentUserIdOrOptions) => {
         if (!query || !query.trim()) return [];
         const searchTerm = query.trim().toLowerCase();
+        const options = currentUserIdOrOptions && typeof currentUserIdOrOptions === "object"
+            ? currentUserIdOrOptions
+            : { excludeId: currentUserIdOrOptions };
+        const excludedId = options.excludeId || null;
+        const maxResults = Math.min(Math.max(Number.parseInt(options.limit, 10) || 20, 1), 50);
         let users = [];
         if (!db) {
             for (const u of localUsers.values()) {
-                if (u.id !== currentUserId) {
+                if (u.id !== excludedId) {
                     users.push(u);
                 }
             }
@@ -324,7 +381,7 @@ const authService = {
             const snapshot = await db.collection("users").get();
             snapshot.forEach((doc) => {
                 const u = Object.assign({ id: doc.id }, doc.data());
-                if (u.id !== currentUserId) users.push(u);
+                if (u.id !== excludedId) users.push(u);
             });
         }
         return users
@@ -334,7 +391,7 @@ const authService = {
                 const email = (u.email || "").toLowerCase();
                 return name.includes(searchTerm) || nickname.includes(searchTerm) || email.includes(searchTerm);
             })
-            .slice(0, 20)
+                .slice(0, maxResults)
             .map((u) => publicUser(u));
     },
 

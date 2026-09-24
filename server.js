@@ -165,6 +165,8 @@ app.use("/api/reviews", (req, res, next) => {
 });
 
 app.use("/api", reviewRoutes);
+const friendsRoutes = require("./src-backend/routes/friendsRoutes");
+app.use("/api", friendsRoutes);
 
 // 404 solo para la API (devuelve JSON, no HTML)
 app.use("/api", (req, res) => {
