@@ -21,8 +21,8 @@ const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const countArg = args.find((arg) => arg.startsWith("--count="));
 const ownerArg = args.find((arg) => arg.startsWith("--userId="));
-const requestedCount = countArg ? Number.parseInt(countArg.split("=")[1], 10) : 200;
-const targetCount = Math.min(Math.max(requestedCount || 200, 1), 400);
+const requestedCount = countArg ? Number.parseInt(countArg.split("=")[1], 10) : 300;
+const targetCount = Math.min(Math.max(requestedCount || 300, 1), 400);
 const ownerId = ownerArg ? ownerArg.split("=").slice(1).join("=").trim() : "catalog-seed";
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
