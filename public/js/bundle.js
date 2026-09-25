@@ -2878,8 +2878,7 @@ function MiCuenta(props) {
                 h("li", null, h("a", { href: "#peliculas-recientes", onClick: (e) => { e.preventDefault(); document.getElementById("peliculas-recientes")?.scrollIntoView({ behavior: "smooth" }); } }, "🎬 Películas recientes")),
                 h("li", null, h("a", { href: "#todas-peliculas", onClick: (e) => { e.preventDefault(); document.getElementById("todas-peliculas")?.scrollIntoView({ behavior: "smooth" }); } }, "📁 Todas las películas")),
                 h("li", null, h("a", { href: "#series-recientes", onClick: (e) => { e.preventDefault(); document.getElementById("series-recientes")?.scrollIntoView({ behavior: "smooth" }); } }, "📺 Series recientes")),
-                h("li", null, h("a", { href: "#todas-series", onClick: (e) => { e.preventDefault(); document.getElementById("todas-series")?.scrollIntoView({ behavior: "smooth" }); } }, "📁 Todas las series")),
-                h("li", null, h("a", { href: "#amistades", onClick: (e) => { e.preventDefault(); document.getElementById("amistades")?.scrollIntoView({ behavior: "smooth" }); } }, "👥 Amistades"))
+                h("li", null, h("a", { href: "#todas-series", onClick: (e) => { e.preventDefault(); document.getElementById("todas-series")?.scrollIntoView({ behavior: "smooth" }); } }, "📁 Todas las series"))
             )
         ),
 
@@ -2909,96 +2908,7 @@ function MiCuenta(props) {
             )
         ),
 
-        // Amistades section
-        h("section", { id: "amistades", className: "friends-section", style: { marginTop: "3rem" } },
-            h("h2", null, "Amistades"),
-            h("div", { className: "friends-tabs" },
-                h("button", { className: "tab-btn" + (friendsTab === "friends" ? " active" : ""), onClick: () => setFriendsTab("friends") }, "Mis amigos (" + friends.length + ")"),
-                h("button", { className: "tab-btn" + (friendsTab === "requests" ? " active" : ""), onClick: () => setFriendsTab("requests") }, "Solicitudes" + (requests.length > 0 ? " (" + requests.length + ")" : "")),
-                h("button", { className: "tab-btn" + (friendsTab === "search" ? " active" : ""), onClick: () => setFriendsTab("search") }, "Buscar amigos")
-            ),
 
-            friendsTab === "friends" ? h("div", { className: "friends-content" },
-                loadingFriends ? h("p", { className: "muted" }, "Cargando amigos...") : null,
-                !loadingFriends && friends.length === 0 ? h("p", { className: "muted" }, "Aún no tienes amigos. Busca a alguien por su nickname o comparte tu enlace.") : null,
-                !loadingFriends && friends.length > 0 ? h("div", { className: "friends-list" },
-                    friends.map((friend) =>
-                        h("div", { key: friend.id, className: "friend-item" },
-                            h("div", { className: "friend-info" },
-                                friend.photoURL ? h("img", { src: friend.photoURL, alt: "", className: "friend-avatar" }) : null,
-                                h("div", null,
-                                    h("strong", null, friend.name),
-                                    friend.nickname ? h("span", { className: "friend-nickname" }, " @" + friend.nickname) : null
-                                )
-                            ),
-                            h("button", { className: "btn-ghost btn-small", onClick: () => removeFriend(friend.id) }, "Eliminar")
-                        )
-                    )
-                ) : null
-            ) : null,
-
-            friendsTab === "requests" ? h("div", { className: "friends-content" },
-                requests.length === 0 ? h("p", { className: "muted" }, "No tienes solicitudes pendientes.") : null,
-                requests.length > 0 ? h("div", { className: "requests-list" },
-                    requests.map((req) =>
-                        h("div", { key: req.id, className: "request-item" },
-                            h("div", { className: "friend-info" },
-                                req.photoURL ? h("img", { src: req.photoURL, alt: "", className: "friend-avatar" }) : null,
-                                h("div", null,
-                                    h("strong", null, req.name),
-                                    req.nickname ? h("span", { className: "friend-nickname" }, " @" + req.nickname) : null
-                                )
-                            ),
-                            h("div", { className: "request-actions" },
-                                h("button", { className: "btn-primary btn-small", onClick: () => acceptRequest(req.id) }, "Aceptar"),
-                                h("button", { className: "btn-ghost btn-small", onClick: () => declineRequest(req.id) }, "Rechazar")
-                            )
-                        )
-                    )
-                ) : null
-            ) : null,
-
-            friendsTab === "search" ? h("div", { className: "friends-content" },
-                h("div", { className: "share-link-box" },
-                    h("h3", null, "Tu enlace de invitación"),
-                    user.nickname ? h("div", { className: "share-link-row" },
-                        h("input", {
-                            type: "text",
-                            value: window.location.origin + "/?friend=" + user.nickname,
-                            readOnly: true,
-                            className: "share-link-input"
-                        }),
-                        h("button", { className: "btn-primary btn-small", onClick: copyShareLink }, shareLink ? "¡Copiado!" : "Copiar enlace")
-                    ) : h("p", { className: "muted" }, "Configura tu nickname en el registro para poder compartir tu enlace.")
-                ),
-                h("form", { onSubmit: handleSearch, className: "friend-search-form" },
-                    h("input", {
-                        type: "text",
-                        value: searchQuery,
-                        onChange: (e) => setSearchQuery(e.target.value),
-                        placeholder: "Buscar por nickname (ej. @juan)",
-                        maxLength: 30,
-                        autoComplete: "off"
-                    }),
-                    h("button", { type: "submit", disabled: searching || !searchQuery.trim() }, searching ? "Buscando..." : "Buscar")
-                ),
-                searchError ? h("p", { className: "error" }, searchError) : null,
-                searchResults.length > 0 ? h("div", { className: "search-results" },
-                    searchResults.map((result) =>
-                        h("div", { key: result.id, className: "search-result-item" },
-                            h("div", { className: "friend-info" },
-                                result.photoURL ? h("img", { src: result.photoURL, alt: "", className: "friend-avatar" }) : null,
-                                h("div", null,
-                                    h("strong", null, result.name),
-                                    result.nickname ? h("span", { className: "friend-nickname" }, " @" + result.nickname) : null
-                                )
-                            ),
-                            h("button", { className: "btn-primary btn-small", onClick: () => sendRequest(result.id) }, "Agregar")
-                        )
-                    )
-                ) : null
-            ) : null
-        ),
 
         detail ? h("div", { className: "modal-backdrop", onClick: () => setDetail(null) },
             h("div", { className: "modal", onClick: (e) => e.stopPropagation() },
