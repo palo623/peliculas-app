@@ -168,6 +168,9 @@ app.use("/api", reviewRoutes);
 const friendsRoutes = require("./src-backend/routes/friendsRoutes");
 app.use("/api", friendsRoutes);
 
+const chatRoutes = require("./src-backend/routes/chatRoutes");
+app.use("/api", chatRoutes);
+
 // 404 solo para la API (devuelve JSON, no HTML)
 app.use("/api", (req, res) => {
     res.status(404).json({ error: "Ruta de API no encontrada" });
