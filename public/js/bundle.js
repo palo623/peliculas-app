@@ -1867,7 +1867,29 @@ function SeriesPage(props) {
         return () => clearInterval(timer);
     }, []);
 
-    const rateLimitExceeded = () => {
+    
+    // Si venimos de una portada del Hero, buscar automáticamente esa película.
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem('cineairos_hero_detail');
+            if (raw) {
+                const movie = JSON.parse(raw);
+                sessionStorage.removeItem('cineairos_hero_detail');
+                if (movie && (movie.imdbID || movie.title)) {
+                    setQuery(movie.title);
+                    setTimeout(() => {
+                        const form = document.querySelector('.search-form');
+                        if (form) form.requestSubmit();
+                    }, 0);
+                }
+            }
+        } catch (e) {
+            /* ignora errores de storage/parseo */
+        }
+    }, []);
+
+
+const rateLimitExceeded = () => {
         const err = new Error("Has hecho muchas búsquedas seguidas. Espera un minuto y vuelve a intentarlo.");
         err.code = "RATE_LIMIT";
         return err;
