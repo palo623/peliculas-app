@@ -3208,6 +3208,191 @@ function MiCuenta(props) {
     );
 }
 
+/* ---------- ChatAgent — Asistente virtual CineAIros ---------- */
+function ChatAgent() {
+    const isOpenState = React.useState(false);
+    const isOpen = isOpenState[0];
+    const setIsOpen = isOpenState[1];
+
+    const messagesState = React.useState([
+        { role: "assistant", content: "¡Hola! Soy CineBot 🎬, tu asistente en CineAIros. ¿En qué te ayudo hoy? Puedes preguntarme por películas, series, cómo usar la app, recomendaciones…", time: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) }
+    ]);
+    const messages = messagesState[0];
+    const setMessages = messagesState[1];
+
+    const inputState = React.useState("");
+    const input = inputState[0];
+    const setInput = inputState[1];
+
+    const loadingState = React.useState(false);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+
+    const messagesEndRef = React.useRef(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    React.useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    const toggleChat = () => {
+        setIsOpen(!isOpen);
+    };
+
+    const closeChat = () => {
+        setIsOpen(false);
+    };
+
+    const formatTime = (date) => {
+        return date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+    };
+
+    const sendMessage = async (e) => {
+        e.preventDefault();
+        const text = input.trim();
+        if (!text || loading) return;
+
+        const userMsg = { role: "user", content: text, time: formatTime(new Date()) };
+        setMessages((prev) => [...prev, userMsg]);
+        setInput("");
+        setLoading(true);
+
+        try {
+            const token = getStoredToken();
+            const res = await fetch("/api/chat-agent", {
+                method: "POST",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify({ messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })) })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error en el chat");
+
+            const assistantMsg = { role: "assistant", content: data.reply || "No he podido generar respuesta.", time: formatTime(new Date()) };
+            setMessages((prev) => [...prev, assistantMsg]);
+        } catch (err) {
+            const errorMsg = { role: "assistant", content: "Ups, ha habido un problema. Inténtalo de nuevo en un momento.", time: formatTime(new Date()) };
+            setMessages((prev) => [...prev, errorMsg]);
+            console.error("[ChatAgent] Error:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!isOpen) {
+        return h("div", { className: "chat-agent-float" },
+            h("button", {
+                className: "chat-agent-toggle",
+                onClick: toggleChat,
+                "aria-label": "Abrir chat con CineBot",
+                "aria-expanded": "false"
+            },
+                h("svg", { className: "chat-icon", viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true" },
+                    h("path", { d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }),
+                    h("path", { d: "M8 10h8", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round" }),
+                    h("path", { d: "M8 14h5", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round" })
+                ),
+                h("svg", { className: "close-icon", viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true" },
+                    h("path", { d: "M18 6L6 18M6 6l12 12", stroke: "currentColor", strokeWidth: "2.5", strokeLinecap: "round" })
+                )
+            )
+        );
+    }
+
+    return h("div", { className: "chat-agent-float" },
+        h("button", {
+            className: "chat-agent-toggle open",
+            onClick: toggleChat,
+            "aria-label": "Cerrar chat",
+            "aria-expanded": "true"
+        },
+            h("svg", { className: "chat-icon", viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true" },
+                h("path", { d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }),
+                h("path", { d: "M8 10h8", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round" }),
+                h("path", { d: "M8 14h5", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round" })
+            ),
+            h("svg", { className: "close-icon", viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true" },
+                h("path", { d: "M18 6L6 18M6 6l12 12", stroke: "currentColor", strokeWidth: "2.5", strokeLinecap: "round" })
+            )
+        ),
+        h("div", { className: "chat-agent-window open", role: "dialog", "aria-label": "Chat con CineBot" },
+            h("header", { className: "chat-agent-header" },
+                h("div", { className: "chat-agent-title" },
+                    h("div", { className: "chat-agent-avatar" },
+                        h("svg", { viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true" },
+                            h("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z", stroke: "currentColor", strokeWidth: "2" }),
+                            h("path", { d: "M12 6v6l4 2", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round" })
+                        )
+                    ),
+                    h("div", null,
+                        h("h3", null, "CineBot"),
+                        h("span", null, "Asistente CineAIros")
+                    )
+                ),
+                h("button", { className: "chat-agent-close", onClick: closeChat, "aria-label": "Cerrar chat" },
+                    h("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.5", strokeLinecap: "round" },
+                        h("path", { d: "M18 6L6 18M6 6l12 12" })
+                    )
+                )
+            ),
+            h("div", { className: "chat-agent-messages", role: "log", "aria-live": "polite" },
+                messages.map((msg, idx) =>
+                    h("div", { key: idx, className: "chat-message " + msg.role },
+                        h("div", { className: "chat-message-avatar" },
+                            msg.role === "user"
+                                ? h("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.5" },
+                                    h("path", { d: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2", stroke: "currentColor", strokeWidth: "2" }),
+                                    h("circle", { cx: "12", cy: "7", r: "4", stroke: "currentColor", strokeWidth: "2" })
+                                )
+                                : h("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2" },
+                                    h("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" }),
+                                    h("path", { d: "M12 6v6l4 2" })
+                                )
+                        ),
+                        h("div", { className: "chat-message-bubble" }, msg.content),
+                        h("div", { className: "chat-message-time" }, msg.time)
+                    )
+                ),
+                h("div", { ref: messagesEndRef }) // sentinel for scroll
+            ),
+            loading ? h("div", { className: "chat-agent-typing" },
+                h("span", null, "CineBot está escribiendo"),
+                h("div", { className: "dots" }, h("span"), h("span"), h("span"))
+            ) : null,
+            h("form", { className: "chat-agent-input-area", onSubmit: sendMessage },
+                h("div", { className: "chat-agent-form" },
+                    h("input", {
+                        type: "text",
+                        className: "chat-agent-input",
+                        value: input,
+                        onChange: (e) => setInput(e.target.value),
+                        placeholder: "Pregúntame lo que quieras…",
+                        disabled: loading,
+                        "aria-label": "Tu mensaje",
+                        maxLength: 500
+                    }),
+                    h("button", {
+                        type: "submit",
+                        className: "chat-agent-send",
+                        disabled: loading || !input.trim(),
+                        "aria-label": "Enviar mensaje"
+                    },
+                        h("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round" },
+                            h("path", { d: "M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" })
+                        )
+                    )
+                ),
+                h("p", { className: "chat-agent-hint" },
+                    h("kbd", null, "Enter"), " para enviar · ",
+                    h("kbd", null, "Shift+Enter"), " para nueva línea"
+                )
+            )
+        )
+    );
+}
+
 /* ---------- CookieConsentBanner ---------- */
 function CookieConsentBanner() {
     const consentState = React.useState(false);
@@ -3496,7 +3681,8 @@ function App() {
                 })
         ),
         h(SiteFooter, { onNavigate: navigate }),
-        h(CookieConsentBanner, null)
+        h(CookieConsentBanner, null),
+        h(ChatAgent, null)
     );
 }
 
