@@ -38,6 +38,7 @@ const movieRoutes = require("./src-backend/routes/movieRoutes");
 const seriesRoutes = require("./src-backend/routes/seriesRoutes");
 const reviewRoutes = require("./src-backend/routes/reviewRoutes");
 const { startDailyEnrichment } = require("./src-backend/services/seasonEnrichmentService");
+const { agentService } = require("./src-backend/services/agentService");
 
 const app = express();
 const PORT = Number.parseInt(process.env.PORT, 10) || 8080;
@@ -171,6 +172,10 @@ app.use("/api", friendsRoutes);
 const chatRoutes = require("./src-backend/routes/chatRoutes");
 app.use("/api", chatRoutes);
 
+// Rutas del agente de IA (usa OMDb + LLM opcional)
+const agentRoutes = require("./src-backend/routes/agentRoutes");
+app.use("/api", agentRoutes);
+
 // 404 solo para la API (devuelve JSON, no HTML)
 app.use("/api", (req, res) => {
     res.status(404).json({ error: "Ruta de API no encontrada" });
@@ -190,6 +195,9 @@ app.use((err, req, res, next) => {
 
 if (!process.env.OMDB_API_KEY) {
     console.warn("AVISO: OMDB_API_KEY no definida. Crea un .env a partir de .env.example");
+}
+if (!process.env.AI_API_KEY) {
+    console.warn("AVISO: AI_API_KEY no definida. Define AI_API_KEY en tu .env para habilitar el agente de IA.");
 }
 
 app.listen(PORT, () => {
