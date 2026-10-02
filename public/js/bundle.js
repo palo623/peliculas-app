@@ -2681,6 +2681,12 @@ function MiCuenta(props) {
     const setReviewsDetail = reviewsDetailState[1];
     const shown = movies || [];
     const recent = shown.slice(0, 10);
+    const top5State = React.useState([]);
+    const top5 = top5State[0];
+    const setTop5 = top5State[1];
+    const editingTop5State = React.useState(false);
+    const editingTop5 = editingTop5State[0];
+    const setEditingTop5 = editingTop5State[1];
 
     // Amistades state
     const friendsTabState = React.useState("friends"); // friends, requests, search
@@ -2885,6 +2891,41 @@ function MiCuenta(props) {
         h("div", { className: "hero-stats account-stats" },
             h("div", null, h("strong", null, String((movies || []).length)), h("span", null, "guardadas")),
             h("div", null, h("strong", null, String(shown.length)), h("span", null, "películas"))
+        ),
+        h("section", { id: "top5", className: "top5-section", style: { marginBottom: "2rem" } },
+            h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" } },
+                h("h2", null, "Mi Top 5"),
+                editingTop5
+                    ? h("div", { style: { display: "flex", gap: "0.5rem" } },
+                        h("button", { className: "btn-primary btn-small", onClick: () => setEditingTop5(false) }, "Guardar"),
+                        h("button", { className: "btn-ghost btn-small", onClick: () => { setTop5([]); setEditingTop5(false); } }, "Limpiar")
+                    )
+                    : h("button", { className: "btn-ghost btn-small", onClick: () => setEditingTop5(true) }, top5.length ? "Editar Top 5" : "Crear Top 5")
+            ),
+            editingTop5
+                ? h("div", { className: "top5-available", style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "0.75rem", maxHeight: "300px", overflow: "auto" } },
+                    shown.filter(movie => !top5.some(item => item.id === movie.id)).map(movie =>
+                        h("button", {
+                            key: movie.id,
+                            type: "button",
+                            className: "top5-item-available",
+                            disabled: top5.length >= 5,
+                            onClick: () => top5.length < 5 && setTop5([...top5, movie]),
+                            style: { padding: "0.75rem", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "8px", cursor: "pointer", textAlign: "center" }
+                        },
+                            h("img", { src: movie.poster || "https://via.placeholder.com/150x225?text=Sin+imagen", alt: movie.title, style: { width: "100%", aspectRatio: "2/3", objectFit: "cover", borderRadius: "4px", marginBottom: "0.5rem" } }),
+                            h("span", null, movie.title)
+                        )
+                    )
+                )
+                : top5.length
+                    ? h("div", { className: "top5-display" }, h("ol", { style: { display: "flex", flexDirection: "column", gap: "0.75rem", counterReset: "top5" } }, top5.map((movie, index) =>
+                        h("li", { key: movie.id, style: { display: "flex", alignItems: "center", gap: "1rem", padding: "1rem", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "8px" } },
+                            h("strong", null, (index + 1) + ". " + movie.title),
+                            h("button", { className: "btn-ghost btn-small", onClick: () => setTop5(top5.filter((_, itemIndex) => itemIndex !== index)) }, "Quitar")
+                        )
+                    )))
+                    : h("p", { className: "muted" }, "Aún no has creado tu Top 5.")
         ),
         h("h2", { id: "peliculas-recientes" }, "Películas guardadas recientemente"),
         detailLoading ? h("p", { className: "muted" }, "Cargando detalle...") : null,
@@ -3763,3 +3804,104 @@ function App() {
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(h(App, null));
+
+function ChatAgent() {
+    const openState = React.useState(false);
+    const isOpen = openState[0];
+    const setIsOpen = openState[1];
+    const messagesState = React.useState([
+        { role: "assistant", content: "¡Hola! Soy CineBot. ¿En qué te ayudo hoy?", time: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) }
+    ]);
+    const messages = messagesState[0];
+    const setMessages = messagesState[1];
+    const inputState = React.useState("");
+    const input = inputState[0];
+    const setInput = inputState[1];
+    const loadingState = React.useState(false);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+    const messagesEndRef = React.useRef(null);
+
+    React.useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    const sendMessage = async (event) => {
+        event.preventDefault();
+        const text = input.trim();
+        if (!text || loading) return;
+        const userMessage = { role: "user", content: text, time: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) };
+        setMessages(previous => [...previous, userMessage]);
+        setInput("");
+        setLoading(true);
+        try {
+            const response = await fetch("/api/chat-agent", {
+                method: "POST",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify({ messages: [...messages, userMessage].map(message => ({ role: message.role, content: message.content })) })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || "Error en el chat");
+            setMessages(previous => [...previous, {
+                role: "assistant",
+                content: data.reply || "No he podido generar respuesta.",
+                time: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })
+            }]);
+        } catch (error) {
+            setMessages(previous => [...previous, {
+                role: "assistant",
+                content: "Ha ocurrido un problema. Inténtalo de nuevo.",
+                time: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })
+            }]);
+            console.error("[ChatAgent] Error:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return h("div", { className: "chat-agent-float" },
+        h("button", {
+            className: "chat-agent-toggle" + (isOpen ? " open" : ""),
+            onClick: () => setIsOpen(!isOpen),
+            "aria-label": isOpen ? "Cerrar chat" : "Abrir chat con CineBot",
+            "aria-expanded": String(isOpen)
+        },
+            h("svg", { className: "chat-icon", viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true" },
+                h("path", { d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }),
+                h("path", { d: "M8 10h8M8 14h5", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round" })
+            ),
+            h("svg", { className: "close-icon", viewBox: "0 0 24 24", fill: "none", "aria-hidden": "true" },
+                h("path", { d: "M18 6L6 18M6 6l12 12", stroke: "currentColor", strokeWidth: "2.5", strokeLinecap: "round" })
+            )
+        ),
+        isOpen ? h("div", { className: "chat-agent-window open", role: "dialog", "aria-label": "Chat con CineBot" },
+            h("header", { className: "chat-agent-header" },
+                h("div", { className: "chat-agent-title" }, h("h3", null, "CineBot"), h("span", null, "Asistente CineAIros")),
+                h("button", { className: "chat-agent-close", onClick: () => setIsOpen(false), "aria-label": "Cerrar chat" }, "×")
+            ),
+            h("div", { className: "chat-agent-messages", role: "log", "aria-live": "polite" },
+                messages.map((message, index) => h("div", { key: index, className: "chat-message " + message.role },
+                    h("div", { className: "chat-message-bubble" }, message.content),
+                    h("div", { className: "chat-message-time" }, message.time)
+                )),
+                h("div", { ref: messagesEndRef })
+            ),
+            loading ? h("div", { className: "chat-agent-typing" }, "CineBot está escribiendo") : null,
+            h("form", { className: "chat-agent-input-area", onSubmit: sendMessage },
+                h("div", { className: "chat-agent-form" },
+                    h("input", {
+                        type: "text",
+                        className: "chat-agent-input",
+                        value: input,
+                        onChange: event => setInput(event.target.value),
+                        placeholder: "Escribe un mensaje...",
+                        disabled: loading,
+                        maxLength: 500,
+                        "aria-label": "Tu mensaje"
+                    }),
+                    h("button", { type: "submit", className: "chat-agent-send", disabled: loading || !input.trim(), "aria-label": "Enviar mensaje" }, "Enviar")
+                )
+            )
+        ) : null
+    );
+}

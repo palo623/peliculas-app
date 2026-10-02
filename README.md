@@ -331,6 +331,46 @@ Por defecto utiliza `catalog-seed` como `userId`, lo que permite que las pelícu
 node scripts/seedRandomMovies.js --count=400 --userId=usuario@example.com
 ```
 
+### Poblar el catálogo de series
+
+```powershell
+node scripts/seedRandomSeries.js --count=200
+```
+
+Añade series aleatorias desde OMDb a la colección `series` sin borrar las existentes. Acepta los mismos parámetros que el de películas (`--count`, `--dry-run`, `--userId`).
+
+### Separar las series en su propia colección
+
+```powershell
+node scripts/migrateSeriesToCollection.js --dry-run
+node scripts/migrateSeriesToCollection.js
+```
+
+Mueve los documentos con `type: "series"` desde la colección `movies` a la colección `series`, conservando sus IDs y sin tocar las películas.
+
+### Añadir temporadas y episodios
+
+```powershell
+node scripts/enrichSeriesSeasons.js --limit=30
+node scripts/enrichSeriesSeasons.js --limit=30 --dry-run
+node scripts/enrichSeriesSeasons.js --ids=tt0944947,tt4574334
+```
+
+Rellena `totalSeasons` y `seasons[]` de cada serie del catálogo consultando OMDb temporada a temporada. Como OMDb Free tiene cuota diaria, se recomienda procesar en tandas con `--limit`. Ignora las series ya enriquecidas y actualiza también las copias guardadas por usuarios.
+
+### Enriquecimiento automático
+
+El servidor lanza una tanda diaria en segundo plano (una al arrancar y otra a la hora fijada) sin bloquear la web. Se configura con variables del `.env`:
+
+```env
+SEASON_ENRICH_ENABLED=true
+SEASON_ENRICH_DAILY_LIMIT=25
+SEASON_ENRICH_HOUR=4
+SEASON_ENRICH_DELAY=300
+```
+
+Con `SEASON_ENRICH_ENABLED=false` se desactiva por completo.
+
 ## Modelo de datos
 
 ### `users/{email}`

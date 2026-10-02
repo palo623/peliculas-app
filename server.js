@@ -39,6 +39,7 @@ const seriesRoutes = require("./src-backend/routes/seriesRoutes");
 const reviewRoutes = require("./src-backend/routes/reviewRoutes");
 const { startDailyEnrichment } = require("./src-backend/services/seasonEnrichmentService");
 const { agentService } = require("./src-backend/services/agentService");
+const chatAgentRoutes = require("./src-backend/routes/chatAgentRoutes");
 
 const app = express();
 const PORT = Number.parseInt(process.env.PORT, 10) || 8080;
@@ -105,6 +106,7 @@ app.use("/api/series/search", (req, res, next) => {
 
 app.use("/api", movieRoutes);
 app.use("/api", seriesRoutes);
+app.use("/api", chatAgentRoutes);
 
 // Anti fuerza bruta en login/registro: 20 intentos por IP y minuto.
 const authHits = new Map();
