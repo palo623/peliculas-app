@@ -1698,6 +1698,7 @@ function SeriesPage(props) {
                             plot: data.plot,
                             director: data.director,
                             actors: data.actors,
+                            runtime: data.runtime,
                             type: data.type || item.type,
                         }),
                         limited: false
@@ -2079,6 +2080,7 @@ const rateLimitExceeded = () => {
                     h("h2", null, result.title + " (" + result.year + ")"),
                     h("p", null, h("strong", null, "Director:"), " " + result.director),
                     h("p", null, h("strong", null, "Género:"), " " + result.genre),
+                    result.runtime ? h("p", null, h("strong", null, "Duración:"), " " + result.runtime) : null,
                     result.actors ? h("p", null, h("strong", null, "Actores:"), " " + result.actors) : null,
                     result.rating ? h("p", null, h("strong", null, "Nota IMDb:"), " ★ " + result.rating) : null,
                     h("p", null, h("strong", null, "Sinopsis:"), " " + result.plot),
