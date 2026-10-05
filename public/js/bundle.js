@@ -1384,6 +1384,28 @@ function MediaPage(props) {
     }, []);
 
 
+
+    // Si venimos de una portada del Hero, buscar automáticamente esa película.
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem('cineairos_hero_detail');
+            if (raw) {
+                const movie = JSON.parse(raw);
+                sessionStorage.removeItem('cineairos_hero_detail');
+                if (movie && (movie.imdbID || movie.title)) {
+                    setQuery(movie.title);
+                    setTimeout(() => {
+                        const form = document.querySelector('.search-form');
+                        if (form) form.requestSubmit();
+                    }, 0);
+                }
+            }
+        } catch (e) {
+            /* ignora errores de storage/parseo */
+        }
+    }, []);
+
+
 const rateLimitExceeded = () => {
         const err = new Error("Has hecho muchas búsquedas seguidas. Espera un minuto y vuelve a intentarlo.");
         err.code = "RATE_LIMIT";
@@ -1541,100 +1563,9 @@ const rateLimitExceeded = () => {
         }
     };
 
-    const filtersActive = String(yearFilter).trim() !== "" || Number(minRating) > 0 || genreFilter !== "";
+const filtersActive = String(yearFilter).trim() !== "" || Number(minRating) > 0 || genreFilter !== "";
 
     return h("div", { className: "movies-page" },
-        h("div", { className: "page-head" },
-            h("h1", null, "Películas"),
-            h("p", { className: "muted" }, "Busca tus favoritas, guárdalas y vuelve a verlas cuando quieras.")
-        ),
-        h("form", { onSubmit: handleSearch, className: "search-form" },
-            h("input", {
-                type: "text",
-                value: query,
-                onChange: (e) => setQuery(e.target.value),
-                placeholder: "Buscar películas... (ej. Inception)",
-                maxLength: 100
-            }),
-            h("button", { type: "submit", disabled: loading || cooldown > 0 }, loading ? "Buscando..." : (cooldown > 0 ? "Espera " + cooldown + "s" : "Buscar"))
-        ),
-        h("div", { className: "filters" },
-            h("label", { className: "filter" },
-                h("span", null, "Año"),
-                h("input", {
-                    type: "number",
-                    value: yearFilter,
-                    onChange: (e) => setYearFilter(e.target.value),
-                    placeholder: "Ej. 2010",
-                    min: 1900,
-                    max: 2100
-                })
-            ),
-            h("label", { className: "filter" },
-                h("span", null, "Nota mínima"),
-                h("select", {
-                    value: String(minRating),
-                    onChange: (e) => setMinRating(Number(e.target.value))
-                },
-                    h("option", { value: "0" }, "Sin filtro"),
-                    h("option", { value: "6" }, "★ 6 o más"),
-                    h("option", { value: "7" }, "★ 7 o más"),
-                    h("option", { value: "8" }, "★ 8 o más"),
-                    h("option", { value: "9" }, "★ 9 o más")
-                )
-            ),
-            h("label", { className: "filter" },
-                h("span", null, "Género"),
-                h("select", {
-                    value: genreFilter,
-                    onChange: (e) => setGenreFilter(e.target.value)
-                },
-                    GENRES.map((g) => h("option", { key: g[0], value: g[0] }, g[1]))
-                )
-            ),
-            h("label", { className: "filter" },
-                h("span", null, "Ordenar"),
-                h("select", {
-                    value: sortBy,
-                    onChange: (e) => setSortBy(e.target.value)
-                },
-                    h("option", { value: "relevance" }, "Relevancia"),
-                    h("option", { value: "rating-desc" }, "Mejor nota"),
-                    h("option", { value: "year-desc" }, "Más recientes"),
-                    h("option", { value: "year-asc" }, "Más antiguas")
-                )
-            ),
-            filtersActive
-                ? h("button", { type: "button", className: "btn-ghost btn-small", onClick: handleClear }, "Limpiar")
-                : null
-        ),
-        h("p", { className: "muted hint" }, "Consejo: puedes buscar solo con filtros, sin escribir ningún título."),
-        error ? h("p", { className: "error" }, error) : null,
-        success ? h("p", { className: "success" }, success) : null,
-        (detailLoading || loadingDetails) ? h("p", { className: "muted" }, "Cargando detalles...") : null,
-        result ? h("div", { className: "result" },
-            h("div", { className: "result-content" },
-                h("img", {
-                    src: result.poster || "https://via.placeholder.com/300x450?text=Sin+imagen",
-                    alt: result.title,
-                    className: "poster",
-                    loading: "lazy"
-                }),
-                h("div", { className: "result-info" },
-                    h("h2", null, result.title + " (" + result.year + ")"),
-                    h("p", null, h("strong", null, "Director:"), " " + result.director),
-                    h("p", null, h("strong", null, "Género:"), " " + result.genre),
-                    result.actors ? h("p", null, h("strong", null, "Actores:"), " " + result.actors) : null,
-                    result.rating ? h("p", null, h("strong", null, "Nota IMDb:"), " ★ " + result.rating) : null,
-                    h("p", null, h("strong", null, "Sinopsis:"), " " + result.plot),
-                    resultWarning ? h("p", { className: "muted" }, "ℹ " + resultWarning) : null,
-                    h("div", { className: "result-actions" },
-                        h("button", { onClick: handleSave, disabled: saving }, saving ? "Guardando..." : "Guardar en mi colección"),
-                        h("button", { className: "btn-ghost", type: "button", onClick: () => { setResult(null); setResultWarning(null); } }, "Descartar")
-                    )
-                )
-            )
-        ) : null,
         loadingDefaults
             ? h("p", { className: "muted" }, "Cargando películas...")
             : h(MovieCarousel, {
@@ -2209,9 +2140,12 @@ function MiCuenta(props) {
     const detailState = React.useState(null);
     const detail = detailState[0];
     const setDetail = detailState[1];
-    const detailLoadingState = React.useState(false);
+const detailLoadingState = React.useState(false);
     const detailLoading = detailLoadingState[0];
     const setDetailLoading = detailLoadingState[1];
+    const mainTabState = React.useState("movies");
+    const mainTab = mainTabState[0];
+    const setMainTab = mainTabState[1];
     const shown = movies || [];
     const recent = shown.slice(0, 10);
 
@@ -2239,9 +2173,20 @@ function MiCuenta(props) {
     return h("div", { className: "movies-page" },
         h("div", { className: "page-head" },
             h("h1", null, "Hola, " + user.name),
-            h("p", { className: "muted" }, user.email)
+            h("p", { className: "muted" }, user.email),
+            user.nickname ? h("p", { className: "muted" }, "Apodo: @" + user.nickname) : null
         ),
-        h("div", { className: "hero-stats account-stats" },
+
+        /* ----- Tabs principales ----- */
+        h("div", { className: "friends-tabs" },
+            h("button", { className: "tab-btn" + (mainTab === "movies" ? " active" : ""), onClick: () => setMainTab("movies") }, "🎬 Películas"),
+            h("button", { className: "tab-btn" + (mainTab === "series" ? " active" : ""), onClick: () => setMainTab("series") }, "📺 Series"),
+            h("button", { className: "tab-btn" + (mainTab === "friends" ? " active" : ""), onClick: () => setMainTab("friends") }, "👥 Amigos")
+        ),
+
+        /* ----- Contenido por tab ----- */
+        mainTab === "movies" && h("div", null,
+            h("div", { className: "hero-stats account-stats" },
             h("div", null, h("strong", null, String((movies || []).length)), h("span", null, "guardadas")),
             h("div", null, h("strong", null, String(shown.length)), h("span", null, "películas"))
         ),
@@ -2264,7 +2209,24 @@ function MiCuenta(props) {
             shown.map((movie) =>
                 h(MovieCard, { key: movie.id, movie: movie, onDelete: onDelete, onDetail: openDetail, showDelete: true })
             )
+        )
         ),
+
+        mainTab === "series" && h("div", null,
+            h("h2", null, "Todas tus series"),
+            loadingList ? h("p", { className: "muted" }, "Cargando lista...") : null,
+            (!loadingList && shown.length === 0)
+                ? h("p", { className: "muted" }, "Vacío por ahora.")
+                : null,
+            h("div", { className: "movies-grid" },
+                shown.map((movie) =>
+                    h(MovieCard, { key: movie.id, movie: movie, onDelete: onDelete, onDetail: openDetail, showDelete: true })
+                )
+            )
+        ),
+
+        mainTab === "friends" && h(FriendsPage, { currentUser: user, onNavigate: (p) => {} }),
+
         detail ? h("div", { className: "modal-backdrop", onClick: () => setDetail(null) },
             h("div", { className: "modal", onClick: (e) => e.stopPropagation() },
                 h("button", { className: "modal-close", onClick: () => setDetail(null) }, "✕"),
@@ -2317,6 +2279,495 @@ function CookieConsentBanner() {
         )
     );
 }
+
+
+/* ---------- ChatWidget: Soporte embebido / Chat entre amigos ---------- */
+function ChatWidget(props) {
+    const currentUser = props.currentUser;
+    const onNavigate = props.onNavigate;
+
+    const openState = React.useState(false);
+    const isOpen = openState[0];
+    const setOpen = openState[1];
+
+    const viewState = React.useState("list"); // "list" | "conversation"
+    const view = viewState[0];
+    const setView = viewState[1];
+
+    const chatsState = React.useState([]);
+    const chats = chatsState[0];
+    const setChats = chatsState[1];
+
+    const messagesState = React.useState([]);
+    const messages = messagesState[0];
+    const setMessages = messagesState[1];
+
+    const activeChatState = React.useState(null);
+    const activeChat = activeChatState[0];
+    const setActiveChat = activeChatState[1];
+
+    const loadingState = React.useState(false);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+
+    const errorState = React.useState(null);
+    const error = errorState[0];
+    const setError = errorState[1];
+
+    const messageTextState = React.useState("");
+    const messageText = messageTextState[0];
+    const setMessageText = messageTextState[1];
+
+    const sendingState = React.useState(false);
+    const sending = sendingState[0];
+    const setSending = sendingState[1];
+
+    const authHeaders = () => {
+        const tok = getStoredToken();
+        return tok ? { Authorization: "Bearer " + tok, "Content-Type": "application/json" } : { "Content-Type": "application/json" };
+    };
+
+    // Cargar lista de chats
+    const loadChats = async () => {
+        try {
+            const res = await fetch("/api/chats", { headers: authHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error");
+            setChats(data.results || []);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    // Abrir conversación con un amigo
+    const openConversation = async (friend) => {
+        setActiveChat(friend);
+        setView("conversation");
+        await loadMessages(friend.id);
+    };
+
+    // Cargar mensajes
+    const loadMessages = async (friendId) => {
+        try {
+            const res = await fetch("/api/chats/" + encodeURIComponent(friendId) + "/messages", { headers: authHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error");
+            setMessages(data.results || []);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    // Enviar mensaje
+    const handleSend = async (e) => {
+        e.preventDefault();
+        if (!messageText.trim() || !activeChat || sending) return;
+        setSending(true);
+        try {
+            const res = await fetch("/api/chats/" + encodeURIComponent(activeChat.id) + "/messages", {
+                method: "POST",
+                headers: authHeaders(),
+                body: JSON.stringify({ text: messageText.trim() })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error");
+            setMessageText("");
+            setMessages(prev => [...prev, data.message]);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setSending(false);
+        }
+    };
+
+    // Volver a lista
+    const backToList = () => {
+        setView("list");
+        setActiveChat(null);
+        setMessages([]);
+    };
+
+    // Cargar chats al abrir
+    React.useEffect(() => {
+        if (isOpen) loadChats();
+    }, [isOpen]);
+
+    // Real-time listener para mensajes (si hay chat activo)
+    React.useEffect(() => {
+        if (!activeChat || view !== "conversation") return;
+        let unsub = null;
+        try {
+            const { getFirestore, collection, query, orderBy, onSnapshot } = firebase.firestore();
+            const db = getFirestore();
+            const chatId = "chat_" + [currentUser.id, activeChat.id].sort().join("__");
+            const messagesRef = collection(db, "chats", chatId, "messages");
+            const q = query(messagesRef, orderBy("createdAt", "asc"));
+            unsub = onSnapshot(q, (snapshot) => {
+                const msgs = [];
+                snapshot.forEach(doc => msgs.push({ id: doc.id, ...doc.data() }));
+                setMessages(msgs);
+            });
+        } catch (e) {
+            console.warn("Real-time no disponible:", e);
+        }
+        return () => { if (unsub) unsub(); };
+    }, [activeChat, view, currentUser]);
+
+    if (!isOpen) return null;
+
+    return h("div", { className: "chat-widget" },
+        // Botón flotante
+        !isOpen && h("button", {
+            className: "chat-fab",
+            onClick: () => { setOpen(true); loadChats(); },
+            "aria-label": "Abrir chat"
+        }, h("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2" },
+            h("path", { d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" })
+        )),
+
+        // Modal
+        isOpen && h("div", { className: "chat-widget-backdrop", onClick: () => setOpen(false) },
+            h("div", { className: "chat-widget-modal", onClick: (e) => e.stopPropagation() },
+                // Header
+                h("div", { className: "chat-widget-header" },
+                    view === "list"
+                        ? h("h3", null, "Chat")
+                        : h("div", null,
+                            h("button", { className: "chat-back", onClick: () => { setView("list"); setActiveChat(null); setMessages([]); }, "aria-label": "Volver" }, "‹"),
+                            h("div", { className: "chat-peer" },
+                                activeChat.avatar ? h("img", { src: activeChat.avatar, alt: "", className: "peer-avatar" }) : null,
+                                h("div", null,
+                                    h("strong", null, activeChat.name || activeChat.email),
+                                    h("span", { className: "peer-status" }, "En línea")
+                                )
+                            )
+                        ),
+                    h("button", { className: "chat-close", onClick: () => setOpen(false), "aria-label": "Cerrar" }, "✕")
+                ),
+
+                // Contenido
+                h("div", { className: "chat-widget-content" },
+                    view === "list" && h("div", { className: "chat-list" },
+                        loading ? h("p", { className: "muted" }, "Cargando...") : null,
+                        chats.length === 0 ? h("p", { className: "muted", style: { textAlign: "center", padding: "2rem" } }, "No tienes conversaciones yet. Ve a Amigos para empezar.") : null,
+                        h("ul", { className: "chat-list-items" },
+                            chats.map(c => h("li", {
+                                key: c.id,
+                                className: "chat-item",
+                                onClick: () => openConversation(c.otherUser || c.participants?.find(p => p !== currentUser.id))
+                            },
+                                h("div", { className: "chat-avatar" },
+                                    c.otherUser?.avatar ? h("img", { src: c.otherUser.avatar, alt: "" }) : null
+                                ),
+                                h("div", { className: "chat-info" },
+                                    h("strong", null, c.otherUser?.name || c.otherUser?.email || "Usuario"),
+                                    c.lastMessage ? h("span", { className: "chat-preview" }, c.lastMessage.text?.substring(0, 40)) : h("span", { className: "muted" }, "Sin mensajes")
+                                ),
+                                c.lastMessage ? h("span", { className: "chat-time" }, new Date(c.lastMessage.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })) : null
+                            ))
+                        )
+                    ),
+
+                    view === "conversation" && activeChat && h("div", { className: "chat-conversation" },
+                        h("div", { className: "messages-list" },
+                            messages.length === 0 ? h("p", { className: "muted", style: { textAlign: "center", marginTop: "2rem" } }, "Sin mensajes. ¡Inicia la conversación!") : null,
+                            messages.map(m => h("div", {
+                                key: m.id,
+                                className: "message " + (m.senderId === currentUser.id ? "own" : "other")
+                            },
+                                h("div", { className: "message-bubble" },
+                                    h("p", null, m.text),
+                                    h("span", { className: "message-time" }, new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))
+                                )
+                            ))
+                        ),
+                        h("form", { onSubmit: handleSend, className: "chat-input-form" },
+                            h("input", {
+                                type: "text",
+                                value: messageText,
+                                onChange: (e) => setMessageText(e.target.value),
+                                placeholder: "Escribe un mensaje...",
+                                maxLength: 4000,
+                                disabled: sending
+                            }),
+                            h("button", { type: "submit", disabled: sending || !messageText.trim() }, sending ? "Enviando..." : "Enviar")
+                        )
+                    )
+                ),
+
+                // Botón nueva conversación (en lista)
+                view === "list" && h("button", { className: "chat-fab-small", onClick: () => onNavigate("amigos") }, "+")
+            )
+        )
+    );
+}
+
+
+
+/* ---------- FriendsPage: gestión de amistades ----------
+   Props: currentUser, onNavigate */
+function FriendsPage(props) {
+    const currentUser = props.currentUser;
+    const onNavigate = props.onNavigate;
+
+    const tabState = React.useState("friends"); // friends | requests | search
+    const tab = tabState[0];
+    const setTab = tabState[1];
+
+    const friendsState = React.useState([]);
+    const friends = friendsState[0];
+    const setFriends = friendsState[1];
+
+    const receivedState = React.useState([]);
+    const received = receivedState[0];
+    const setReceived = receivedState[1];
+
+    const sentState = React.useState([]);
+    const sent = sentState[0];
+    const setSent = sentState[1];
+
+    const searchState = React.useState("");
+    const searchQuery = searchState[0];
+    const setSearchQuery = searchState[1];
+
+    const searchResultsState = React.useState([]);
+    const searchResults = searchResultsState[0];
+    const setSearchResults = searchResultsState[1];
+
+    const loadingState = React.useState(false);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+
+    const errorState = React.useState(null);
+    const error = errorState[0];
+    const setError = errorState[1];
+
+    const authHeaders = () => {
+        const tok = getStoredToken();
+        return tok ? { Authorization: "Bearer " + tok, "Content-Type": "application/json" } : { "Content-Type": "application/json" };
+    };
+
+    // Cargar datos iniciales
+    React.useEffect(() => {
+        loadAll();
+    }, [currentUser]);
+
+    const loadAll = async () => {
+        if (!currentUser) return;
+        setLoading(true);
+        try {
+            const [f, rec, snt] = await Promise.all([
+                fetch("/api/friends", { headers: authHeaders() }).then(r => r.json()),
+                fetch("/api/friends/requests/received", { headers: authHeaders() }).then(r => r.json()),
+                fetch("/api/friends/requests/sent", { headers: authHeaders() }).then(r => r.json())
+            ]);
+            setFriends(f.friends || []);
+            setReceived(rec.requests || []);
+            setSent(snt.requests || []);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSearch = async (e) => {
+        e.preventDefault();
+        const q = searchQuery.trim();
+        if (!q || q.length < 2) return;
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch("/api/users/search?q=" + encodeURIComponent(q), { headers: authHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error en búsqueda");
+            // Filtrar usuario actual y amigos actuales
+            const filtered = (data.results || []).filter(u => 
+                u.id !== currentUser.id && 
+                !friends.some(f => f.friendUid === u.id) &&
+                !received.some(r => r.fromUid === u.id) &&
+                !sent.some(s => s.toUid === u.id)
+            );
+            setSearchResults(filtered);
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const sendRequest = async (targetUid) => {
+        setLoading(true);
+        try {
+            const res = await fetch("/api/friends/request", {
+                method: "POST",
+                headers: authHeaders(),
+                body: JSON.stringify({ toUid: targetUid })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error");
+            await loadAll();
+            setSearchQuery("");
+            setSearchResults([]);
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const acceptRequest = async (friendshipId) => {
+        try {
+            await fetch("/api/friends/accept", {
+                method: "POST",
+                headers: authHeaders(),
+                body: JSON.stringify({ friendshipId })
+            });
+            await loadAll();
+        } catch (e) { console.error(e); }
+    };
+
+    const rejectRequest = async (friendshipId) => {
+        try {
+            await fetch("/api/friends/reject", {
+                method: "POST",
+                headers: authHeaders(),
+                body: JSON.stringify({ friendshipId })
+            });
+            await loadAll();
+        } catch (e) { console.error(e); }
+    };
+
+    const removeFriend = async (friendshipId) => {
+        if (!window.confirm("¿Eliminar amigo?")) return;
+        try {
+            await fetch("/api/friends/" + friendshipId, {
+                method: "DELETE",
+                headers: authHeaders()
+            });
+            await loadAll();
+        } catch (e) { console.error(e); }
+    };
+
+    const cancelRequest = async (friendshipId) => {
+        try {
+            await fetch("/api/friends/" + friendshipId, {
+                method: "DELETE",
+                headers: authHeaders()
+            });
+            await loadAll();
+        } catch (e) { console.error(e); }
+    };
+
+    // Renderizado
+    const tabButtons = [
+        { id: "friends", label: "Amigos (" + friends.length + ")", icon: "👥" },
+        { id: "requests", label: "Solicitudes (" + (received.length + sent.length) + ")", icon: "📨" },
+        { id: "search", label: "Buscar", icon: "🔍" }
+    ];
+
+    return h("div", { className: "friends-page" },
+        h("div", { className: "page-head" },
+            h("h1", null, "Amistades"),
+            h("p", { className: "muted" }, "Conecta con amigos y comparte tus colecciones")
+        ),
+
+        h("div", { className: "friends-tabs" },
+            tabButtons.map(t => h("button", {
+                className: "tab-btn" + (tab === t.id ? " active" : ""),
+                onClick: () => setTab(t.id)
+            }, h("span", null, t.icon), " ", t.label))
+        ),
+
+        error ? h("p", { className: "error" }, error) : null,
+
+        tab === "friends" && h("div", { className: "friends-content" },
+            loading && friends.length === 0 ? h("p", { className: "muted" }, "Cargando...") : null,
+            !loading && friends.length === 0 ? h("p", { className: "muted" }, "Aún no tienes amigos. Busca a alguien por su nickname o comparte tu enlace.") : null,
+            !loading && friends.length > 0 && h("div", { className: "friends-list" },
+                friends.map(f => h("div", { key: f.friendshipId, className: "friend-item" },
+                    h("div", { className: "friend-info" },
+                        f.avatar ? h("img", { src: f.avatar, alt: "", className: "friend-avatar" }) : null,
+                        h("div", null,
+                            h("strong", null, f.name),
+                            h("span", { className: "friend-nickname" }, " @" + f.name)
+                        )
+                    ),
+                    h("button", { className: "btn-ghost btn-small", onClick: () => removeFriend(f.friendshipId) }, "Eliminar")
+                ))
+            )
+        ),
+
+        tab === "requests" && h("div", { className: "friends-content" },
+            received.length > 0 ? h("div", null,
+                h("h3", { className: "section-title" }, "Recibidas (" + received.length + ")"),
+                h("div", { className: "requests-list" },
+                    received.map(r => h("div", { key: r.friendshipId, className: "request-item" },
+                        h("div", { className: "friend-info" },
+                            r.fromAvatar ? h("img", { src: r.fromAvatar, alt: "", className: "friend-avatar" }) : null,
+                            h("div", null,
+                                h("strong", null, r.fromName),
+                                r.fromNickname ? h("span", { className: "friend-nickname" }, " @" + r.fromNickname) : null
+                            )
+                        ),
+                        h("div", { className: "request-actions" },
+                            h("button", { className: "btn-primary btn-small", onClick: () => acceptRequest(r.friendshipId) }, "Aceptar"),
+                            h("button", { className: "btn-ghost btn-small", onClick: () => rejectRequest(r.friendshipId) }, "Rechazar")
+                        )
+                    ))
+                )
+            ) : null,
+
+            sent.length > 0 ? h("div", null,
+                h("h3", { className: "section-title" }, "Enviadas (" + sent.length + ")"),
+                h("div", { className: "requests-list" },
+                    sent.map(s => h("div", { key: s.friendshipId, className: "request-item" },
+                        h("div", { className: "friend-info" },
+                            s.toAvatar ? h("img", { src: s.toAvatar, alt: "", className: "friend-avatar" }) : null,
+                            h("div", null,
+                                h("strong", null, s.toName),
+                                s.toNickname ? h("span", { className: "friend-nickname" }, " @" + s.toNickname) : null
+                            )
+                        ),
+                        h("button", { className: "btn-ghost btn-small", onClick: () => cancelRequest(s.friendshipId) }, "Cancelar")
+                    ))
+                )
+            ) : null,
+
+            received.length === 0 && sent.length === 0 && !loading && h("p", { className: "muted" }, "No hay solicitudes pendientes.")
+        ),
+
+        tab === "search" && h("div", { className: "friends-content" },
+            h("form", { onSubmit: handleSearch, className: "friend-search-form" },
+                h("input", {
+                    type: "text",
+                    value: searchQuery,
+                    onChange: (e) => setSearchQuery(e.target.value),
+                    placeholder: "Buscar por nickname (ej. @juan)",
+                    maxLength: 30,
+                    autoComplete: "off",
+                    autoFocus: true
+                }),
+                h("button", { type: "submit", disabled: loading || !searchQuery.trim() }, loading ? "Buscando..." : "Buscar")
+            ),
+            error ? h("p", { className: "error" }, error) : null,
+            searchResults.length > 0 ? h("div", { className: "search-results" },
+                searchResults.map(u => h("div", { key: u.id, className: "search-result-item" },
+                    h("div", { className: "friend-info" },
+                        u.avatar ? h("img", { src: u.avatar, alt: "", className: "friend-avatar" }) : null,
+                        h("div", null,
+                            h("strong", null, u.nickname || u.name),
+                            u.email ? h("span", { className: "friend-email" }, u.email) : null
+                        )
+                    ),
+                    h("button", { className: "btn-primary btn-small", onClick: () => sendRequest(u.id) }, "Agregar")
+                ))
+            ) : null,
+            !loading && searchQuery && searchResults.length === 0 && h("p", { className: "muted" }, "No se encontraron usuarios.")
+        )
+    );
+}
+
 
 /* ---------- App raíz ---------- */
 function App() {
@@ -2558,7 +3009,8 @@ function App() {
                 })
         ),
         h(SiteFooter, { onNavigate: navigate }),
-        h(CookieConsentBanner, null)
+        h(CookieConsentBanner, null),
+        user ? h(ChatWidget, { currentUser: user, onNavigate: navigate }) : null
     );
 }
 
