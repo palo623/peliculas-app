@@ -19,7 +19,7 @@ function sendError(res, err) {
 }
 
 // POST /api/friends/request  { toUid }
-router.post("/request", async (req, res) => {
+router.post("/friends/request", async (req, res) => {
     try {
         const user = await authUser(req);
         if (!user) return res.status(401).json({ error: "Requiere login" });
@@ -31,7 +31,7 @@ router.post("/request", async (req, res) => {
 });
 
 // POST /api/friends/accept  { friendshipId }
-router.post("/accept", async (req, res) => {
+router.post("/friends/accept", async (req, res) => {
     try {
         const user = await authUser(req);
         if (!user) return res.status(401).json({ error: "Requiere login" });
@@ -42,7 +42,7 @@ router.post("/accept", async (req, res) => {
 });
 
 // POST /api/friends/reject  { friendshipId }
-router.post("/reject", async (req, res) => {
+router.post("/friends/reject", async (req, res) => {
     try {
         const user = await authUser(req);
         if (!user) return res.status(401).json({ error: "Requiere login" });
@@ -53,7 +53,7 @@ router.post("/reject", async (req, res) => {
 });
 
 // DELETE /api/friends/:friendshipId
-router.delete("/:friendshipId", async (req, res) => {
+router.delete("/friends/:friendshipId", async (req, res) => {
     try {
         const user = await authUser(req);
         if (!user) return res.status(401).json({ error: "Requiere login" });
@@ -63,7 +63,7 @@ router.delete("/:friendshipId", async (req, res) => {
 });
 
 // GET /api/friends
-router.get("/", async (req, res) => {
+router.get("/friends", async (req, res) => {
     try {
         const user = await authUser(req);
         if (!user) return res.status(401).json({ error: "Requiere login" });
@@ -73,7 +73,7 @@ router.get("/", async (req, res) => {
 });
 
 // GET /api/friends/requests/received
-router.get("/requests/received", async (req, res) => {
+router.get("/friends/requests/received", async (req, res) => {
     try {
         const user = await authUser(req);
         if (!user) return res.status(401).json({ error: "Requiere login" });
@@ -83,7 +83,7 @@ router.get("/requests/received", async (req, res) => {
 });
 
 // GET /api/friends/requests/sent
-router.get("/requests/sent", async (req, res) => {
+router.get("/friends/requests/sent", async (req, res) => {
     try {
         const user = await authUser(req);
         if (!user) return res.status(401).json({ error: "Requiere login" });
