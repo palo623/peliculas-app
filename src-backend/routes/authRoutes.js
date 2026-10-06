@@ -80,4 +80,20 @@ router.put("/auth/prefs", async (req, res) => {
     }
 });
 
+// GET /api/users/search?q=...&limit=20 — buscar usuarios para añadir amigos
+router.get("/users/search", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        const user = await authService.me(token);
+        if (!user) return res.status(401).json({ error: "Requiere login" });
+        const q = req.query.q || "";
+        const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 20, 1), 50);
+        const results = await authService.searchUsers(q, { excludeId: user.id, limit });
+        res.json({ results });
+    } catch (error) {
+        const badRequest = /necesita al menos|demasiado largo/i.test(error.message || "");
+        res.status(badRequest ? 400 : 500).json({ error: error.message || "Error en búsqueda" });
+    }
+});
+
 module.exports = router;
