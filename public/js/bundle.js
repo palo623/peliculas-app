@@ -256,7 +256,8 @@ function MovieCard(props) {
         { className: "movie-card", onClick: () => { if (onDetail) onDetail(movie); } },
         h("div", { className: "movie-card-poster" },
             h("img", { src: movie.poster || PLACEHOLDER_POSTER, alt: movie.title, loading: "lazy" }),
-            movie.rating ? h("span", { className: "rating-badge" }, "★ " + movie.rating) : null
+            movie.rating ? h("span", { className: "rating-badge" }, "★ " + movie.rating) : null,
+            movie.runtime ? h("span", { className: "runtime-badge" }, movie.runtime) : null
         ),
         h("div", { className: "movie-card-body" },
             h("h3", { title: movie.title }, movie.title),

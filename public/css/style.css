@@ -377,6 +377,13 @@ button { font-family: inherit; }
     padding: 0.25rem 0.55rem; border-radius: 999px;
     font-size: 0.82rem; font-weight: 700; color: var(--bronze-bright);
 }
+.runtime-badge {
+    position: absolute; bottom: 0.5rem; right: 0.5rem;
+    background: rgba(0, 0, 0, 0.85);
+    padding: 0.2rem 0.45rem; border-radius: 4px;
+    font-size: 0.75rem; font-weight: 600; color: #fff;
+    font-variant-numeric: tabular-nums;
+}
 .movie-card-body { padding: 0.7rem 0.8rem 0.8rem; display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
 .movie-card h3 {
     font-size: 0.95rem; font-weight: 500; color: #fff;
