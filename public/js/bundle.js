@@ -1150,15 +1150,27 @@ function MediaPage(props) {
     const queryState = React.useState("");
     const query = queryState[0];
     const setQuery = queryState[1];
-    const yearState = React.useState("");
-    const yearFilter = yearState[0];
-    const setYearFilter = yearState[1];
+    const yearFromState = React.useState("");
+    const yearFrom = yearFromState[0];
+    const setYearFrom = yearFromState[1];
+    const yearToState = React.useState("");
+    const yearTo = yearToState[0];
+    const setYearTo = yearToState[1];
     const ratingState = React.useState(0);
     const minRating = ratingState[0];
     const setMinRating = ratingState[1];
     const genreState = React.useState("");
     const genreFilter = genreState[0];
     const setGenreFilter = genreState[1];
+    const durationMinState = React.useState("");
+    const durationMin = durationMinState[0];
+    const setDurationMin = durationMinState[1];
+    const durationMaxState = React.useState("");
+    const durationMax = durationMaxState[0];
+    const setDurationMax = durationMaxState[1];
+    const pegiState = React.useState("");
+    const pegiFilter = pegiState[0];
+    const setPegiFilter = pegiState[1];
     const sortState = React.useState("relevance");
     const sortBy = sortState[0];
     const setSortBy = sortState[1];
@@ -1205,12 +1217,34 @@ function MediaPage(props) {
     const setCooldown = cooldownState[1];
 
     // Valida el filtro de año (vacío o 4 cifras 1900-2100).
-    const parseYearFilter = () => {
-        const y = String(yearFilter).trim();
-        if (!y) return null;
-        if (!/^\d{4}$/.test(y)) throw new Error("El año debe tener 4 cifras (ej. 2010)");
-        const n = Number.parseInt(y, 10);
-        if (n < 1900 || n > 2100) throw new Error("El año debe estar entre 1900 y 2100");
+    const parseYearRange = () => {
+        const from = String(yearFrom).trim();
+        const to = String(yearTo).trim();
+        const result = { from: null, to: null };
+        if (from) {
+            if (!/^\d{4}$/.test(from)) throw new Error("Año desde: 4 cifras (ej. 2010)");
+            const n = Number.parseInt(from, 10);
+            if (n < 1900 || n > 2100) throw new Error("Año desde: entre 1900 y 2100");
+            result.from = n;
+        }
+        if (to) {
+            if (!/^\d{4}$/.test(to)) throw new Error("Año hasta: 4 cifras (ej. 2020)");
+            const n = Number.parseInt(to, 10);
+            if (n < 1900 || n > 2100) throw new Error("Año hasta: entre 1900 y 2100");
+            result.to = n;
+        }
+        if (result.from && result.to && result.from > result.to) {
+            throw new Error("Año desde no puede ser mayor que año hasta");
+        }
+        return result;
+    };
+
+    // Valida duración en minutos.
+    const parseDuration = (val, label) => {
+        const v = String(val).trim();
+        if (!v) return null;
+        const n = Number.parseInt(v, 10);
+        if (Number.isNaN(n) || n < 1 || n > 1000) throw new Error(label + ": minutos inválidos (1-1000)");
         return n;
     };
 
@@ -1250,16 +1284,19 @@ function MediaPage(props) {
         return out;
     };
 
-    const applyClientFilters = (items, year, min, genre, expectedType) => {
+    const applyClientFilters = (items, yearRange, min, genre, durationRange, pegi, expectedType) => {
         return items.filter((item) => {
             // Blindaje por apartado: la API a veces cuela otro tipo en la lista.
             if (expectedType) {
                 const it = String(item.type || "").toLowerCase();
                 if (it && it !== expectedType) return false;
             }
-            if (year) {
+            // Year range filter
+            if (yearRange && (yearRange.from || yearRange.to)) {
                 const iy = yearOf(item);
-                if (iy !== year) return false;
+                if (!iy) return false;
+                if (yearRange.from && iy < yearRange.from) return false;
+                if (yearRange.to && iy > yearRange.to) return false;
             }
             if (min > 0) {
                 const r = ratingOf(item);
@@ -1269,9 +1306,65 @@ function MediaPage(props) {
                 const g = String(item.genre || "").toLowerCase();
                 if (!g || g.indexOf(genre.toLowerCase()) === -1) return false;
             }
+            // Duration range filter (in minutes)
+            if (durationRange && (durationRange.min || durationRange.max)) {
+                const runtime = item.runtime;
+                if (!runtime) return false;
+                const mins = parseRuntimeToMinutes(runtime);
+                if (mins === null) return false;
+                if (durationRange.min && mins < durationRange.min) return false;
+                if (durationRange.max && mins > durationRange.max) return false;
+            }
+            // PEGI / age rating filter
+            if (pegi) {
+                const rated = String(item.rated || item.ageRating || "").toUpperCase();
+                if (!rated) return false;
+                if (!pegiMatches(pegi, rated)) return false;
+            }
             return true;
         });
     };
+
+    // Helper: parse runtime string like "2h 22m" or "142 min" to minutes
+    function parseRuntimeToMinutes(str) {
+        if (!str) return null;
+        const s = String(str).toLowerCase().trim();
+        // Try "2h 22m" format
+        const hMatch = s.match(/(\d+)h/);
+        const mMatch = s.match(/(\d+)m/);
+        if (hMatch || mMatch) {
+            const hours = hMatch ? parseInt(hMatch[1], 10) : 0;
+            const mins = mMatch ? parseInt(mMatch[1], 10) : 0;
+            return hours * 60 + mins;
+        }
+        // Try "142 min" or "142" format
+        const numMatch = s.match(/(\d+)/);
+        if (numMatch) {
+            const val = parseInt(numMatch[1], 10);
+            // If value > 60, assume it's already minutes
+            return val > 60 ? val : val * 60;
+        }
+        return null;
+    }
+
+    // Helper: check if item's rated matches PEGI filter
+    function pegiMatches(filter, rated) {
+        // filter examples: "G", "PG", "PG-13", "R", "NC-17", "7", "12", "16", "18"
+        const pegiMap = {
+            "G": ["G"],
+            "PG": ["G", "PG"],
+            "PG-13": ["G", "PG", "PG-13"],
+            "R": ["G", "PG", "PG-13", "R"],
+            "NC-17": ["G", "PG", "PG-13", "R", "NC-17"],
+            "7": ["G", "PG", "7"],
+            "12": ["G", "PG", "7", "12", "PG-13"],
+            "16": ["G", "PG", "7", "12", "PG-13", "16", "R"],
+            "18": ["G", "PG", "7", "12", "PG-13", "16", "R", "NC-17", "18"]
+        };
+        const allowed = pegiMap[filter];
+        if (!allowed) return true;
+        return allowed.includes(rated);
+    }
 
     const applySort = (items, mode) => {
         const arr = items.slice();
@@ -1294,11 +1387,11 @@ function MediaPage(props) {
 
     // Modo descubrir: pide una muestra aleatoria de Firebase y aplica aquí
     // los filtros que no forman parte de la consulta del servidor.
-    const runDiscovery = async (year, min, genre) => {
+    const runDiscovery = async (yearRange, min, genre, durationRange, pegi) => {
         let pooled = [];
         try {
             let url = "/api/movies/popular?limit=30";
-            if (year) url += "&y=" + year;
+            if (yearRange && yearRange.from) url += "&y=" + yearRange.from;
             const res = await fetch(url);
             if (res.status === 429) {
                 throw rateLimitExceeded();
@@ -1314,7 +1407,8 @@ function MediaPage(props) {
             throw new Error("Sin resultados para esos filtros. Prueba con otros.");
         }
         // Sin filtro de nota ni género no hace falta pedir detalles: la lista ya trae año y tipo.
-        if (min > 0 || genre !== "") {
+        const needDetails = min > 0 || genre !== "" || (durationRange && (durationRange.min || durationRange.max)) || pegi;
+        if (needDetails) {
             setLoadingDetails(true);
             try {
                 pooled = await enrichWithDetails(pooled);
@@ -1322,7 +1416,7 @@ function MediaPage(props) {
                 setLoadingDetails(false);
             }
         }
-        const filtered = applySort(applyClientFilters(pooled, year, min, genre, omdbType), sortBy);
+        const filtered = applySort(applyClientFilters(pooled, yearRange, min, genre, durationRange, pegi, omdbType), sortBy);
         setExplore(filtered);
         setExploreTitle("Explora (" + filtered.length + ")");
         if (filtered.length === 0) {
@@ -1416,16 +1510,23 @@ const rateLimitExceeded = () => {
     const handleSearch = async (e) => {
         e.preventDefault();
         const q = query.trim();
-        let year = null;
+        let yearRange = null;
+        let durationRange = null;
+        let pegi = null;
         try {
-            year = parseYearFilter();
+            yearRange = parseYearRange();
+            durationRange = {
+                min: parseDuration(durationMin, "Duración mínima"),
+                max: parseDuration(durationMax, "Duración máxima")
+            };
+            pegi = pegiFilter || null;
         } catch (err) {
             setError(err.message);
             return;
         }
         const min = Number(minRating) || 0;
         const genre = genreFilter || "";
-        const hasFilters = year !== null || min > 0 || genre !== "";
+        const hasFilters = (yearRange && (yearRange.from || yearRange.to)) || min > 0 || genre || (durationRange && (durationRange.min || durationRange.max)) || pegi;
         if (!q && !hasFilters) {
             setError("Escribe un título o elige algún filtro para explorar.");
             return;
@@ -1439,14 +1540,14 @@ const rateLimitExceeded = () => {
         try {
             // Sin título pero con filtros: modo descubrir.
             if (!q) {
-                await runDiscovery(year, min, genre);
+                await runDiscovery(yearRange, min, genre, durationRange, pegi);
                 return;
             }
             let exactUrl = "/api/movies/search?t=" + encodeURIComponent(q);
             let listUrl = "/api/movies/search-list?s=" + encodeURIComponent(q);
-            if (year) {
-                exactUrl += "&y=" + year;
-                listUrl += "&y=" + year;
+            if (yearRange && yearRange.from) {
+                exactUrl += "&y=" + yearRange.from;
+                listUrl += "&y=" + yearRange.from;
             }
             const results = await Promise.all([
                 fetch(exactUrl).then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json() })),
@@ -1498,9 +1599,13 @@ const rateLimitExceeded = () => {
 
     const handleClear = () => {
         setQuery("");
-        setYearFilter("");
+        setYearFrom("");
+        setYearTo("");
         setMinRating(0);
         setGenreFilter("");
+        setDurationMin("");
+        setDurationMax("");
+        setPegiFilter("");
         setSortBy("relevance");
         setResult(null);
         setResultWarning(null);
@@ -1621,15 +1726,27 @@ function SeriesPage(props) {
     const queryState = React.useState("");
     const query = queryState[0];
     const setQuery = queryState[1];
-    const yearState = React.useState("");
-    const yearFilter = yearState[0];
-    const setYearFilter = yearState[1];
+    const yearFromState = React.useState("");
+    const yearFrom = yearFromState[0];
+    const setYearFrom = yearFromState[1];
+    const yearToState = React.useState("");
+    const yearTo = yearToState[0];
+    const setYearTo = yearToState[1];
     const ratingState = React.useState(0);
     const minRating = ratingState[0];
     const setMinRating = ratingState[1];
     const genreState = React.useState("");
     const genreFilter = genreState[0];
     const setGenreFilter = genreState[1];
+    const durationMinState = React.useState("");
+    const durationMin = durationMinState[0];
+    const setDurationMin = durationMinState[1];
+    const durationMaxState = React.useState("");
+    const durationMax = durationMaxState[0];
+    const setDurationMax = durationMaxState[1];
+    const pegiState = React.useState("");
+    const pegiFilter = pegiState[0];
+    const setPegiFilter = pegiState[1];
     const sortState = React.useState("relevance");
     const sortBy = sortState[0];
     const setSortBy = sortState[1];
@@ -1673,12 +1790,34 @@ function SeriesPage(props) {
     const cooldown = cooldownState[0];
     const setCooldown = cooldownState[1];
 
-    const parseYearFilter = () => {
-        const y = String(yearFilter).trim();
-        if (!y) return null;
-        if (!/^\d{4}$/.test(y)) throw new Error("El año debe tener 4 cifras (ej. 2010)");
-        const n = Number.parseInt(y, 10);
-        if (n < 1900 || n > 2100) throw new Error("El año debe estar entre 1900 y 2100");
+    const parseYearRange = () => {
+        const from = String(yearFrom).trim();
+        const to = String(yearTo).trim();
+        const result = { from: null, to: null };
+        if (from) {
+            if (!/^\d{4}$/.test(from)) throw new Error("Año desde: 4 cifras (ej. 2010)");
+            const n = Number.parseInt(from, 10);
+            if (n < 1900 || n > 2100) throw new Error("Año desde: entre 1900 y 2100");
+            result.from = n;
+        }
+        if (to) {
+            if (!/^\d{4}$/.test(to)) throw new Error("Año hasta: 4 cifras (ej. 2020)");
+            const n = Number.parseInt(to, 10);
+            if (n < 1900 || n > 2100) throw new Error("Año hasta: entre 1900 y 2100");
+            result.to = n;
+        }
+        if (result.from && result.to && result.from > result.to) {
+            throw new Error("Año desde no puede ser mayor que año hasta");
+        }
+        return result;
+    };
+
+    // Valida duración en minutos.
+    const parseDuration = (val, label) => {
+        const v = String(val).trim();
+        if (!v) return null;
+        const n = Number.parseInt(v, 10);
+        if (Number.isNaN(n) || n < 1 || n > 1000) throw new Error(label + ": minutos inválidos (1-1000)");
         return n;
     };
 
@@ -1716,15 +1855,18 @@ function SeriesPage(props) {
         return out;
     };
 
-    const applyClientFilters = (items, year, min, genre, expectedType) => {
+    const applyClientFilters = (items, yearRange, min, genre, durationRange, pegi, expectedType) => {
         return items.filter((item) => {
             if (expectedType) {
                 const it = String(item.type || "").toLowerCase();
                 if (it && it !== expectedType) return false;
             }
-            if (year) {
+            // Year range filter
+            if (yearRange && (yearRange.from || yearRange.to)) {
                 const iy = yearOf(item);
-                if (iy !== year) return false;
+                if (!iy) return false;
+                if (yearRange.from && iy < yearRange.from) return false;
+                if (yearRange.to && iy > yearRange.to) return false;
             }
             if (min > 0) {
                 const r = ratingOf(item);
@@ -1734,9 +1876,65 @@ function SeriesPage(props) {
                 const g = String(item.genre || "").toLowerCase();
                 if (!g || g.indexOf(genre.toLowerCase()) === -1) return false;
             }
+            // Duration range filter (in minutes)
+            if (durationRange && (durationRange.min || durationRange.max)) {
+                const runtime = item.runtime;
+                if (!runtime) return false;
+                const mins = parseRuntimeToMinutes(runtime);
+                if (mins === null) return false;
+                if (durationRange.min && mins < durationRange.min) return false;
+                if (durationRange.max && mins > durationRange.max) return false;
+            }
+            // PEGI / age rating filter
+            if (pegi) {
+                const rated = String(item.rated || item.ageRating || "").toUpperCase();
+                if (!rated) return false;
+                if (!pegiMatches(pegi, rated)) return false;
+            }
             return true;
         });
     };
+
+    // Helper: parse runtime string like "2h 22m" or "142 min" to minutes
+    function parseRuntimeToMinutes(str) {
+        if (!str) return null;
+        const s = String(str).toLowerCase().trim();
+        // Try "2h 22m" format
+        const hMatch = s.match(/(\d+)h/);
+        const mMatch = s.match(/(\d+)m/);
+        if (hMatch || mMatch) {
+            const hours = hMatch ? parseInt(hMatch[1], 10) : 0;
+            const mins = mMatch ? parseInt(mMatch[1], 10) : 0;
+            return hours * 60 + mins;
+        }
+        // Try "142 min" or "142" format
+        const numMatch = s.match(/(\d+)/);
+        if (numMatch) {
+            const val = parseInt(numMatch[1], 10);
+            // If value > 60, assume it's already minutes
+            return val > 60 ? val : val * 60;
+        }
+        return null;
+    }
+
+    // Helper: check if item's rated matches PEGI filter
+    function pegiMatches(filter, rated) {
+        // filter examples: "G", "PG", "PG-13", "R", "NC-17", "7", "12", "16", "18"
+        const pegiMap = {
+            "G": ["G"],
+            "PG": ["G", "PG"],
+            "PG-13": ["G", "PG", "PG-13"],
+            "R": ["G", "PG", "PG-13", "R"],
+            "NC-17": ["G", "PG", "PG-13", "R", "NC-17"],
+            "7": ["G", "PG", "7"],
+            "12": ["G", "PG", "7", "12", "PG-13"],
+            "16": ["G", "PG", "7", "12", "PG-13", "16", "R"],
+            "18": ["G", "PG", "7", "12", "PG-13", "16", "R", "NC-17", "18"]
+        };
+        const allowed = pegiMap[filter];
+        if (!allowed) return true;
+        return allowed.includes(rated);
+    }
 
     const applySort = (items, mode) => {
         const arr = items.slice();
@@ -1757,11 +1955,11 @@ function SeriesPage(props) {
         return arr;
     };
 
-    const runDiscovery = async (year, min, genre) => {
+    const runDiscovery = async (yearRange, min, genre, durationRange, pegi) => {
         let pooled = [];
         try {
             let url = "/api/series/popular?limit=30";
-            if (year) url += "&y=" + year;
+            if (yearRange && yearRange.from) url += "&y=" + yearRange.from;
             const res = await fetch(url);
             if (res.status === 429) {
                 throw rateLimitExceeded();
@@ -1776,7 +1974,8 @@ function SeriesPage(props) {
         if (pooled.length === 0) {
             throw new Error("Sin resultados para esos filtros. Prueba con otros.");
         }
-        if (min > 0 || genre !== "") {
+        const needDetails = min > 0 || genre !== "" || (durationRange && (durationRange.min || durationRange.max)) || pegi;
+        if (needDetails) {
             setLoadingDetails(true);
             try {
                 pooled = await enrichWithDetails(pooled);
@@ -1784,7 +1983,7 @@ function SeriesPage(props) {
                 setLoadingDetails(false);
             }
         }
-        const filtered = applySort(applyClientFilters(pooled, year, min, genre, omdbType), sortBy);
+        const filtered = applySort(applyClientFilters(pooled, yearRange, min, genre, durationRange, pegi, omdbType), sortBy);
         setExplore(filtered);
         setExploreTitle("Explora (" + filtered.length + ")");
         if (filtered.length === 0) {
@@ -1853,16 +2052,23 @@ const rateLimitExceeded = () => {
     const handleSearch = async (e) => {
         e.preventDefault();
         const q = query.trim();
-        let year = null;
+        let yearRange = null;
+        let durationRange = null;
+        let pegi = null;
         try {
-            year = parseYearFilter();
+            yearRange = parseYearRange();
+            durationRange = {
+                min: parseDuration(durationMin, "Duración mínima"),
+                max: parseDuration(durationMax, "Duración máxima")
+            };
+            pegi = pegiFilter || null;
         } catch (err) {
             setError(err.message);
             return;
         }
         const min = Number(minRating) || 0;
         const genre = genreFilter || "";
-        const hasFilters = year !== null || min > 0 || genre !== "";
+        const hasFilters = (yearRange && (yearRange.from || yearRange.to)) || min > 0 || genre || (durationRange && (durationRange.min || durationRange.max)) || pegi;
         if (!q && !hasFilters) {
             setError("Escribe un título o elige algún filtro para explorar.");
             return;
@@ -1875,14 +2081,14 @@ const rateLimitExceeded = () => {
         setExplore([]);
         try {
             if (!q) {
-                await runDiscovery(year, min, genre);
+                await runDiscovery(yearRange, min, genre, durationRange, pegi);
                 return;
             }
             let exactUrl = "/api/series/search?t=" + encodeURIComponent(q);
             let listUrl = "/api/series/search-list?s=" + encodeURIComponent(q);
-            if (year) {
-                exactUrl += "&y=" + year;
-                listUrl += "&y=" + year;
+            if (yearRange && yearRange.from) {
+                exactUrl += "&y=" + yearRange.from;
+                listUrl += "&y=" + yearRange.from;
             }
             const results = await Promise.all([
                 fetch(exactUrl).then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json() })),
@@ -1933,9 +2139,13 @@ const rateLimitExceeded = () => {
 
     const handleClear = () => {
         setQuery("");
-        setYearFilter("");
+        setYearFrom("");
+        setYearTo("");
         setMinRating(0);
         setGenreFilter("");
+        setDurationMin("");
+        setDurationMax("");
+        setPegiFilter("");
         setSortBy("relevance");
         setResult(null);
         setResultWarning(null);
@@ -1998,7 +2208,7 @@ const rateLimitExceeded = () => {
         }
     };
 
-    const filtersActive = String(yearFilter).trim() !== "" || Number(minRating) > 0 || genreFilter !== "";
+const filtersActive = String(yearFrom).trim() !== "" || String(yearTo).trim() !== "" || Number(minRating) > 0 || genreFilter !== "" || String(durationMin).trim() !== "" || String(durationMax).trim() !== "" || pegiFilter !== "";
 
     return h("div", { className: "movies-page" },
         h("div", { className: "page-head" },
@@ -2017,12 +2227,23 @@ const rateLimitExceeded = () => {
         ),
         h("div", { className: "filters" },
             h("label", { className: "filter" },
-                h("span", null, "Año"),
+                h("span", null, "Año desde"),
                 h("input", {
                     type: "number",
-                    value: yearFilter,
-                    onChange: (e) => setYearFilter(e.target.value),
+                    value: yearFrom,
+                    onChange: (e) => setYearFrom(e.target.value),
                     placeholder: "Ej. 2010",
+                    min: 1900,
+                    max: 2100
+                })
+            ),
+            h("label", { className: "filter" },
+                h("span", null, "Año hasta"),
+                h("input", {
+                    type: "number",
+                    value: yearTo,
+                    onChange: (e) => setYearTo(e.target.value),
+                    placeholder: "Ej. 2020",
                     min: 1900,
                     max: 2100
                 })
@@ -2047,6 +2268,46 @@ const rateLimitExceeded = () => {
                     onChange: (e) => setGenreFilter(e.target.value)
                 },
                     GENRES.map((g) => h("option", { key: g[0], value: g[0] }, g[1]))
+                )
+            ),
+            h("label", { className: "filter" },
+                h("span", null, "Duración min"),
+                h("input", {
+                    type: "number",
+                    value: durationMin,
+                    onChange: (e) => setDurationMin(e.target.value),
+                    placeholder: "Ej. 90",
+                    min: 1,
+                    max: 1000
+                })
+            ),
+            h("label", { className: "filter" },
+                h("span", null, "Duración max"),
+                h("input", {
+                    type: "number",
+                    value: durationMax,
+                    onChange: (e) => setDurationMax(e.target.value),
+                    placeholder: "Ej. 180",
+                    min: 1,
+                    max: 1000
+                })
+            ),
+            h("label", { className: "filter" },
+                h("span", null, "PEGI"),
+                h("select", {
+                    value: pegiFilter,
+                    onChange: (e) => setPegiFilter(e.target.value)
+                },
+                    h("option", { value: "" }, "Sin filtro"),
+                    h("option", { value: "G" }, "G - Todos"),
+                    h("option", { value: "PG" }, "PG"),
+                    h("option", { value: "PG-13" }, "PG-13"),
+                    h("option", { value: "R" }, "R"),
+                    h("option", { value: "NC-17" }, "NC-17"),
+                    h("option", { value: "7" }, "7+"),
+                    h("option", { value: "12" }, "12+"),
+                    h("option", { value: "16" }, "16+"),
+                    h("option", { value: "18" }, "18+")
                 )
             ),
             h("label", { className: "filter" },
