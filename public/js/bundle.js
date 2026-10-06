@@ -1669,7 +1669,7 @@ const rateLimitExceeded = () => {
         }
     };
 
-const filtersActive = String(yearFilter).trim() !== "" || Number(minRating) > 0 || genreFilter !== "";
+const filtersActive = String(yearFrom).trim() !== "" || String(yearTo).trim() !== "" || Number(minRating) > 0 || genreFilter !== "";
 
     return h("div", { className: "movies-page" },
         loadingDefaults
