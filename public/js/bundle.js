@@ -2148,8 +2148,50 @@ const detailLoadingState = React.useState(false);
     const mainTabState = React.useState("movies");
     const mainTab = mainTabState[0];
     const setMainTab = mainTabState[1];
-    const shown = movies || [];
+const shown = movies || [];
     const recent = shown.slice(0, 10);
+
+    const top5State = React.useState([]);
+    const top5 = top5State[0];
+    const setTop5 = top5State[1];
+    const top5LoadingState = React.useState(false);
+    const top5Loading = top5LoadingState[0];
+    const setTop5Loading = top5LoadingState[1];
+
+    const loadTop5 = async () => {
+        try {
+            setTop5Loading(true);
+            const token = getStoredToken();
+            const res = await fetch("/api/auth/top5", { headers: { Authorization: "Bearer " + token } });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error");
+            setTop5(data.top5 || []);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setTop5Loading(false);
+        }
+    };
+
+    const saveTop5 = async (items) => {
+        try {
+            const token = getStoredToken();
+            const res = await fetch("/api/auth/top5", {
+                method: "PUT",
+                headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+                body: JSON.stringify({ items })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error");
+            setTop5(data.top5 || []);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    React.useEffect(() => {
+        if (mainTab === "top5") loadTop5();
+    }, [mainTab]);
 
     const openDetail = async (movie) => {
         if (movie.plot || movie.director) {
@@ -2183,7 +2225,8 @@ const detailLoadingState = React.useState(false);
         h("div", { className: "friends-tabs" },
             h("button", { className: "tab-btn" + (mainTab === "movies" ? " active" : ""), onClick: () => setMainTab("movies") }, "🎬 Películas"),
             h("button", { className: "tab-btn" + (mainTab === "series" ? " active" : ""), onClick: () => setMainTab("series") }, "📺 Series"),
-            h("button", { className: "tab-btn" + (mainTab === "friends" ? " active" : ""), onClick: () => setMainTab("friends") }, "👥 Amigos")
+            h("button", { className: "tab-btn" + (mainTab === "friends" ? " active" : ""), onClick: () => setMainTab("friends") }, "👥 Amigos"),
+            h("button", { className: "tab-btn" + (mainTab === "top5" ? " active" : ""), onClick: () => setMainTab("top5") }, "⭐ Top 5")
         ),
 
         /* ----- Contenido por tab ----- */
@@ -2228,6 +2271,43 @@ const detailLoadingState = React.useState(false);
         ),
 
         mainTab === "friends" && h(FriendsPage, { currentUser: user, onNavigate: (p) => {} }),
+
+        mainTab === "top5" && h("div", null,
+            h("h2", null, "Tu Top 5"),
+            h("p", { className: "muted" }, "Arrastra para reordenar. Máximo 5 películas/series."),
+            top5Loading ? h("p", { className: "muted" }, "Cargando...") : null,
+            h("div", { className: "top5-list" },
+                top5.map((item, idx) => h("div", {
+                    key: item.imdbID || item.title + idx,
+                    className: "top5-item"
+                },
+                    h("span", { className: "top5-rank" }, idx + 1),
+                    item.poster ? h("img", { src: item.poster, alt: "", className: "top5-poster" }) : null,
+                    h("div", { className: "top5-info" },
+                        h("strong", null, item.title),
+                        item.year ? h("span", { className: "muted" }, " (" + item.year + ")") : null,
+                        item.type === "series" ? h("span", { className: "badge series" }, "Serie") : h("span", { className: "badge movie" }, "Película")
+                    ),
+                    h("button", {
+                        className: "btn-ghost btn-small top5-remove",
+                        onClick: () => saveTop5(top5.filter((_, i) => i !== idx)),
+                        "aria-label": "Eliminar del Top 5"
+                    }, "✕")
+                ))
+            ),
+            top5.length < 5 && h("button", {
+                className: "btn-primary top5-add",
+                onClick: () => {
+                    const saved = props.movies || [];
+                    if (saved.length === 0) return alert("No tienes nada guardado para añadir.");
+                    const options = saved.filter(m => !top5.some(t => t.imdbID === m.imdbID || t.title === m.title));
+                    if (options.length === 0) return alert("Ya están todas tus guardadas en el Top 5.");
+                    const pick = options[Math.floor(Math.random() * options.length)];
+                    saveTop5([...top5, { imdbID: pick.imdbID, title: pick.title, year: pick.year, poster: pick.poster, type: pick.type || "movie" }]);
+                }
+            }, "+ Añadir desde guardadas"),
+            top5.length === 5 && h("p", { className: "muted" }, "Top 5 completo. Elimina uno para añadir otro.")
+        ),
 
         detail ? h("div", { className: "modal-backdrop", onClick: () => setDetail(null) },
             h("div", { className: "modal", onClick: (e) => e.stopPropagation() },

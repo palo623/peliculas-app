@@ -96,4 +96,37 @@ router.get("/users/search", async (req, res) => {
     }
 });
 
+// GET /api/auth/top5 — obtener Top 5 del usuario
+router.get("/auth/top5", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        const user = await authService.me(token);
+        if (!user) return res.status(401).json({ error: "Requiere login" });
+        const top5 = await authService.getTop5(user.id);
+        res.json({ top5 });
+    } catch (error) {
+        const notFound = /no encontrado/i.test(error.message || "");
+        res.status(notFound ? 404 : 500).json({ error: error.message || "Error al obtener Top 5" });
+    }
+});
+
+// PUT /api/auth/top5 { items: [...] } — actualizar Top 5 (máx 5 items)
+router.put("/auth/top5", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        const user = await authService.me(token);
+        if (!user) return res.status(401).json({ error: "Requiere login" });
+        const body = req.body || {};
+        if (!Array.isArray(body.items)) {
+            return res.status(400).json({ error: "El Top 5 debe ser un array 'items'" });
+        }
+        const top5 = await authService.setTop5(user.id, body.items);
+        res.json({ ok: true, top5 });
+    } catch (error) {
+        const badRequest = /inválido|máximo 5|falta el usuario/i.test(error.message || "");
+        const notFound = /no encontrado/i.test(error.message || "");
+        res.status(badRequest ? 400 : notFound ? 404 : 500).json({ error: error.message || "Error al actualizar Top 5" });
+    }
+});
+
 module.exports = router;
