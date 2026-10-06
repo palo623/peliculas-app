@@ -92,4 +92,19 @@ router.get("/friends/requests/sent", async (req, res) => {
     } catch (e) { sendError(res, e); }
 });
 
+// GET /api/friends/:friendshipId - get a specific friendship
+router.get("/friends/:friendshipId", async (req, res) => {
+    try {
+        const user = await authUser(req);
+        if (!user) return res.status(401).json({ error: "Requiere login" });
+        const friendship = await FriendshipModel.getFriendshipById(req.params.friendshipId);
+        if (!friendship) return res.status(404).json({ error: "Amistad no encontrada" });
+        // Verify user is part of this friendship
+        if (friendship.requesterId !== user.id && friendship.addresseeId !== user.id) {
+            return res.status(403).json({ error: "No autorizado" });
+        }
+        res.json({ friendship });
+    } catch (e) { sendError(res, e); }
+});
+
 module.exports = router;

@@ -162,6 +162,13 @@ const FriendshipModel = {
         const fid = await getFriendshipId(uid1, uid2);
         const snap = await db.collection("friendships").doc(fid).get();
         return snap.exists && snap.data().status === "accepted";
+    },
+
+    // Obtener amistad por ID
+    async getFriendshipById(friendshipId) {
+        const snap = await db.collection("friendships").doc(friendshipId).get();
+        if (!snap.exists) return null;
+        return { friendshipId: snap.id, ...snap.data() };
     }
 };
 
