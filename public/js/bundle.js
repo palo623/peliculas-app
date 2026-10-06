@@ -2625,6 +2625,71 @@ function CookieConsentBanner() {
 }
 
 
+
+/* ---------- ThemePicker: Selector de paleta de colores ---------- */
+function ThemePicker() {
+    const themes = [
+        { id: "default", name: "CineAIros", swatch: "linear-gradient(135deg, #b3122e 0%, #b3122e 55%, #7fb0d8 100%)" },
+        { id: "ocean", name: "Océano", swatch: "linear-gradient(135deg, #006994 0%, #006994 55%, #00b4d8 100%)" },
+        { id: "forest", name: "Bosque", swatch: "linear-gradient(135deg, #2d6a4f 0%, #2d6a4f 55%, #52b788 100%)" },
+        { id: "sunset", name: "Atardecer", swatch: "linear-gradient(135deg, #e85d04 0%, #e85d04 55%, #ff9f1c 100%)" },
+        { id: "purple", name: "Púrpura", swatch: "linear-gradient(135deg, #7209b7 0%, #7209b7 55%, #b5179e 100%)" },
+        { id: "mono", name: "Monocromo", swatch: "linear-gradient(135deg, #ffffff 0%, #ffffff 55%, #bbbbbb 100%)" }
+    ];
+
+    const openState = React.useState(false);
+    const isOpen = openState[0];
+    const setOpen = openState[1];
+
+    const themeState = React.useState(() => {
+        try { return localStorage.getItem("cineairos_theme") || "default"; } catch (e) { return "default"; }
+    });
+    const currentTheme = themeState[0];
+    const setCurrentTheme = themeState[1];
+
+    React.useEffect(() => {
+        document.documentElement.setAttribute("data-theme", currentTheme);
+        try { localStorage.setItem("cineairos_theme", currentTheme); } catch (e) {}
+    }, [currentTheme]);
+
+    const selectTheme = (themeId) => {
+        setCurrentTheme(themeId);
+        setOpen(false);
+    };
+
+    return h("div", { className: "theme-picker" },
+        h("button", {
+            className: "theme-picker-btn",
+            onClick: () => setOpen(!isOpen),
+            "aria-label": "Cambiar tema",
+            "aria-expanded": isOpen
+        },
+            h("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2" },
+                h("circle", { cx: "12", cy: "12", r: "5" }),
+                h("line", { x1: "12", y1: "1", x2: "12", y2: "3" }),
+                h("line", { x1: "12", y1: "21", x2: "12", y2: "23" }),
+                h("line", { x1: "4.22", y1: "4.22", x2: "5.64", y2: "5.64" }),
+                h("line", { x1: "18.36", y1: "18.36", x2: "19.78", y2: "19.78" }),
+                h("line", { x1: "1", y1: "12", x2: "3", y2: "12" }),
+                h("line", { x1: "21", y1: "12", x2: "23", y2: "12" }),
+                h("line", { x1: "4.22", y1: "19.78", x2: "5.64", y2: "18.36" }),
+                h("line", { x1: "18.36", y1: "5.64", x2: "19.78", y2: "4.22" })
+            )
+        ),
+        h("div", { className: "theme-picker-panel" + (isOpen ? " open" : "") },
+            themes.map(t => h("button", {
+                key: t.id,
+                className: "theme-option" + (currentTheme === t.id ? " active" : ""),
+                onClick: () => selectTheme(t.id),
+                "aria-pressed": currentTheme === t.id
+            },
+                h("div", { className: "theme-swatch", style: { background: t.swatch } }),
+                h("span", { className: "theme-name" }, t.name)
+            ))
+        )
+    );
+}
+
 /* ---------- ChatWidget: Soporte embebido / Chat entre amigos ---------- */
 function ChatWidget(props) {
     const currentUser = props.currentUser;
@@ -3352,8 +3417,9 @@ function App() {
                     onNavigate: navigate
                 })
         ),
-        h(SiteFooter, { onNavigate: navigate }),
+h(SiteFooter, { onNavigate: navigate }),
         h(CookieConsentBanner, null),
+        h(ThemePicker, null),
         user ? h(ChatWidget, { currentUser: user, onNavigate: navigate }) : null
     );
 }
