@@ -149,6 +149,9 @@ app.use("/api", chatRoutes);
 const reviewRoutes = require("./src-backend/routes/reviewRoutes");
 app.use("/api", reviewRoutes);
 
+const adminRoutes = require("./src-backend/routes/adminRoutes");
+app.use("/api/admin", adminRoutes);
+
 // 404 solo para la API (devuelve JSON, no HTML)
 app.use("/api", (req, res) => {
     res.status(404).json({ error: "Ruta de API no encontrada" });

@@ -37,7 +37,8 @@ function publicUser(user) {
         photoURL: user.photoURL || null,
         provider: user.provider || (user.passHash ? "password" : "firebase"),
         prefs: user.prefs || defaultPrefs(),
-        top5: Array.isArray(user.top5) ? user.top5 : []
+        top5: Array.isArray(user.top5) ? user.top5 : [],
+        isAdmin: user.isAdmin === true
     };
 }
 
@@ -216,6 +217,7 @@ const authService = {
                 photoURL: decoded.picture || null,
                 emailVerified: Boolean(decoded.email_verified),
                 prefs: defaultPrefs(),
+                isAdmin: false,
                 createdAt: new Date().toISOString()
             };
             if (!db) {

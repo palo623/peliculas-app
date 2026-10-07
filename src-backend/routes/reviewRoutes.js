@@ -11,6 +11,14 @@ async function authUser(req) {
     try { return await authService.me(match[1].trim()); } catch (e) { return null; }
 }
 
+// Admin middleware
+function requireAdmin(req, res, next) {
+    if (!req.user || !req.user.isAdmin) {
+        return res.status(403).json({ error: "Acceso denegado: se requieren permisos de administrador" });
+    }
+    next();
+}
+
 function statusFor(err) {
     if (err.code === "BAD_REQUEST") return 400;
     if (err.code === "FORBIDDEN") return 403;
