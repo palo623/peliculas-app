@@ -3557,7 +3557,7 @@ function ChatAgent() {
     const setIsOpen = isOpenState[1];
 
     const messagesState = React.useState([
-        { role: "assistant", content: "¡Hola! Soy CineBot 🎬, tu asistente en CineAIros. ¿En qué te ayudo hoy? Puedes preguntarme por películas, series, cómo usar la app, recomendaciones…", time: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) }
+        { role: "assistant", content: "¡Hola! Soy CineBot 🎬, tu asistente en CineAIros. ¿En qué te ayudo hoy? Puedes preguntarme por películas, series, cómo usar la página web, recomendaciones…", time: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) }
     ]);
     const messages = messagesState[0];
     const setMessages = messagesState[1];
