@@ -246,19 +246,19 @@ button { font-family: inherit; }
     border-radius: 2px;
 }
 
-/* Buscador blanco con botón carmesí */
+/* Buscador con botón carmesí */
 .search-form {
     display: flex; gap: 0.3rem; margin-bottom: 1rem;
-    background: #fff; border-radius: 8px; padding: 0.3rem;
+    background: var(--surface); border-radius: 8px; padding: 0.3rem;
 }
 .search-form input {
     flex: 1; min-width: 0; padding: 0.7rem 1rem;
     border: none; border-radius: 6px;
-    font-size: 1rem; background: transparent; color: #000;
+    font-size: 1rem; background: transparent; color: var(--text);
     font-family: inherit;
 }
 .search-form input:focus { outline: none; }
-.search-form input::placeholder { color: #666; }
+.search-form input::placeholder { color: var(--muted); }
 .search-form button {
     padding: 0.7rem 1.6rem; border: none; border-radius: 6px;
     background: linear-gradient(180deg, #c81e3a, #a50f28); color: #fff;
@@ -1079,7 +1079,8 @@ a.footer-link:hover, button.footer-link:hover { color: var(--sky-bright); }
     border-top-color: var(--color-primary) !important;
 }
 .filters,
-.search-form {
+.search-form,
+.friend-search-form {
     background: var(--color-surface) !important;
 }
 /* ---------- Nickname field in registration ---------- */
@@ -1167,15 +1168,16 @@ a.footer-link:hover, button.footer-link:hover { color: var(--sky-bright); }
 
 .friend-search-form {
     display: flex; gap: 0.5rem; margin-bottom: 1rem;
-    background: #fff; border-radius: 8px; padding: 0.3rem;
+    background: var(--surface); border-radius: 8px; padding: 0.3rem;
 }
 .friend-search-form input {
     flex: 1; min-width: 0; padding: 0.7rem 1rem;
     border: none; border-radius: 6px;
-    font-size: 1rem; background: transparent; color: #000;
+    font-size: 1rem; background: transparent; color: var(--text);
     font-family: inherit;
 }
 .friend-search-form input:focus { outline: none; }
+.friend-search-form input::placeholder { color: var(--muted); }
 .friend-search-form button {
     padding: 0.7rem 1.6rem; border: none; border-radius: 6px;
     background: linear-gradient(180deg, #c81e3a, #a50f28); color: #fff;
@@ -1254,9 +1256,7 @@ a.footer-link:hover, button.footer-link:hover { color: var(--sky-bright); }
     border-radius: var(--radius);
     padding: 1rem 1.5rem;
     margin: 1.5rem 0;
-    position: sticky;
-    top: 80px;
-    z-index: 10;
+    position: static;
 }
 .profile-toc h3 {
     margin: 0 0 0.75rem;
@@ -1343,6 +1343,82 @@ a.footer-link:hover, button.footer-link:hover { color: var(--sky-bright); }
 }
 .top5-editor .muted {
     font-size: 0.9rem;
+}
+/* ---------- Top 5 buscador moderno (Netflix / IMDb) ---------- */
+.top5-search--modern {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    background: linear-gradient(180deg, #141b2d 0%, #0e1424 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 0.55rem 0.55rem 0.55rem 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.top5-search--modern:hover {
+    border-color: rgba(255, 255, 255, 0.22);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.top5-search--modern:focus-within {
+    border-color: #e50914;
+    box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.28), 0 0 24px rgba(229, 9, 20, 0.35), 0 10px 28px rgba(0, 0, 0, 0.5);
+}
+.top5-search-icon {
+    font-size: 1.05rem;
+    line-height: 1;
+    opacity: 0.85;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.15));
+}
+.top5-search-input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #f1f5f9;
+    font-size: 0.95rem;
+    padding: 0.45rem 0.25rem;
+}
+.top5-search-input::placeholder {
+    color: #8b94a7;
+}
+.top5-search-clear {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: #cbd5e1;
+    cursor: pointer;
+    font-size: 0.85rem;
+    line-height: 1;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.top5-search-clear:hover {
+    background: rgba(229, 9, 20, 0.85);
+    border-color: #e50914;
+    color: #fff;
+    transform: scale(1.05);
+}
+.top5-source {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.1rem 0.55rem;
+    background: rgba(255, 255, 255, 0.05);
+}
+@media (max-width: 600px) {
+    .top5-search--modern {
+        border-radius: 18px;
+        padding: 0.6rem 0.7rem 0.6rem 0.9rem;
+    }
+    .top5-search-input {
+        font-size: 0.9rem;
+    }
 }
 .reply-item { margin-bottom: 0.75rem; }
 .reply-item strong { font-size: 0.9rem; }
