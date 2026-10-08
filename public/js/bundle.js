@@ -2716,6 +2716,36 @@ function MiCuenta(props) {
     const top5SearchError = top5SearchErrorState[0];
     const setTop5SearchError = top5SearchErrorState[1];
 
+    // Cargar Top 5 guardado del backend al montar
+    React.useEffect(() => {
+        if (!user) return;
+        let alive = true;
+        fetch("/api/users/me/top5", { headers: authHeaders() })
+            .then(r => r.json())
+            .then(data => {
+                if (alive && Array.isArray(data.results)) {
+                    setTop5(data.results);
+                }
+            })
+            .catch(() => { /* silencioso */ });
+        return () => { alive = false; };
+    }, [user]);
+
+    // Guardar Top 5 en el backend
+    const saveTop5 = async () => {
+        if (!user) return;
+        try {
+            await fetch("/api/users/me/top5", {
+                method: "PUT",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify({ top5 })
+            });
+            setEditingTop5(false);
+        } catch (e) {
+            alert("No se pudo guardar el Top 5: " + e.message);
+        }
+    };
+
     // Combinar películas y series para selección en Top 5
     const allItems = [
         ...shownMovies.map(m => ({ ...m, mediaType: 'movie' })),
@@ -3012,7 +3042,7 @@ function MiCuenta(props) {
                     ? h("button", { className: "btn-primary btn-small", onClick: () => setEditingTop5(true) }, "Crear Top 5")
                     : editingTop5
                         ? h("div", { style: { display: "flex", gap: "0.5rem" } },
-                            h("button", { className: "btn-primary btn-small", onClick: () => setEditingTop5(false) }, "Guardar"),
+                            h("button", { className: "btn-primary btn-small", onClick: saveTop5 }, "Guardar"),
                             h("button", { className: "btn-ghost btn-small", onClick: () => { setTop5([]); setEditingTop5(false); } }, "Limpiar")
                         )
                         : top5.length > 0
