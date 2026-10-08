@@ -244,6 +244,17 @@ usuario solo se devuelve si existe una amistad aceptada (o es el propio usuario)
 | `GET` | `/api/users/me/top5` | Top 5 propio. |
 | `PUT` | `/api/users/me/top5` | Guarda el Top 5 (`{ top5: [...] }`, máx. 5 referencias). |
 
+### Chat
+
+Todas requieren `Authorization: Bearer <token>`. Solo amigos pueden acceder.
+
+| Método | Ruta | Función |
+|---|---|---|
+| `GET` | `/api/chats` | Lista mis conversaciones (con `lastMessage`). |
+| `GET` | `/api/chats/:friendId` | Obtiene/crea conversación con ese amigo. |
+| `GET` | `/api/chats/:friendId/messages` | Historial paginado (`limit`, `before` cursor). |
+| `POST` | `/api/chats/:friendId/messages` | Envía mensaje (`{ text }`, máx. 4000 chars). |
+
 Las rutas privadas reciben el token propio en:
 
 ```text
@@ -346,6 +357,19 @@ node scripts/enrichSeriesSeasons.js --ids=tt0944947,tt4574334
 ```
 
 Rellena `totalSeasons` y `seasons[]` de cada serie del catálogo consultando OMDb temporada a temporada. Como OMDb Free tiene cuota diaria, se recomienda procesar en tandas con `--limit`. Ignora las series ya enriquecidas y actualiza también las copias guardadas por usuarios.
+
+### Enriquecimiento automático
+
+El servidor lanza una tanda diaria en segundo plano (una al arrancar y otra a la hora fijada) sin bloquear la web. Se configura con variables del `.env`:
+
+```env
+SEASON_ENRICH_ENABLED=true
+SEASON_ENRICH_DAILY_LIMIT=25
+SEASON_ENRICH_HOUR=4
+SEASON_ENRICH_DELAY=300
+```
+
+Con `SEASON_ENRICH_ENABLED=false` se desactiva por completo.
 
 ## Modelo de datos
 
@@ -459,6 +483,36 @@ Son referencias ligeras a películas/series ya guardadas, no fichas duplicadas.
 El perfil de amigo (`GET /api/friends/:friendId/profile`) lo devuelve junto a
 contadores de películas/series. Preparado para el futuro chat entre amigos
 (la relación de amistad aceptada será la condición de acceso).
+
+### Chat
+
+#### `chats/{chatId}`
+
+```text
+chatId          # "chat_<email1>__<email2>" (emails en minúsculas, ordenados)
+participants[]  # [email1, email2] (ordenados)
+createdAt
+updatedAt
+lastMessage     # { id, senderId, text, createdAt } del último mensaje
+```
+
+#### `chats/{chatId}/messages/{messageId}`
+
+```text
+messageId       # "msg_<timestamp>_<random>"
+chatId
+senderId        # email del remitente
+text            # texto del mensaje (máx. 4000 chars)
+createdAt
+```
+
+El `chatId` es determinista e independiente de quién inicie la conversación.
+El acceso a chats y mensajes requiere amistad aceptada verificada en backend
+(`FriendshipModel.areFriends`). Si se elimina la amistad, los endpoints
+bloquean el acceso (no borran el historial automáticamente).
+
+Para tiempo real, el frontend puede escuchar `onSnapshot` en
+`chats/{chatId}/messages` ordenado por `createdAt` (Firestore nativo).
 
 ## Seguridad y límites conocidos
 
