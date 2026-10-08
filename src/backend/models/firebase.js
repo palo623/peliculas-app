@@ -10,7 +10,7 @@ let mode = "local";
 function loadEnvIfNeeded() {
     // server.js ya carga el .env, esto es solo para usos directos (scripts).
     if (process.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_PRIVATE_KEY) return;
-    const envPath = path.join(__dirname, "../../.env");
+    const envPath = path.join(__dirname, "../../config/.env");
     if (!fs.existsSync(envPath)) return;
     const content = fs.readFileSync(envPath, "utf8");
     for (const line of content.split("\n")) {
@@ -40,7 +40,7 @@ function serviceAccountFromEnv() {
 }
 
 function serviceAccountFromFile() {
-    const keyPath = path.join(__dirname, "../../firebase-key.json");
+    const keyPath = path.join(__dirname, "../../config/firebase-key.json");
     if (!fs.existsSync(keyPath)) return null;
     try {
         return require(keyPath);

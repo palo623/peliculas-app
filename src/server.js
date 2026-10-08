@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 function loadEnvFile() {
-    const envPath = path.join(__dirname, ".env");
+    const envPath = path.join(__dirname, "../config/.env");
     if (!fs.existsSync(envPath)) return;
     const content = fs.readFileSync(envPath, "utf8");
     for (const line of content.split("\n")) {
@@ -34,8 +34,10 @@ try {
 
 const express = require("express");
 const cors = require("cors");
-const movieRoutes = require("./src-backend/routes/movieRoutes");
-const seriesRoutes = require("./src-backend/routes/seriesRoutes");
+const movieRoutes = require("./backend/routes/movieRoutes");
+const seriesRoutes = require("./backend/routes/seriesRoutes");
+const reviewRoutes = require("./backend/routes/reviewRoutes");
+const { startDailyEnrichment } = require("./backend/services/seasonEnrichmentService");
 
 const app = express();
 const PORT = Number.parseInt(process.env.PORT, 10) || 8080;
@@ -59,7 +61,7 @@ app.use((req, res, next) => {
 
 app.use(cors());
 app.use(express.json({ limit: "100kb" }));
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "../public")));
 
 // Rate-limit de lectura del catálogo: evita bucles accidentales y abusos
 // aunque estas rutas ya no consultan directamente la API externa.
@@ -89,9 +91,9 @@ app.use("/api/series/search", (req, res, next) => {
     const hits = (seriesSearchHits.get(ip) || []).filter((t) => now - t < windowMs);
     hits.push(now);
     seriesSearchHits.set(ip, hits);
-    if (seriesSearchHits.size > 500) {
-        for (const [key, times] of seriesSearchHits) {
-            if (!times.some((t) => now - t < windowMs)) seriesSearchHits.delete(key);
+    if (searchHits.size > 500) {
+        for (const [key, times] of searchHits) {
+            if (!times.some((t) => now - t < windowMs)) searchHits.delete(key);
         }
     }
     if (hits.length > 120) {
@@ -137,8 +139,34 @@ app.get("/api/firebase-config", (req, res) => {
     });
 });
 
-const authRoutes = require("./src-backend/routes/authRoutes");
+const authRoutes = require("./backend/routes/authRoutes");
 app.use("/api", authRoutes);
+
+// Anti-spam de reseñas: 30 escrituras por IP y minuto (lecturas sin límite).
+// Debe registrarse ANTES de las rutas para que Express lo ejecute primero.
+const reviewWriteHits = new Map();
+app.use("/api/reviews", (req, res, next) => {
+    if (req.method === "GET") return next();
+    const now = Date.now();
+    const ip = req.ip || "unknown";
+    const windowMs = 60 * 1000;
+    const hits = (reviewWriteHits.get(ip) || []).filter((t) => now - t < windowMs);
+    hits.push(now);
+    reviewWriteHits.set(ip, hits);
+    if (reviewWriteHits.size > 500) {
+        for (const [key, times] of reviewWriteHits) {
+            if (!times.some((t) => now - t < windowMs)) reviewWriteHits.delete(key);
+        }
+    }
+    if (hits.length > 30) {
+        return res.status(429).json({ error: "Demasiadas reseñas seguidas. Espera un minuto." });
+    }
+    next();
+});
+
+app.use("/api", reviewRoutes);
+const friendsRoutes = require("./backend/routes/friendsRoutes");
+app.use("/api", friendsRoutes);
 
 // 404 solo para la API (devuelve JSON, no HTML)
 app.use("/api", (req, res) => {
@@ -147,7 +175,7 @@ app.use("/api", (req, res) => {
 
 // Fallback SPA: funciona en Express 4 y 5 (evita app.get("*") que rompe en Express 5)
 app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
+    res.sendFile(path.join(__dirname, "../public", "index.html"));
 });
 
 // Manejador central de errores
@@ -164,3 +192,10 @@ if (!process.env.OMDB_API_KEY) {
 app.listen(PORT, () => {
     console.log(`Servidor arrancado en http://localhost:${PORT}`);
 });
+
+// Rellena temporadas/episodios de las series desde OMDb en segundo plano:
+// una tanda al arrancar (si hoy no se ha hecho ninguna) y una diaria a la hora
+// configurada. No bloquea el servidor. Se controla con las variables
+// SEASON_ENRICH_ENABLED, SEASON_ENRICH_DAILY_LIMIT, SEASON_ENRICH_HOUR y
+// SEASON_ENRICH_DELAY del .env.
+startDailyEnrichment();

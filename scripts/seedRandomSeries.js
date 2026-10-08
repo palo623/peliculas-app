@@ -12,9 +12,9 @@
  * 200 series consumen aproximadamente 220 peticiones de OMDb.
  */
 
-const firebaseConn = require("../src-backend/models/firebase");
-const { omdbService } = require("../src-backend/services/omdbService");
-const { SeriesModel } = require("../src-backend/models/seriesModel");
+const firebaseConn = require("../src/backend/models/firebase");
+const { omdbService } = require("../src/backend/services/omdbService");
+const { SeriesModel } = require("../src/backend/models/seriesModel");
 
 const db = firebaseConn.getDb();
 const args = process.argv.slice(2);

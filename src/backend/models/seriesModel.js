@@ -95,7 +95,7 @@ const SeriesModel = {
     getCatalogSeries: async () => {
         if (!db) return [];
         try {
-            const snapshot = await db.collection("movies").where("type", "==", "series").limit(5000).get();
+            const snapshot = await db.collection("series").limit(5000).get();
             return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             console.error("Error al leer el catálogo de series:", error.message || error);
@@ -180,7 +180,7 @@ const SeriesModel = {
         }
 
         try {
-            const docRef = db.collection("movies").doc(seriesId);
+            const docRef = db.collection("series").doc(seriesId);
             const existing = await docRef.get();
 
             if (existing.exists) {
@@ -206,7 +206,7 @@ const SeriesModel = {
         }
 
         try {
-            const snapshot = await db.collection("movies").where("userId", "==", userId).get();
+            const snapshot = await db.collection("series").where("userId", "==", userId).get();
             const series = [];
             snapshot.forEach((doc) => {
                 const data = doc.data() || {};
@@ -235,7 +235,7 @@ const SeriesModel = {
             return claimed;
         }
         try {
-            const snapshot = await db.collection("movies").get();
+            const snapshot = await db.collection("series").get();
             const batch = db.batch();
             let claimed = 0;
             snapshot.forEach((doc) => {
@@ -261,7 +261,7 @@ const SeriesModel = {
         if (!db) {
             return localSeries.find((m) => m.id === id && m.userId === userId) || null;
         }
-        const doc = await db.collection("movies").doc(id).get();
+        const doc = await db.collection("series").doc(id).get();
         if (!doc.exists) return null;
         const data = doc.data() || {};
         if (data.userId !== userId) return null;
@@ -276,7 +276,7 @@ const SeriesModel = {
             localSeries.splice(idx, 1);
             return true;
         }
-        const docRef = db.collection("movies").doc(id);
+        const docRef = db.collection("series").doc(id);
         const doc = await docRef.get();
         if (!doc.exists) return false;
         const data = doc.data() || {};
@@ -295,7 +295,7 @@ const SeriesModel = {
         } else {
             try {
                 const snapshot = await db
-                    .collection("movies")
+                    .collection("series")
                     .where("type", "==", "series")
                     .limit(500)
                     .get();
@@ -321,7 +321,7 @@ const SeriesModel = {
 
         if (filtered.length === 0 && db && !yearStr) {
             try {
-                const fallback = await db.collection("movies").limit(500).get();
+                const fallback = await db.collection("series").limit(500).get();
                 const all = [];
                 fallback.forEach((d) => {
                     all.push({ id: d.id, ...d.data() });

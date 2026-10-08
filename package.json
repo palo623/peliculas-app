@@ -2,17 +2,16 @@
   "name": "peliculas-app",
   "version": "1.0.0",
   "description": "App de películas con Express + React (CDN)",
-  "main": "server.js",
+  "main": "src/server.js",
   "engines": { "node": ">=18" },
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "firebase-admin": "^14.2.0",
-    "cheerio": "^1.0.0",
-    "puppeteer": "^22.0.0"
+    "cheerio": "^1.0.0"
   }
 }
