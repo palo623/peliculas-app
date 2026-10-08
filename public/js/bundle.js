@@ -2706,9 +2706,15 @@ function MiCuenta(props) {
     const top5QueryState = React.useState("");
     const top5Query = top5QueryState[0];
     const setTop5Query = top5QueryState[1];
-    const top5FilterState = React.useState("all");
-    const top5Filter = top5FilterState[0];
-    const setTop5Filter = top5FilterState[1];
+    const top5GlobalState = React.useState([]);
+    const top5Global = top5GlobalState[0];
+    const setTop5Global = top5GlobalState[1];
+    const top5SearchingState = React.useState(false);
+    const top5Searching = top5SearchingState[0];
+    const setTop5Searching = top5SearchingState[1];
+    const top5SearchErrorState = React.useState(null);
+    const top5SearchError = top5SearchErrorState[0];
+    const setTop5SearchError = top5SearchErrorState[1];
 
     // Combinar películas y series para selección en Top 5
     const allItems = [
@@ -2716,13 +2722,69 @@ function MiCuenta(props) {
         ...shownSeries.map(s => ({ ...s, mediaType: 'series' }))
     ];
     const norm = (v) => String(v || "").toLowerCase();
-    const top5Candidates = allItems.filter(item => {
-        if (top5.some(t => String(t.id) === String(item.id) && t.mediaType === item.mediaType)) return false;
-        if (top5Filter !== "all" && item.mediaType !== top5Filter) return false;
+    const isInTop5 = (item) => top5.some(t => String(t.id || t.imdbID || t.title) === String(item.id || item.imdbID || item.title) && (t.mediaType || "movie") === (item.mediaType || "movie"));
+    const withTop5Id = (item, media) => Object.assign({ id: item.id || item.imdbID || (String(item.title || "") + "|" + String(item.year || "")) }, item, { mediaType: media });
+    // Búsqueda global en catálogo (sin necesitar tenerlas guardadas): películas + series.
+    React.useEffect(() => {
+        const q = top5Query.trim();
+        if (!editingTop5 || q.length < 2) {
+            setTop5Global([]);
+            setTop5SearchError(null);
+            setTop5Searching(false);
+            return;
+        }
+        let alive = true;
+        setTop5Searching(true);
+        setTop5SearchError(null);
+        const timer = setTimeout(async () => {
+            try {
+                const [mRes, sRes] = await Promise.all([
+                    fetch("/api/movies/search-list?s=" + encodeURIComponent(q)).then(r => r.json().catch(() => ({}))),
+                    fetch("/api/series/search-list?s=" + encodeURIComponent(q)).then(r => r.json().catch(() => ({})))
+                ]);
+                if (!alive) return;
+                const mItems = Array.isArray(mRes.results) ? mRes.results : (Array.isArray(mRes) ? mRes : []);
+                const sItems = Array.isArray(sRes.results) ? sRes.results : (Array.isArray(sRes) ? sRes : []);
+                const merged = [
+                    ...mItems.map(m => withTop5Id(m, "movie")),
+                    ...sItems.map(s => withTop5Id(s, "series"))
+                ];
+                const seen = new Set();
+                const deduped = [];
+                for (const it of merged) {
+                    const key = String(it.mediaType) + "|" + String(it.id);
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    if (isInTop5(it)) continue;
+                    deduped.push(it);
+                }
+                setTop5Global(deduped.slice(0, 24));
+            } catch (e) {
+                if (alive) setTop5SearchError("No se pudo buscar en el catálogo. Inténtalo de nuevo.");
+            } finally {
+                if (alive) setTop5Searching(false);
+            }
+        }, 400);
+        return () => { alive = false; clearTimeout(timer); };
+    }, [top5Query, editingTop5]);
+    const clearTop5Search = () => {
+        setTop5Query("");
+        setTop5Global([]);
+        setTop5SearchError(null);
+    };
+    const collectionCandidates = allItems.filter(item => {
+        if (isInTop5(item)) return false;
         const q = top5Query.trim().toLowerCase();
         if (!q) return true;
         return norm(item.title).indexOf(q) !== -1;
     });
+    const top5Candidates = (() => {
+        const q = top5Query.trim();
+        if (q.length < 2) return collectionCandidates;
+        const inCollection = new Set(collectionCandidates.map(c => String(c.mediaType) + "|" + String(c.id || c.imdbID || c.title)));
+        const extras = top5Global.filter(g => !isInTop5(g) && !inCollection.has(String(g.mediaType) + "|" + String(g.id)));
+        return [...collectionCandidates.map(c => Object.assign({}, c, { _source: "Colección" })), ...extras.map(e => Object.assign({}, e, { _source: "Catálogo" }))];
+    })();
 
     // Amistades state
     const friendsTabState = React.useState("friends"); // friends, requests, search
@@ -2959,33 +3021,38 @@ function MiCuenta(props) {
             ),
 
             editingTop5 ? h("div", { className: "top5-editor" },
-                h("p", { className: "muted", style: { marginBottom: "0.75rem" } }, "Busca en tu colección y haz click para añadir al Top (" + top5.length + "/5)."),
-                h("div", { className: "top5-search", style: { display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" } },
+                h("p", { className: "muted", style: { marginBottom: "0.75rem" } }, "Busca cualquier película o serie y haz click para añadir al Top (" + top5.length + "/5)."),
+                h("form", {
+                    className: "top5-search top5-search--modern",
+                    onSubmit: (e) => { e.preventDefault(); }
+                },
+                    h("span", { className: "top5-search-icon", "aria-hidden": "true" }, "🔍"),
                     h("input", {
                         type: "text",
                         value: top5Query,
                         onChange: (e) => setTop5Query(e.target.value),
-                        placeholder: "🔍 Buscar película o serie...",
-                        maxLength: 60,
-                        style: { flex: "1", minWidth: "180px" }
+                        placeholder: "Buscar películas y series...",
+                        maxLength: 100,
+                        autoComplete: "off",
+                        className: "top5-search-input",
+                        "aria-label": "Buscar películas y series para el Top 5"
                     }),
-                    h("select", {
-                        value: top5Filter,
-                        onChange: (e) => setTop5Filter(e.target.value)
-                    },
-                        h("option", { value: "all" }, "Todo"),
-                        h("option", { value: "movie" }, "🎬 Películas"),
-                        h("option", { value: "series" }, "📺 Series")
-                    ),
-                    (top5Query || top5Filter !== "all")
-                        ? h("button", { type: "button", className: "btn-ghost btn-small", onClick: () => { setTop5Query(""); setTop5Filter("all"); } }, "Limpiar")
+                    top5Query
+                        ? h("button", { type: "button", className: "top5-search-clear", onClick: clearTop5Search, "aria-label": "Limpiar búsqueda" }, "✕")
                         : null
                 ),
-                h("p", { className: "muted", style: { marginBottom: "0.75rem" } }, String(top5Candidates.length) + " disponibles"),
+                h("p", { className: "muted", style: { marginBottom: "0.75rem" } },
+                    top5Searching
+                        ? "Buscando en catálogo..."
+                        : (top5Query.trim().length >= 2
+                            ? (String(top5Candidates.length) + " resultados (películas + series)")
+                            : (String(top5Candidates.length) + " en tu colección"))
+                ),
+                top5SearchError ? h("p", { className: "error" }, top5SearchError) : null,
                 top5.length >= 5 ? h("p", { className: "muted" }, "Top completo: quita alguno para añadir otro.") : null,
                 top5Candidates.length === 0
-                    ? h("p", { className: "muted", style: { textAlign: "center", padding: "1rem" } }, allItems.length === 0 ? "Guarda primero películas o series para crear tu Top 5." : "Sin resultados para esa búsqueda.")
-                    : h("div", { className: "top5-available", style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "0.75rem", maxHeight: "300px", overflow: "auto" } },
+                    ? h("p", { className: "muted", style: { textAlign: "center", padding: "1rem" } }, top5Searching ? "Buscando..." : (top5Query.trim().length >= 2 ? "Sin resultados para esa búsqueda. Prueba con otro título." : "Guarda o busca películas y series para crear tu Top 5."))
+                    : h("div", { className: "top5-available", style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "0.75rem", maxHeight: "320px", overflow: "auto" } },
                         top5Candidates.map(item =>
                         h("div", {
                             key: item.id + "-" + item.mediaType,
@@ -3003,7 +3070,9 @@ function MiCuenta(props) {
                                 style: { width: "100%", aspectRatio: "2/3", objectFit: "cover", borderRadius: "4px", marginBottom: "0.5rem" }
                             }),
                             h("div", { style: { fontWeight: 600, fontSize: "0.85rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, item.title),
-                            h("span", { className: "watching-badge", style: { fontSize: "0.7rem", marginTop: "0.25rem", display: "inline-block" } }, item.mediaType === "movie" ? "🎬 Película" : "📺 Serie")
+                            h("div", { style: { fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.15rem" } }, item.year || "----"),
+                            h("span", { className: "watching-badge", style: { fontSize: "0.7rem", marginTop: "0.25rem", display: "inline-block" } }, item.mediaType === "movie" ? "🎬 Película" : "📺 Serie"),
+                            item._source ? h("span", { className: "top5-source", style: { fontSize: "0.68rem", marginTop: "0.2rem", display: "inline-block", color: "var(--muted)" } }, item._source) : null
                         )
                     )
                 )
@@ -3909,9 +3978,6 @@ function App() {
             const data = await res.json();
             if (!res.ok) throw new Error("invalid");
             setUser(data.user);
-            if (!data.user.prefs || !data.user.prefs.onboardingDone) {
-                navigate("cuestionario");
-            }
         } catch (e) {
             try {
                 window.localStorage.removeItem("cineairos_token");
@@ -4033,12 +4099,8 @@ function App() {
         }
         setUser(userValue);
         setToast({ type: "success", text: "Hola, " + userValue.name });
-        if (!userValue.prefs || !userValue.prefs.onboardingDone) {
-            navigate("cuestionario");
-            return;
-        }
         await fetchMovies();
-        navigate("peliculas");
+        navigate("home");
     };
 
     const handleLogout = async () => {
