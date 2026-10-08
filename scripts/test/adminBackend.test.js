@@ -382,6 +382,46 @@ test("validateSentiment rechaza etiquetas y puntuaciones inválidas", () => {
     assert.equal(ok.score, 0.5);
 });
 
+// ---- Nickname público (lo usa el front del equipo) ----
+test("el nickname se guarda, se puede comprobar y no se puede repetir", async () => {
+    const set = await api("POST", "/api/auth/nickname", {
+        token: normalUser.token,
+        body: { nickname: "Hector_Test" }
+    });
+    assert.equal(set.status, 200);
+    assert.equal(set.body.nickname, "hector_test");
+
+    // El perfil devuelve el nickname (campo propio y dentro de prefs).
+    const me = await api("GET", "/api/auth/me", { token: normalUser.token });
+    assert.equal(me.status, 200);
+    assert.equal(me.body.user.nickname, "hector_test");
+    assert.equal(me.body.user.prefs.nickname, "hector_test");
+
+    const taken = await api("GET", "/api/auth/nickname/check/hector_test");
+    assert.equal(taken.status, 200);
+    assert.equal(taken.body.available, false);
+
+    const free = await api("GET", "/api/auth/nickname/check/otro_nick");
+    assert.equal(free.status, 200);
+    assert.equal(free.body.available, true);
+
+    // Otro usuario no puede cogerlo, y los inválidos dan 400.
+    const duplicated = await api("POST", "/api/auth/nickname", {
+        token: admin.token,
+        body: { nickname: "Hector_Test" }
+    });
+    assert.equal(duplicated.status, 409);
+
+    const tooShort = await api("POST", "/api/auth/nickname", {
+        token: admin.token,
+        body: { nickname: "ab" }
+    });
+    assert.equal(tooShort.status, 400);
+
+    const withoutSession = await api("POST", "/api/auth/nickname", { body: { nickname: "sin_sesion" } });
+    assert.equal(withoutSession.status, 401);
+});
+
 // ---- Generador de dataset (tarea 13) ----
 // Va al final: añade reseñas y no debe alterar las comprobaciones anteriores.
 test("el generador de dataset produce usuarios y reseñas válidas sin tocar la base de datos", async () => {
