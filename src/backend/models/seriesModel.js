@@ -362,6 +362,29 @@ const SeriesModel = {
         const pool = withPoster.length >= want ? withPoster : enriched;
 
         return shuffleInPlace([...pool]).slice(0, want).map(toPopularItem);
+    },
+
+    // Actualiza las temporadas de una serie por su IMDb ID.
+    // Usado por el servicio de enriquecimiento automático.
+    updateSeasonsByImdbID: async (imdbID, totalSeasons, seasons) => {
+        if (!db || !imdbID) return 0;
+        try {
+            const snapshot = await db.collection("series").where("imdbID", "==", imdbID).get();
+            if (snapshot.empty) return 0;
+            const batch = db.batch();
+            snapshot.forEach((doc) => {
+                batch.update(doc.ref, {
+                    totalSeasons: totalSeasons || null,
+                    seasons: seasons || [],
+                    dateEnriched: new Date().toISOString()
+                });
+            });
+            await batch.commit();
+            return snapshot.size;
+        } catch (error) {
+            console.error("Error al actualizar temporadas:", error.message || error);
+            return 0;
+        }
     }
 };
 
