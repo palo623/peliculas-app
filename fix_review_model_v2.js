@@ -1,0 +1,24 @@
+const fs = require('fs');
+let c = fs.readFileSync('src-backend/models/reviewModel.js', 'utf8');
+
+const marker = '    }\n};';
+const idx = c.lastIndexOf(marker);
+if (idx === -1) {
+    console.error('Marker not found');
+    process.exit(1);
+}
+
+const newMethods = '\n    // Get sentiment analysis for a specific media (admin only)\n    // Returns aggregated sentiment stats for all reviews of a media\n    async getSentimentAnalysis({ mediaType, imdbID, mediaTitle, mediaYear }) {\n        if (!db) return { error: "Firestore no disponible" };\n\n        const key = mediaKey(mediaType, imdbID, mediaTitle, mediaYear);\n        const snap = await db.collection("reviews")\n            .where("mediaKey", "==", key)\n            .get();\n\n        const reviews = [];\n        snap.forEach(doc => reviews.push({ id: doc.id, ...doc.data() }));\n\n        if (reviews.length === 0) {\n            return {\n                mediaKey: key,\n                totalReviews: 0,\n                sentiment: null,\n                message: "No hay reseñas para esta obra"\n            };\n        }\n\n        const reviewsWithSentiment = reviews.filter(r => r.sentiment && r.sentiment.score !== undefined);\n\n        if (reviewsWithSentiment.length === 0) {\n            return {\n                mediaKey: key,\n                totalReviews: reviews.length,\n                analyzedReviews: 0,\n                sentiment: null,\n                message: "No hay análisis de sentimientos disponibles aún"\n            };\n        }\n\n        const totalScore = reviewsWithSentiment.reduce((sum, r) => sum + (r.sentiment.score || 0), 0);\n        const totalMagnitude = reviewsWithSentiment.reduce((sum, r) => sum + (r.sentiment.magnitude || 0), 0);\n\n        const avgScore = totalScore / reviewsWithSentiment.length;\n        const avgMagnitude = totalMagnitude / reviewsWithSentiment.length;\n\n        const labelCounts = { positive: 0, negative: 0, neutral: 0 };\n        reviewsWithSentiment.forEach(r => {\n            const label = r.sentiment.label || "neutral";\n            if (labelCounts[label] !== undefined) labelCounts[label]++;\n        });\n\n        const distribution = {\n            veryNegative: 0, negative: 0, neutral: 0, positive: 0, veryPositive: 0\n        };\n\n        reviewsWithSentiment.forEach(r => {\n            const s = r.sentiment.score || 0;\n            if (s <= -0.6) distribution.veryNegative++;\n            else if (s <= -0.2) distribution.negative++;\n            else if (s <= 0.2) distribution.neutral++;\n            else if (s <= 0.6) distribution.positive++;\n            else distribution.veryPositive++;\n        });\n\n        return {\n            mediaKey: key,\n            totalReviews: reviews.length,\n            analyzedReviews: reviewsWithSentiment.length,\n            sentiment: {\n                avgScore: Number(avgScore.toFixed(3)),\n                avgMagnitude: Number(avgMagnitude.toFixed(3)),\n                label: avgScore > 0.1 ? "positive" : avgScore < -0.1 ? "negative" : "neutral",\n                labelCounts,\n                distribution\n            },\n            reviews: reviewsWithSentiment.map(r => ({\n                reviewId: r.id,\n                userId: r.userId,\n                score: r.sentiment.score,\n                magnitude: r.sentiment.magnitude,\n                label: r.sentiment.label,\n                analyzedAt: r.sentiment.analyzedAt\n            }))\n        };\n    },\n\n    async updateSentiment(reviewId, sentiment) {\n        if (!db) return { ok: false, error: "Firestore no disponible" };\n        const ref = db.collection("reviews").doc(reviewId);\n        const snap = await ref.get();\n        if (!snap.exists) throw codedError("NOT_FOUND", "Reseña no encontrada");\n\n        const sentimentData = {\n            sentiment: {\n                score: Number(sentiment.score),\n                magnitude: Number(sentiment.magnitude),\n                label: sentiment.label,\n                analyzedAt: new Date().toISOString()\n            },\n            updatedAt: new Date().toISOString()\n        };\n\n        await ref.update(sentimentData);\n        return { ok: true };\n    },\n';
+
+const marker = '    }\n};';
+const idx = c.lastIndexOf(marker);
+if (idx === -1) {
+    console.error('Marker not found');
+    process.exit(1);
+}
+
+const before = c.substring(0, idx + marker.length);
+const after = c.substring(idx + marker.length);
+c = c.substring(0, idx + marker.length) + '\n' + newMethods + '\n' + after;
+fs.writeFileSync('src-backend/models/reviewModel.js', c, 'utf8');
+console.log('Added sentiment methods correctly');
