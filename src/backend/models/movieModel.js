@@ -1,5 +1,6 @@
 // Este modelo separa dos usos de la colección movies:
 // catálogo público (búsqueda y populares) y colección personal (userId).
+// Las series viven en su propia colección "series" (ver seriesModel.js).
 // La conexión se centraliza en ./firebase.js.
 // Soporta credenciales por .env o por firebase-key.json (legacy).
 const firebaseConn = require("./firebase");
@@ -71,7 +72,8 @@ function toPopularItem(doc) {
         // Extras si existen en Firestore (el front los ignora si no los usa).
         rating: doc.rating || null,
         genre: doc.genre || null,
-        plot: doc.plot || null
+        plot: doc.plot || null,
+        runtime: doc.runtime || null
     };
 }
 

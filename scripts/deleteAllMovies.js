@@ -1,5 +1,6 @@
 /**
- * Borra todos los documentos de la colección movies de Firestore.
+ * Borra todos los documentos de la colección movies de Firestore (solo películas).
+ * Las series viven en su propia colección "series" y no se ven afectadas.
  * No toca users, sessions ni Firebase Authentication.
  *
  * Uso:
