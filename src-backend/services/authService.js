@@ -31,6 +31,23 @@ function defaultPrefs() {
     };
 }
 
+const USER_ROLES = {
+    USER: "user",
+    ADMIN: "admin"
+};
+
+function defaultRole() {
+    return USER_ROLES.USER;
+}
+
+function isAdmin(user) {
+    return user && user.role === USER_ROLES.ADMIN;
+}
+
+function hasRole(user, role) {
+    return user && user.role === role;
+}
+
 function publicUser(user) {
     const prefs = user.prefs || defaultPrefs();
     return {
@@ -42,6 +59,7 @@ function publicUser(user) {
         provider: user.provider || (user.passHash ? "password" : "firebase"),
         nickname: prefs.nickname || user.name,
         colorTheme: prefs.colorTheme || "default",
+        role: user.role || defaultRole(),
         prefs: prefs
     };
 }
@@ -235,6 +253,7 @@ const authService = {
                 photoURL: decoded.picture || null,
                 emailVerified: Boolean(decoded.email_verified),
                 prefs: defaultPrefs(),
+                role: defaultRole(),
                 createdAt: new Date().toISOString()
             };
             if (!db) {
@@ -561,4 +580,4 @@ const authService = {
 
 };
 
-module.exports = { authService, findUserByNickname, setUserNickname };
+module.exports = { authService, findUserByNickname, setUserNickname, isAdmin, hasRole, USER_ROLES };
