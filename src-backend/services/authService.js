@@ -41,6 +41,19 @@ function publicUser(user) {
     };
 }
 
+function isAdmin(user) {
+    if (!user) return false;
+    // 1. Revisar campo role en prefs (configurable en Firestore)
+    const userRole = (user.prefs && user.prefs.role) || "";
+    if (userRole && userRole.toString().trim().toLowerCase() === "admin") return true;
+    // 2. Revisar email dominios comunes de pruebas (ej. admin@dominio.com)
+    const adminEmails = ["admin@test.com", "admin@example.com"];
+    if (adminEmails.includes(user.email)) return true;
+    // 3. Fallback: si el nickname contiene "admin"
+    if (user.nickname && user.nickname.toString().toLowerCase().includes("admin")) return true;
+    return false;
+}
+
 function cleanDisplayName(raw, emailFallback) {
     const clean = (raw || "").toString().trim().slice(0, 80);
     if (clean.length >= 2) return clean;
@@ -271,4 +284,4 @@ const authService = {
 
 };
 
-module.exports = { authService, findUserByNickname, setUserNickname };
+module.exports = { authService, findUserByNickname, setUserNickname, isAdmin };
