@@ -37,6 +37,7 @@ const cors = require("cors");
 const movieRoutes = require("./backend/routes/movieRoutes");
 const seriesRoutes = require("./backend/routes/seriesRoutes");
 const reviewRoutes = require("./backend/routes/reviewRoutes");
+const adminRoutes = require("./backend/routes/adminRoutes");
 const { startDailyEnrichment } = require("./backend/services/seasonEnrichmentService");
 
 const app = express();
@@ -168,6 +169,9 @@ app.use("/api", reviewRoutes);
 const friendsRoutes = require("./backend/routes/friendsRoutes");
 app.use("/api", friendsRoutes);
 
+// Vista de administrador: todas las rutas exigen rol admin (ver adminRoutes).
+app.use("/api", adminRoutes);
+
 // 404 solo para la API (devuelve JSON, no HTML)
 app.use("/api", (req, res) => {
     res.status(404).json({ error: "Ruta de API no encontrada" });
@@ -189,13 +193,21 @@ if (!process.env.OMDB_API_KEY) {
     console.warn("AVISO: OMDB_API_KEY no definida. Crea un .env a partir de .env.example");
 }
 
-app.listen(PORT, () => {
-    console.log(`Servidor arrancado en http://localhost:${PORT}`);
-});
+// Se exporta la app para poder arrancarla en pruebas sin abrir un puerto fijo
+// (`node --test`: require("../src/server").listen(0)).
+module.exports = app;
 
-// Rellena temporadas/episodios de las series desde OMDb en segundo plano:
-// una tanda al arrancar (si hoy no se ha hecho ninguna) y una diaria a la hora
-// configurada. No bloquea el servidor. Se controla con las variables
-// SEASON_ENRICH_ENABLED, SEASON_ENRICH_DAILY_LIMIT, SEASON_ENRICH_HOUR y
-// SEASON_ENRICH_DELAY del .env.
-startDailyEnrichment();
+// Solo arranca el servidor cuando este archivo se ejecuta directamente
+// (`node src/server.js` / `npm start`), no cuando se importa desde las pruebas.
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Servidor arrancado en http://localhost:${PORT}`);
+    });
+
+    // Rellena temporadas/episodios de las series desde OMDb en segundo plano:
+    // una tanda al arrancar (si hoy no se ha hecho ninguna) y una diaria a la hora
+    // configurada. No bloquea el servidor. Se controla con las variables
+    // SEASON_ENRICH_ENABLED, SEASON_ENRICH_DAILY_LIMIT, SEASON_ENRICH_HOUR y
+    // SEASON_ENRICH_DELAY del .env.
+    startDailyEnrichment();
+}

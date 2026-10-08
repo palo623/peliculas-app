@@ -11,47 +11,25 @@
 const crypto = require("crypto");
 const firebaseConn = require("./firebase");
 const db = firebaseConn.getDb();
+// La clave de la obra (slug + imdbID) es compartida con el catálogo/admin.
+const { slugify, normalizeMediaType, normalizeImdbId, normalizeYear, buildMediaKey } = require("./mediaKey");
+// Clasificación automática de sentimiento (positivo/negativo/neutro).
+const { analyzeSentiment } = require("../services/sentimentService");
+// Géneros: se guardan en la reseña y, si faltan, se resuelven desde el catálogo.
+const { toGenreString, resolveGenres } = require("../services/catalogService");
 
 // ---------- Memoria (modo local) ----------
 const localReviews = []; // { id, ...doc }
 const localVotes = new Map(); // voteId -> { reviewId, userId, value }
 const localReplies = new Map(); // reviewId -> [ replies ]
 
+// Tope de lectura para estadísticas/administración: se leen como máximo estas
+// reseñas de una vez para no disparar los costes de Firestore.
+const MAX_STATS_READ = 5000;
+
 // ---------- Utilidades ----------
-function slugify(value) {
-    if (typeof value !== "string") return "untitled";
-    const out = value
-        .trim()
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-    return out || "untitled";
-}
-
-function normalizeMediaType(raw) {
-    const v = String(raw || "").trim().toLowerCase();
-    if (v === "movie" || v === "movies" || v === "film") return "movie";
-    if (v === "series" || v === "serie" || v === "tv" || v === "show") return "series";
-    throw new Error("mediaType inválido (usa 'movie' o 'series')");
-}
-
-function normalizeImdbId(raw) {
-    const v = String(raw || "").trim();
-    if (!v) return null;
-    if (!/^tt\d{1,12}$/i.test(v)) throw new Error("imdbID inválido (formato tt1234567)");
-    return v.toLowerCase();
-}
-
-function normalizeYear(raw) {
-    const v = String(raw == null ? "" : raw).trim().slice(0, 4);
-    if (!v) return null;
-    if (!/^\d{4}$/.test(v)) throw new Error("Año inválido (4 cifras)");
-    const n = Number.parseInt(v, 10);
-    if (n < 1900 || n > 2100) throw new Error("Año fuera de rango (1900-2100)");
-    return String(n);
-}
+// slugify / normalizeMediaType / normalizeImdbId / normalizeYear / buildMediaKey
+// viven en ./mediaKey (una sola fuente de verdad para reseñas y catálogo).
 
 // Quita caracteres de control pero conserva saltos de línea y texto UTF-8.
 function sanitizeText(raw) {
@@ -59,13 +37,6 @@ function sanitizeText(raw) {
         .replace(/\r\n/g, "\n")
         .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
         .trim();
-}
-
-function buildMediaKey({ mediaType, imdbID, title, year }) {
-    if (imdbID) return `${mediaType}:${imdbID}`;
-    const base = slugify(title);
-    const y = year ? `-${year}` : "";
-    return `${mediaType}:${base}${y}`;
 }
 
 function validateReviewInput(input) {
@@ -93,7 +64,10 @@ function validateReviewInput(input) {
         rating = n;
     }
     const mediaKey = buildMediaKey({ mediaType, imdbID, title, year });
-    return { mediaType, mediaKey, imdbID, mediaTitle: title, mediaYear: year, text, rating };
+    // Género opcional: el front lo puede enviar (mediaGenre/genre) para no
+    // depender de una lectura extra al catálogo.
+    const genre = toGenreString(input.mediaGenre != null ? input.mediaGenre : input.genre);
+    return { mediaType, mediaKey, imdbID, mediaTitle: title, mediaYear: year, text, rating, genre };
 }
 
 function validateReplyInput(input) {
@@ -131,6 +105,9 @@ function publicReview(doc, userVote) {
         userName: doc.userName,
         text: doc.text,
         rating: doc.rating != null ? doc.rating : null,
+        genre: doc.genre || null,
+        sentiment: doc.sentiment || null,
+        sentimentLabel: doc.sentimentLabel || null,
         upvotes: Number(doc.upvotes) || 0,
         downvotes: Number(doc.downvotes) || 0,
         score: Number(doc.score) || 0,
@@ -139,6 +116,26 @@ function publicReview(doc, userVote) {
         createdAt: doc.createdAt,
         updatedAt: doc.updatedAt || doc.createdAt
     };
+}
+
+// Clasifica el texto y devuelve el bloque que se guarda en la reseña.
+function classify(text) {
+    try {
+        return analyzeSentiment(text);
+    } catch (e) {
+        return null;
+    }
+}
+
+// Completa el género de una reseña leyendo el catálogo (best-effort: si el
+// catálogo no está disponible, la reseña se guarda sin género).
+async function fillGenreFromCatalog({ mediaType, imdbID, title, year }) {
+    try {
+        const genres = await resolveGenres({ mediaType, imdbID, title, year });
+        return toGenreString(genres);
+    } catch (e) {
+        return null;
+    }
 }
 
 function voteDocId(reviewId, userId) {
@@ -288,6 +285,16 @@ const ReviewModel = {
         const clean = validateReviewInput(input);
         const now = new Date().toISOString();
         const displayName = sanitizeText(userName).slice(0, 80) || String(userId).split("@")[0] || "Usuario";
+        // Clasificación de sentimiento y género desde el primer momento.
+        const sentiment = classify(clean.text);
+        if (!clean.genre) {
+            clean.genre = await fillGenreFromCatalog({
+                mediaType: clean.mediaType,
+                imdbID: clean.imdbID,
+                title: clean.mediaTitle,
+                year: clean.mediaYear
+            });
+        }
 
         if (!db) {
             const dup = localReviews.find((r) => r.mediaKey === clean.mediaKey && r.userId === userId);
@@ -299,6 +306,7 @@ const ReviewModel = {
             const id = crypto.randomBytes(12).toString("hex");
             const doc = {
                 id, ...clean, userId, userName: displayName,
+                sentiment, sentimentLabel: sentiment ? sentiment.label : null,
                 upvotes: 0, downvotes: 0, score: 0, replyCount: 0,
                 createdAt: now, updatedAt: now
             };
@@ -310,6 +318,7 @@ const ReviewModel = {
         const ref = db.collection("reviews").doc();
         const doc = {
             ...clean, userId, userName: displayName,
+            sentiment, sentimentLabel: sentiment ? sentiment.label : null,
             upvotes: 0, downvotes: 0, score: 0, replyCount: 0,
             createdAt: now, updatedAt: now
         };
@@ -350,7 +359,11 @@ const ReviewModel = {
                 err.code = "FORBIDDEN";
                 throw err;
             }
-            if (text !== undefined) doc.text = text;
+            if (text !== undefined) {
+                doc.text = text;
+                doc.sentiment = classify(text);
+                doc.sentimentLabel = doc.sentiment ? doc.sentiment.label : null;
+            }
             if (rating !== undefined) doc.rating = rating;
             doc.updatedAt = now;
             return publicReview(doc, 0);
@@ -365,7 +378,12 @@ const ReviewModel = {
             throw err;
         }
         const patch = { updatedAt: now };
-        if (text !== undefined) patch.text = text;
+        if (text !== undefined) {
+            const sentiment = classify(text);
+            patch.text = text;
+            patch.sentiment = sentiment;
+            patch.sentimentLabel = sentiment ? sentiment.label : null;
+        }
         if (rating !== undefined) patch.rating = rating;
         await ref.set(patch, { merge: true });
         return publicReview({ id: ref.id, ...data, ...patch }, 0);
@@ -527,6 +545,96 @@ const ReviewModel = {
         const all = await parent.collection("replies").get();
         await parent.set({ replyCount: all.size }, { merge: true });
         return true;
+    },
+
+    // ---- Administración ----
+    // Estas operaciones no comprueban al autor: las rutas /api/admin ya han
+    // validado que quien llama tiene rol "admin".
+
+    // Lee reseñas sin paginar para estadísticas y análisis (tope MAX_STATS_READ).
+    readAll: async ({ mediaKey } = {}) => {
+        const wanted = mediaKey ? String(mediaKey).trim().toLowerCase() : null;
+        if (!db) {
+            return localReviews
+                .filter((r) => !wanted || r.mediaKey === wanted)
+                .map((r) => publicReview(r, 0));
+        }
+        let docs;
+        if (wanted) {
+            const snap = await db.collection("reviews").where("mediaKey", "==", wanted).limit(MAX_STATS_READ).get();
+            docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        } else {
+            const snap = await db.collection("reviews").limit(MAX_STATS_READ).get();
+            docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        }
+        return docs.map((d) => publicReview(d, 0));
+    },
+
+    countAll: async () => {
+        if (!db) return localReviews.length;
+        try {
+            const snap = await db.collection("reviews").count().get();
+            return snap.data().count;
+        } catch (e) {
+            // Si la agregación no está disponible, se cuenta con una lectura acotada.
+            const snap = await db.collection("reviews").limit(MAX_STATS_READ).get();
+            return snap.size;
+        }
+    },
+
+    latest: async (limit) => {
+        const want = Math.min(Math.max(Number.parseInt(limit, 10) || 10, 1), 100);
+        if (!db) {
+            return sortReviews(localReviews, "recent").slice(0, want).map((r) => publicReview(r, 0));
+        }
+        const snap = await db
+            .collection("reviews")
+            .orderBy("createdAt", "desc")
+            .limit(want)
+            .get();
+        return snap.docs.map((d) => publicReview({ id: d.id, ...d.data() }, 0));
+    },
+
+    // Borrado administrativo: ignora al autor y limpia votos y respuestas.
+    removeAsAdmin: async (id) => {
+        if (!id) throw new Error("Falta el id de la reseña");
+        if (!db) {
+            const idx = localReviews.findIndex((r) => r.id === id);
+            if (idx === -1) return false;
+            localReviews.splice(idx, 1);
+            localReplies.delete(id);
+            for (const [k, v] of localVotes) if (v.reviewId === id) localVotes.delete(k);
+            return true;
+        }
+        const ref = db.collection("reviews").doc(id);
+        const snap = await ref.get();
+        if (!snap.exists) return false;
+        await deleteQueryInBatches(db.collection("review_votes").where("reviewId", "==", id));
+        await deleteQueryInBatches(ref.collection("replies"));
+        await ref.delete();
+        return true;
+    },
+
+    // Guarda (o recalcula) la clasificación de sentimiento de una reseña.
+    setSentiment: async (id, sentiment) => {
+        if (!id) throw new Error("Falta el id de la reseña");
+        if (!sentiment || !sentiment.label) throw new Error("sentimiento inválido");
+        const patch = {
+            sentiment,
+            sentimentLabel: sentiment.label,
+            sentimentUpdatedAt: new Date().toISOString()
+        };
+        if (!db) {
+            const doc = localReviews.find((r) => r.id === id);
+            if (!doc) return null;
+            Object.assign(doc, patch);
+            return publicReview(doc, 0);
+        }
+        const ref = db.collection("reviews").doc(id);
+        const snap = await ref.get();
+        if (!snap.exists) return null;
+        await ref.set(patch, { merge: true });
+        return publicReview({ id: ref.id, ...snap.data(), ...patch }, 0);
     }
 };
 

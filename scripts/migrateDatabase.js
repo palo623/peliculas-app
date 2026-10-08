@@ -38,6 +38,13 @@ async function migrateDatabase() {
                 needsUpdate = true;
             }
 
+            // Rol del usuario (tarea 1: sistema de roles Admin/User).
+            // Las cuentas creadas antes de existir roles pasan a "user".
+            if (!data.role) {
+                updateFields.role = "user";
+                needsUpdate = true;
+            }
+
             if (needsUpdate) {
                 await doc.ref.update(updateFields);
                 console.log(`  ✔ Usuario migrado: ${doc.id} (${data.email || "sin email"})`);

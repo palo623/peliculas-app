@@ -30,6 +30,9 @@ function loadEnvIfNeeded() {
 }
 
 function serviceAccountFromEnv() {
+    // Modo local forzado (pruebas/CI): DISABLE_FIREBASE=1 evita conectar con
+    // Firestore aunque haya credenciales en config/.env.
+    if (process.env.DISABLE_FIREBASE === "1") return null;
     const projectId = (process.env.FIREBASE_PROJECT_ID || "").trim();
     const clientEmail = (process.env.FIREBASE_CLIENT_EMAIL || "").trim();
     let privateKey = process.env.FIREBASE_PRIVATE_KEY || "";
@@ -40,6 +43,7 @@ function serviceAccountFromEnv() {
 }
 
 function serviceAccountFromFile() {
+    if (process.env.DISABLE_FIREBASE === "1") return null;
     const keyPath = path.join(__dirname, "../../config/firebase-key.json");
     if (!fs.existsSync(keyPath)) return null;
     try {
@@ -83,6 +87,9 @@ try {
         }
         mode = fromEnv ? "firestore-env" : "firestore-file";
         console.log("Firestore conectado (" + (fromEnv ? "variables de entorno" : "firebase-key.json") + ")");
+    } else if (process.env.DISABLE_FIREBASE === "1") {
+        mode = "local-disabled";
+        console.warn("DISABLE_FIREBASE=1: modo local en memoria (sin Firestore).");
     } else {
         console.warn("Sin credenciales Firebase (ni .env ni firebase-key.json). Modo local (memoria).");
     }
