@@ -11,7 +11,7 @@ Aplicación web para descubrir, buscar y guardar películas. El catálogo públi
 - [Configuración](#configuración)
 - [Ejecución](#ejecución)
 - [API del backend](#api-del-backend)
-- [Backend de administración (admin)](ADMIN_API.md)
+- [Backend de administración (admin)](docs/ADMIN_API.md)
 - [Scripts administrativos](#scripts-administrativos)
 - [Modelo de datos](#modelo-de-datos)
 - [Seguridad y límites conocidos](#seguridad-y-límites-conocidos)

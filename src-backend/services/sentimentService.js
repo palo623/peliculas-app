@@ -2,6 +2,8 @@
 //
 // Estrategia (tarea 7 del proyecto: "Integrar análisis de sentimiento con IA"):
 //   1. Se analiza el texto y se etiqueta como positive | negative | neutral.
+//      Se guarda `score` en [-1, 1] y `magnitude`, la misma forma que usa el
+//      panel de administración del equipo (positivas / negativas / neutras).
 //   2. Por defecto se usa un analizador léxico ES/EN, que funciona sin clave ni
 //      conexión y es instantáneo (se ejecuta al guardar la reseña).
 //   3. Si hay una IA configurada (Gemini o OpenAI) se puede refinar la
@@ -110,9 +112,14 @@ function clamp(n, min, max) {
 }
 
 // Analizador léxico: instantáneo, determinista y sin red.
+// Umbral de la banda neutra. Coincide con el que usa el equipo para pintar la
+// distribución (|score| <= 0.2 es neutro).
+const NEUTRAL_BAND = 0.2;
+
 function analyzeLexicon(text) {
     const tokens = tokenize(text);
-    let score = 0;
+    let raw = 0;   // suma de pesos con signo
+    let mass = 0;  // suma de pesos en valor absoluto (magnitud)
     let positives = 0;
     let negatives = 0;
 
@@ -137,26 +144,30 @@ function analyzeLexicon(text) {
         }
         if (negated) weight *= -1;
 
-        score += weight;
+        raw += weight;
+        mass += Math.abs(weight);
         if (weight > 0) positives += 1;
         else if (weight < 0) negatives += 1;
     }
 
-    let label = "neutral";
-    if (score >= 1) label = "positive";
-    else if (score <= -1) label = "negative";
+    // `score` normalizado a [-1, 1] con tanh, igual que la forma que espera el
+    // panel del equipo (bandas 0.2 / 0.6). `magnitude` es la intensidad total.
+    const score = clamp(Math.tanh(raw / 3), -1, 1);
+    const label = score >= NEUTRAL_BAND ? "positive" : score <= -NEUTRAL_BAND ? "negative" : "neutral";
 
     let confidence;
     if (label === "neutral") {
-        confidence = clamp(1 - Math.abs(score) * 0.25, 0.35, 0.9);
+        confidence = clamp(0.75 - Math.abs(score) * 1.5, 0.35, 0.9);
     } else {
-        confidence = clamp(0.55 + (Math.abs(score) - 1) * 0.1, 0.55, 0.97);
+        confidence = clamp(0.55 + (Math.abs(score) - NEUTRAL_BAND) * 0.5, 0.55, 0.97);
     }
 
     return {
         label,
         score: round2(score),
+        magnitude: round2(mass),
         confidence: round2(confidence),
+        rawScore: round2(raw),
         provider: "lexicon",
         version: VERSION,
         tokens: tokens.length,

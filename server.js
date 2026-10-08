@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 function loadEnvFile() {
-    const envPath = path.join(__dirname, "../config/.env");
+    const envPath = path.join(__dirname, ".env");
     if (!fs.existsSync(envPath)) return;
     const content = fs.readFileSync(envPath, "utf8");
     for (const line of content.split("\n")) {
@@ -34,11 +34,11 @@ try {
 
 const express = require("express");
 const cors = require("cors");
-const movieRoutes = require("./backend/routes/movieRoutes");
-const seriesRoutes = require("./backend/routes/seriesRoutes");
-const reviewRoutes = require("./backend/routes/reviewRoutes");
-const adminRoutes = require("./backend/routes/adminRoutes");
-const { startDailyEnrichment } = require("./backend/services/seasonEnrichmentService");
+const movieRoutes = require("./src-backend/routes/movieRoutes");
+const seriesRoutes = require("./src-backend/routes/seriesRoutes");
+const reviewRoutes = require("./src-backend/routes/reviewRoutes");
+const adminRoutes = require("./src-backend/routes/adminRoutes");
+const { startDailyEnrichment } = require("./src-backend/services/seasonEnrichmentService");
 
 const app = express();
 const PORT = Number.parseInt(process.env.PORT, 10) || 8080;
@@ -62,7 +62,7 @@ app.use((req, res, next) => {
 
 app.use(cors());
 app.use(express.json({ limit: "100kb" }));
-app.use(express.static(path.join(__dirname, "../public")));
+app.use(express.static(path.join(__dirname, "public")));
 
 // Rate-limit de lectura del catálogo: evita bucles accidentales y abusos
 // aunque estas rutas ya no consultan directamente la API externa.
@@ -140,7 +140,7 @@ app.get("/api/firebase-config", (req, res) => {
     });
 });
 
-const authRoutes = require("./backend/routes/authRoutes");
+const authRoutes = require("./src-backend/routes/authRoutes");
 app.use("/api", authRoutes);
 
 // Anti-spam de reseñas: 30 escrituras por IP y minuto (lecturas sin límite).
@@ -166,7 +166,7 @@ app.use("/api/reviews", (req, res, next) => {
 });
 
 app.use("/api", reviewRoutes);
-const friendsRoutes = require("./backend/routes/friendsRoutes");
+const friendsRoutes = require("./src-backend/routes/friendsRoutes");
 app.use("/api", friendsRoutes);
 
 // Vista de administrador: todas las rutas exigen rol admin (ver adminRoutes).
@@ -179,7 +179,7 @@ app.use("/api", (req, res) => {
 
 // Fallback SPA: funciona en Express 4 y 5 (evita app.get("*") que rompe en Express 5)
 app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__dirname, "../public", "index.html"));
+    res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // Manejador central de errores
@@ -194,11 +194,11 @@ if (!process.env.OMDB_API_KEY) {
 }
 
 // Se exporta la app para poder arrancarla en pruebas sin abrir un puerto fijo
-// (`node --test`: require("../src/server").listen(0)).
+// (`node --test`: require("./server").listen(0)).
 module.exports = app;
 
 // Solo arranca el servidor cuando este archivo se ejecuta directamente
-// (`node src/server.js` / `npm start`), no cuando se importa desde las pruebas.
+// (`node server.js` / `npm start`), no cuando se importa desde las pruebas.
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`Servidor arrancado en http://localhost:${PORT}`);

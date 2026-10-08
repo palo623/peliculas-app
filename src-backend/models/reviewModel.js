@@ -138,6 +138,50 @@ async function fillGenreFromCatalog({ mediaType, imdbID, title, year }) {
     }
 }
 
+// Etiquetas válidas de sentimiento.
+const SENTIMENT_LABELS = new Set(["positive", "negative", "neutral"]);
+
+// Valida y normaliza el bloque de sentimiento antes de guardarlo. Evita que se
+// almacenen etiquetas o puntuaciones incoherentes (punto 6 de la revisión).
+function validateSentiment(input) {
+    if (!input || typeof input !== "object") throw new Error("sentimiento inválido");
+    const label = String(input.label || "").trim().toLowerCase();
+    if (!SENTIMENT_LABELS.has(label)) {
+        throw new Error("label de sentimiento inválido (usa 'positive', 'negative' o 'neutral')");
+    }
+    let score = 0;
+    if (input.score !== undefined && input.score !== null && String(input.score).trim() !== "") {
+        score = Number(input.score);
+        if (!Number.isFinite(score) || score < -1 || score > 1) {
+            throw new Error("score de sentimiento inválido (número entre -1 y 1)");
+        }
+        score = Math.round(score * 1000) / 1000;
+    }
+    let magnitude = Math.abs(score);
+    if (input.magnitude !== undefined && input.magnitude !== null && String(input.magnitude).trim() !== "") {
+        magnitude = Number(input.magnitude);
+        if (!Number.isFinite(magnitude) || magnitude < 0) {
+            throw new Error("magnitude de sentimiento inválida (número >= 0)");
+        }
+        magnitude = Math.round(magnitude * 100) / 100;
+    }
+    let confidence = null;
+    if (input.confidence !== undefined && input.confidence !== null && String(input.confidence).trim() !== "") {
+        const n = Number(input.confidence);
+        if (Number.isFinite(n) && n >= 0 && n <= 1) confidence = n;
+    }
+    const clean = {
+        label,
+        score,
+        magnitude,
+        provider: input.provider ? String(input.provider).slice(0, 40) : "manual",
+        version: input.version ? String(input.version).slice(0, 40) : null,
+        analyzedAt: input.analyzedAt ? String(input.analyzedAt).slice(0, 40) : new Date().toISOString()
+    };
+    if (confidence !== null) clean.confidence = confidence;
+    return clean;
+}
+
 function voteDocId(reviewId, userId) {
     return `${reviewId}__${slugify(String(userId))}`;
 }
@@ -618,10 +662,10 @@ const ReviewModel = {
     // Guarda (o recalcula) la clasificación de sentimiento de una reseña.
     setSentiment: async (id, sentiment) => {
         if (!id) throw new Error("Falta el id de la reseña");
-        if (!sentiment || !sentiment.label) throw new Error("sentimiento inválido");
+        const clean = validateSentiment(sentiment);
         const patch = {
-            sentiment,
-            sentimentLabel: sentiment.label,
+            sentiment: clean,
+            sentimentLabel: clean.label,
             sentimentUpdatedAt: new Date().toISOString()
         };
         if (!db) {
@@ -638,4 +682,4 @@ const ReviewModel = {
     }
 };
 
-module.exports = { ReviewModel };
+module.exports = { ReviewModel, validateSentiment, SENTIMENT_LABELS };

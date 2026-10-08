@@ -65,6 +65,46 @@ function withPercent(counts) {
     };
 }
 
+// Desglose por obra: agrupa las reseñas de un conjunto por película/serie y
+// devuelve los mismos conteos y porcentajes que el informe general, más la nota
+// media. Lo usa el filtro por género del panel ("INFO x GEN"), para poder listar
+// de qué obras salen esas reseñas.
+function worksBreakdown(reviews) {
+    const byWork = new Map();
+    for (const review of reviews) {
+        const key = review.mediaKey || review.imdbID ||
+            `${review.mediaType || "media"}:${String(review.mediaTitle || "?")}`;
+        if (!byWork.has(key)) {
+            byWork.set(key, {
+                mediaKey: review.mediaKey || null,
+                imdbID: review.imdbID || null,
+                mediaType: review.mediaType || null,
+                title: review.mediaTitle || null,
+                year: review.mediaYear || null,
+                reviews: []
+            });
+        }
+        byWork.get(key).reviews.push(review);
+    }
+    return [...byWork.values()]
+        .map((work) => {
+            const ratings = work.reviews.map((r) => r.rating).filter((n) => Number.isInteger(n));
+            return {
+                mediaKey: work.mediaKey,
+                imdbID: work.imdbID,
+                mediaType: work.mediaType,
+                title: work.title,
+                year: work.year,
+                ...withPercent(countSentiments(work.reviews)),
+                avgRating: ratings.length > 0
+                    ? round2(ratings.reduce((a, b) => a + b, 0) / ratings.length)
+                    : null,
+                ratingsCount: ratings.length
+            };
+        })
+        .sort((a, b) => (b.total - a.total) || String(a.title || "").localeCompare(String(b.title || ""), "es"));
+}
+
 // Añade a cada reseña su lista de géneros: usa el guardado en la reseña y, si
 // falta, lo completa con el catálogo (una sola lectura cacheada).
 async function enrichReviews(reviews) {
@@ -274,15 +314,123 @@ const adminService = {
                 byGenre.get(g).push(review);
             }
         }
-        const wanted = catalog.normalizeGenres(genre).map((g) => g.toLowerCase());
+        const selectionGenres = catalog.normalizeGenres(genre);
+        const wanted = selectionGenres.map((g) => g.toLowerCase());
         const results = [...byGenre.entries()]
             .filter(([g]) => wanted.length === 0 || wanted.includes(g.toLowerCase()))
             .map(([g, list]) => ({ genre: g, ...withPercent(countSentiments(list)) }))
             .sort((a, b) => (b.total - a.total) || a.genre.localeCompare(b.genre, "es"));
+
+        // Filtro del panel ("INFO x GEN"): al elegir un género se devuelve el
+        // agregado de ESE género (no el global) y el desglose por obra.
+        // Una reseña que tenga dos géneros seleccionados cuenta una sola vez.
+        const selectionReviews = wanted.length === 0
+            ? []
+            : reviews.filter((review) => {
+                const own = (review.genres || catalog.normalizeGenres(review.genre))
+                    .map((g) => g.toLowerCase());
+                return wanted.some((g) => own.includes(g));
+            });
+        const selectionRatings = selectionReviews
+            .map((r) => r.rating)
+            .filter((n) => Number.isInteger(n));
+
         return {
             results,
             totals: withPercent(countSentiments(reviews)),
-            genres: [...byGenre.keys()].sort((a, b) => a.localeCompare(b, "es"))
+            genres: [...byGenre.keys()].sort((a, b) => a.localeCompare(b, "es")),
+            selection: wanted.length === 0 ? null : {
+                genre: selectionGenres.join(", "),
+                genres: selectionGenres,
+                reviews: withPercent(countSentiments(selectionReviews)),
+                avgRating: selectionRatings.length > 0
+                    ? round2(selectionRatings.reduce((a, b) => a + b, 0) / selectionRatings.length)
+                    : null,
+                ratingsCount: selectionRatings.length,
+                works: worksBreakdown(selectionReviews)
+            }
+        };
+    },
+
+    // Analiza una sola reseña en el servidor y guarda el resultado.
+    // Nunca acepta la clasificación del cliente (antes se guardaba tal cual).
+    analyzeOne: async (id, { useAI } = {}) => {
+        const review = await ReviewModel.getById(id, null);
+        if (!review) {
+            const err = new Error("Reseña no encontrada");
+            err.code = "NOT_FOUND";
+            throw err;
+        }
+        const sentiment = useAI === false
+            ? analyzeSentiment(review.text)
+            : await analyzeSentimentAI(review.text);
+        await ReviewModel.setSentiment(id, sentiment);
+        return sentiment;
+    },
+
+    // Análisis con la MISMA forma de respuesta que usa el panel del equipo
+    // (avgScore, avgMagnitude, labelCounts y distribución por bandas).
+    sentimentAnalysisForMedia: async (ref) => {
+        const mediaKey = resolveMediaKey(ref);
+        const reviews = await enrichReviews(await ReviewModel.readAll({ mediaKey }));
+        if (reviews.length === 0) {
+            return {
+                mediaKey,
+                totalReviews: 0,
+                analyzedReviews: 0,
+                sentiment: null,
+                message: "No hay reseñas para esta obra"
+            };
+        }
+        const withSentiment = reviews.filter((r) => r.sentiment && typeof r.sentiment.score === "number");
+        if (withSentiment.length === 0) {
+            return {
+                mediaKey,
+                totalReviews: reviews.length,
+                analyzedReviews: 0,
+                sentiment: null,
+                message: "No hay análisis de sentimientos disponibles aún"
+            };
+        }
+        const totalScore = withSentiment.reduce((sum, r) => sum + (r.sentiment.score || 0), 0);
+        const totalMagnitude = withSentiment.reduce((sum, r) => sum + (r.sentiment.magnitude || 0), 0);
+        const avgScore = totalScore / withSentiment.length;
+        const avgMagnitude = totalMagnitude / withSentiment.length;
+
+        const labelCounts = { positive: 0, negative: 0, neutral: 0 };
+        for (const r of withSentiment) {
+            const label = r.sentiment.label || "neutral";
+            if (labelCounts[label] !== undefined) labelCounts[label] += 1;
+        }
+        const distribution = { veryNegative: 0, negative: 0, neutral: 0, positive: 0, veryPositive: 0 };
+        for (const r of withSentiment) {
+            const s = r.sentiment.score || 0;
+            if (s <= -0.6) distribution.veryNegative += 1;
+            else if (s <= -0.2) distribution.negative += 1;
+            else if (s <= 0.2) distribution.neutral += 1;
+            else if (s <= 0.6) distribution.positive += 1;
+            else distribution.veryPositive += 1;
+        }
+
+        return {
+            mediaKey,
+            totalReviews: reviews.length,
+            analyzedReviews: withSentiment.length,
+            sentiment: {
+                avgScore: Number(avgScore.toFixed(3)),
+                avgMagnitude: Number(avgMagnitude.toFixed(3)),
+                label: avgScore > 0.1 ? "positive" : avgScore < -0.1 ? "negative" : "neutral",
+                labelCounts,
+                distribution
+            },
+            reviews: withSentiment.map((r) => ({
+                reviewId: r.id,
+                userId: r.userId,
+                score: r.sentiment.score,
+                magnitude: r.sentiment.magnitude,
+                label: r.sentiment.label,
+                analyzedAt: r.sentiment.analyzedAt
+            }))
         };
     },
 

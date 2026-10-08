@@ -1,7 +1,7 @@
 // Pruebas del backend de administración (tarea 15 del proyecto).
 //
 // Se ejecutan en modo local (memoria), sin tocar Firestore: DISABLE_FIREBASE=1
-// evita cualquier conexión con la base de datos real aunque config/.env tenga
+// evita cualquier conexión con la base de datos real aunque .env tenga
 // credenciales. Se levanta la app real en un puerto libre y se llama por HTTP,
 // de forma que se prueban rutas, permisos y respuestas tal y como las usará el
 // frontend.
@@ -14,12 +14,12 @@ process.env.SENTIMENT_PROVIDER = "lexicon";
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 
-const app = require("../../src/server");
-const { authService, isAdminUser } = require("../../src/backend/services/authService");
-const { ReviewModel } = require("../../src/backend/models/reviewModel");
-const { adminService } = require("../../src/backend/services/adminService");
-const catalog = require("../../src/backend/services/catalogService");
-const { analyzeSentiment } = require("../../src/backend/services/sentimentService");
+const app = require("../../server");
+const { authService, isAdminUser } = require("../../src-backend/services/authService");
+const { ReviewModel } = require("../../src-backend/models/reviewModel");
+const { adminService } = require("../../src-backend/services/adminService");
+const catalog = require("../../src-backend/services/catalogService");
+const { analyzeSentiment } = require("../../src-backend/services/sentimentService");
 
 const POSITIVE_REVIEW = "Me ha parecido excelente y muy entretenida, con una actuación brillante y un final perfecto.";
 const NEGATIVE_REVIEW = "Me ha parecido aburrida y muy predecible, con un guion flojo y unas actuaciones mediocres.";
@@ -236,6 +236,36 @@ test("las estadísticas por género agrupan las reseñas", async () => {
     assert.equal(onlySciFi.body.results[0].positive, 1);
 });
 
+test("al filtrar por género el informe muestra el agregado de ese género (INFO x GEN)", async () => {
+    const res = await api("GET", "/api/admin/stats/genres?genre=Sci-Fi", { token: admin.token });
+    assert.equal(res.status, 200);
+
+    const selection = res.body.selection;
+    assert.equal(selection.genre, "Sci-Fi");
+    assert.equal(selection.genres.includes("Sci-Fi"), true);
+    // Los conteos del género cuadran entre sí y con sus porcentajes.
+    assert.equal(
+        selection.reviews.positive + selection.reviews.negative +
+        selection.reviews.neutral + selection.reviews.unclassified,
+        selection.reviews.total
+    );
+    assert.equal(selection.reviews.positive >= 1, true);
+    assert.equal(selection.reviews.percent.positive > 0, true);
+    // El género no puede tener más reseñas que el total global.
+    assert.equal(selection.reviews.total <= res.body.totals.total, true);
+    // Desglose por obra: aparece Inception con su nota media.
+    assert.equal(selection.works.length >= 1, true);
+    const inception = selection.works.find((w) => w.title === "Inception");
+    assert.equal(Boolean(inception), true);
+    assert.equal(inception.total >= 1, true);
+    assert.equal(inception.avgRating, 9);
+
+    // Sin filtro no hay selección: el informe global sigue disponible.
+    const all = await api("GET", "/api/admin/stats/genres", { token: admin.token });
+    assert.equal(all.status, 200);
+    assert.equal(all.body.selection, null);
+});
+
 test("el análisis masivo clasifica las reseñas pendientes", async () => {
     // Se fuerza el recálculo y se comprueba que se analizan todas.
     const res = await api("POST", "/api/admin/reviews/analyze", {
@@ -277,6 +307,79 @@ test("el servicio de administración filtra por obra", async () => {
     const data = await adminService.listReviews({ mediaKey: "movie:tt0111161", page: 1, limit: 10 });
     assert.equal(data.total, 1);
     assert.equal(data.results[0].sentimentLabel, "positive");
+});
+
+// ---- Compatibilidad con el panel del equipo (Rama-Dani) ----
+
+test("el sentimiento se guarda con score normalizado, magnitud y etiqueta", () => {
+    const pos = analyzeSentiment(POSITIVE_REVIEW);
+    assert.equal(pos.label, "positive");
+    assert.equal(pos.score > 0 && pos.score <= 1, true, "score normalizado entre 0 y 1");
+    assert.equal(typeof pos.magnitude === "number" && pos.magnitude >= 0, true);
+
+    const neg = analyzeSentiment(NEGATIVE_REVIEW);
+    assert.equal(neg.label, "negative");
+    assert.equal(neg.score < 0 && neg.score >= -1, true);
+});
+
+test("isAdminUser acepta el campo isAdmin del compañero", () => {
+    assert.equal(isAdminUser({ isAdmin: true }), true);
+    assert.equal(isAdminUser({ role: "admin" }), true);
+    assert.equal(isAdminUser({ role: "user", isAdmin: false }), false);
+    assert.equal(isAdminUser(null), false);
+});
+
+test("cambiar el rol escribe role e isAdmin a la vez", async () => {
+    const created = await authService.seedLocalUser({ email: "role.test@example.com", name: "Role Test", role: "user" });
+    assert.equal(created.user.role, "user");
+    const updated = await authService.setRole("role.test@example.com", "admin");
+    assert.equal(updated.role, "admin");
+    assert.equal(updated.isAdmin, true);
+    const stored = await authService.getById("role.test@example.com");
+    assert.equal(stored.role, "admin");
+    assert.equal(stored.isAdmin, true);
+});
+
+test("los endpoints de sentimiento del equipo funcionan y el servidor ignora la etiqueta del cliente", async () => {
+    const res = await api("GET", "/api/admin/reviews/sentiment?mediaType=movie&imdbID=tt0468569", { token: admin.token });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.mediaKey, "movie:tt0468569");
+    assert.equal(res.body.totalReviews, 1);
+    assert.equal(res.body.sentiment.labelCounts.negative, 1);
+    assert.equal(res.body.sentiment.avgScore < 0, true);
+
+    // El cliente manda una etiqueta falsa: el servidor debe recalcularla.
+    const batch = await api("POST", "/api/admin/reviews/sentiment/batch", {
+        token: admin.token,
+        body: { reviews: [{ reviewId: createdReviewIds.darkKnight, sentiment: { label: "positive", score: 0.9, magnitude: 5 } }] }
+    });
+    assert.equal(batch.status, 200);
+    assert.equal(batch.body.results[0].ok, true);
+    assert.equal(batch.body.results[0].sentiment.label, "negative");
+
+    const after = await api("GET", "/api/admin/reviews?mediaKey=movie:tt0468569", { token: admin.token });
+    assert.equal(after.body.results[0].sentimentLabel, "negative");
+});
+
+test("el administrador puede borrar reseñas por la ruta pública", async () => {
+    const created = await createReview(normalUser.token, {
+        mediaType: "movie", imdbID: "tt0109830", title: "Forrest Gump", year: "1994", text: POSITIVE_REVIEW, rating: 9
+    });
+    assert.equal(created.status, 201);
+    const removed = await api("DELETE", `/api/reviews/${created.body.id}`, { token: admin.token });
+    assert.equal(removed.status, 200);
+    const check = await api("GET", "/api/admin/reviews?mediaKey=movie:tt0109830", { token: admin.token });
+    assert.equal(check.body.total, 0);
+});
+
+test("validateSentiment rechaza etiquetas y puntuaciones inválidas", () => {
+    const { validateSentiment } = require("../../src-backend/models/reviewModel");
+    assert.throws(() => validateSentiment({ label: "regular" }), /label de sentimiento inválido/);
+    assert.throws(() => validateSentiment({ label: "positive", score: 3 }), /score de sentimiento inválido/);
+    assert.throws(() => validateSentiment({ label: "positive", magnitude: -1 }), /magnitude de sentimiento inválida/);
+    const ok = validateSentiment({ label: "POSITIVE", score: 0.5, magnitude: 2 });
+    assert.equal(ok.label, "positive");
+    assert.equal(ok.score, 0.5);
 });
 
 // ---- Generador de dataset (tarea 13) ----

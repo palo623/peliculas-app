@@ -7,7 +7,7 @@
  *   node scripts/migrateDatabase.js
  */
 
-const firebaseConn = require("../src/backend/models/firebase");
+const firebaseConn = require("../src-backend/models/firebase");
 const db = firebaseConn.getDb();
 
 if (!db) {

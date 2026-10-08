@@ -16,13 +16,13 @@
  * Los documentos generados llevan `seedSource: "admin-dataset"`, así que
  * --cleanup solo elimina los datos de prueba (nunca usuarios reales).
  *
- * Requiere credenciales Firebase Admin en config/.env (o firebase-key.json).
+ * Requiere credenciales Firebase Admin en .env (o firebase-key.json).
  */
 
-const firebaseConn = require("../src/backend/models/firebase");
-const catalog = require("../src/backend/services/catalogService");
-const { buildMediaKey } = require("../src/backend/models/mediaKey");
-const { analyzeSentiment, analyzeSentimentAI } = require("../src/backend/services/sentimentService");
+const firebaseConn = require("../src-backend/models/firebase");
+const catalog = require("../src-backend/services/catalogService");
+const { buildMediaKey } = require("../src-backend/models/mediaKey");
+const { analyzeSentiment, analyzeSentimentAI } = require("../src-backend/services/sentimentService");
 
 const SEED_SOURCE = "admin-dataset";
 const db = firebaseConn.getDb();
@@ -255,7 +255,7 @@ async function run(argv) {
     // El dry-run no toca la base de datos, así que también sirve sin Firestore
     // para revisar qué se generaría.
     if (!db && !args.dryRun) {
-        console.error("Sin conexión a Firestore. Revisa FIREBASE_* en config/.env.");
+        console.error("Sin conexión a Firestore. Revisa FIREBASE_* en .env.");
         console.error("(Puedes validar la generación con: node scripts/seedAdminDataset.js --dry-run)");
         return { ok: false, reason: "sin-firestore" };
     }

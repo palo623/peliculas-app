@@ -8,7 +8,7 @@
  *   node scripts/deleteAllMovies.js --confirm --dry-run
  */
 
-const firebaseConn = require("../src/backend/models/firebase");
+const firebaseConn = require("../src-backend/models/firebase");
 const db = firebaseConn.getDb();
 const args = process.argv.slice(2);
 

@@ -181,6 +181,51 @@ router.get("/admin/reviews", async (req, res) => {
     }
 });
 
+// Compatibilidad con el panel del equipo: mismo endpoint y misma forma de
+// respuesta (avgScore, avgMagnitude, labelCounts y distribución por bandas).
+// GET /api/admin/reviews/sentiment?mediaType=movie&imdbID=tt0111161
+router.get("/admin/reviews/sentiment", async (req, res) => {
+    try {
+        res.json(await adminService.sentimentAnalysisForMedia({
+            mediaType: req.query.mediaType || req.query.type,
+            imdbID: req.query.imdbID || req.query.i,
+            title: req.query.title || req.query.t,
+            year: req.query.year || req.query.y,
+            mediaKey: req.query.mediaKey
+        }));
+    } catch (error) {
+        sendError(res, error);
+    }
+});
+
+// Clasificación por lotes. El análisis lo hace SIEMPRE el servidor: cualquier
+// "sentiment" que mande el cliente se ignora (antes se guardaba tal cual).
+// Acepta { ids: [...] } o el formato del front { reviews: [{ reviewId }] }.
+router.post("/admin/reviews/sentiment/batch", async (req, res) => {
+    try {
+        const body = req.body && typeof req.body === "object" ? req.body : {};
+        let ids = [];
+        if (Array.isArray(body.ids)) ids = body.ids;
+        else if (Array.isArray(body.reviews)) ids = body.reviews.map((r) => r && (r.reviewId || r.id)).filter(Boolean);
+        ids = ids.map((id) => String(id));
+        if (ids.length === 0) {
+            return res.status(400).json({ error: "Se requiere 'ids' o 'reviews' con reviewId" });
+        }
+        const results = [];
+        for (const reviewId of ids) {
+            try {
+                const sentiment = await adminService.analyzeOne(reviewId, { useAI: body.useAI });
+                results.push({ reviewId, ok: true, sentiment });
+            } catch (e) {
+                results.push({ reviewId, ok: false, error: e.message });
+            }
+        }
+        res.json({ results, provider: adminService.sentimentInfo() });
+    } catch (error) {
+        sendError(res, error);
+    }
+});
+
 // Borrar cualquier reseña (tarea 6). Se pide confirmación en el front.
 router.delete("/admin/reviews/:id", async (req, res) => {
     try {

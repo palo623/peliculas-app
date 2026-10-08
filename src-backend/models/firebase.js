@@ -10,7 +10,7 @@ let mode = "local";
 function loadEnvIfNeeded() {
     // server.js ya carga el .env, esto es solo para usos directos (scripts).
     if (process.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_PRIVATE_KEY) return;
-    const envPath = path.join(__dirname, "../../config/.env");
+    const envPath = path.join(__dirname, "../../.env");
     if (!fs.existsSync(envPath)) return;
     const content = fs.readFileSync(envPath, "utf8");
     for (const line of content.split("\n")) {
@@ -31,7 +31,7 @@ function loadEnvIfNeeded() {
 
 function serviceAccountFromEnv() {
     // Modo local forzado (pruebas/CI): DISABLE_FIREBASE=1 evita conectar con
-    // Firestore aunque haya credenciales en config/.env.
+    // Firestore aunque haya credenciales en .env.
     if (process.env.DISABLE_FIREBASE === "1") return null;
     const projectId = (process.env.FIREBASE_PROJECT_ID || "").trim();
     const clientEmail = (process.env.FIREBASE_CLIENT_EMAIL || "").trim();
@@ -44,7 +44,7 @@ function serviceAccountFromEnv() {
 
 function serviceAccountFromFile() {
     if (process.env.DISABLE_FIREBASE === "1") return null;
-    const keyPath = path.join(__dirname, "../../config/firebase-key.json");
+    const keyPath = path.join(__dirname, "../../firebase-key.json");
     if (!fs.existsSync(keyPath)) return null;
     try {
         return require(keyPath);

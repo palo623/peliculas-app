@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { ReviewModel } = require("../models/reviewModel");
-const { authService } = require("../services/authService");
+const { authService, isAdminUser } = require("../services/authService");
 
 // Sesión obligatoria (401) u opcional (null) según la ruta.
 // Las lecturas son públicas pero si viene Bearer se añade `userVote`.
@@ -148,12 +148,15 @@ router.put("/reviews/:id", async (req, res) => {
     }
 });
 
-// DELETE /api/reviews/:id (solo el autor; borra votos y respuestas)
+// DELETE /api/reviews/:id (el autor o cualquier administrador; borra votos y respuestas)
 router.delete("/reviews/:id", async (req, res) => {
     const user = await requireAuth(req, res);
     if (!user) return;
     try {
-        const deleted = await ReviewModel.remove(req.params.id, user.id);
+        // Los administradores pueden borrar la reseña de cualquier usuario.
+        const deleted = isAdminUser(user)
+            ? await ReviewModel.removeAsAdmin(req.params.id)
+            : await ReviewModel.remove(req.params.id, user.id);
         if (!deleted) return res.status(404).json({ error: "Reseña no encontrada" });
         res.json({ ok: true, id: req.params.id });
     } catch (error) {

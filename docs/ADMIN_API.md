@@ -34,6 +34,14 @@ ofrece para construirlas.
   ```
 - Un administrador **no puede quitarse a sí mismo** el rol (evita quedarse sin acceso).
 - El rol se comprueba en el servidor, no solo ocultando el botón en la interfaz.
+- **Compatibilidad con el equipo:** además de `role`, se acepta el booleano
+  `isAdmin` que ya usa el resto del equipo en Firestore. `isAdmin: true` cuenta
+  como administrador aunque no exista `role`, y al cambiar el rol se escriben
+  **los dos campos**, así que las dos implementaciones funcionan a la vez.
+- Formas válidas de dar de alta a un administrador:
+  - `ADMIN_EMAILS` en el `.env` (automático al entrar), o
+  - editar a mano el documento del usuario en Firestore
+    (`role: "admin"` y/o `isAdmin: true`).
 
 ## Autenticación de las peticiones
 
@@ -85,6 +93,35 @@ Body opcional: `{ mediaKey?, ids?, limit?, force?, useAI? }`.
 - `useAI: false` usa solo el analizador léxico (sin red).
 Respuesta: `{ analyzed, failed, skipped, candidates, provider }`.
 
+### `GET /api/admin/reviews/sentiment`
+Compatibilidad con el panel del equipo: devuelve el análisis agregado de una obra
+con la **misma forma** que ya usaba su frontend. Query: `mediaType`,
+`imdbID`, `title`, `year` o `mediaKey`.
+
+```json
+{
+  "mediaKey": "movie:tt0111161",
+  "totalReviews": 12,
+  "analyzedReviews": 12,
+  "sentiment": {
+    "avgScore": 0.421,
+    "avgMagnitude": 2.35,
+    "label": "positive",
+    "labelCounts": { "positive": 8, "negative": 2, "neutral": 2 },
+    "distribution": { "veryNegative": 1, "negative": 1, "neutral": 2, "positive": 3, "veryPositive": 5 }
+  },
+  "reviews": [ { "reviewId": "...", "userId": "...", "score": 0.98, "magnitude": 7, "label": "positive", "analyzedAt": "..." } ]
+}
+```
+
+### `POST /api/admin/reviews/sentiment/batch`
+Clasificación por lotes. **El análisis lo hace siempre el servidor**: cualquier
+`sentiment` que envíe el cliente se ignora y se recalcula desde el texto de la
+reseña.
+Body: `{ ids: ["..."] }` o el formato del front `{ reviews: [{ reviewId }] }`.
+Opcional `useAI` (por defecto usa el proveedor configurado).
+Respuesta: `{ results: [{ reviewId, ok, sentiment?, error? }], provider }`.
+
 ### `GET /api/admin/stats/media`
 Estadísticas de una obra (tarea 8). Query: `mediaType`, `imdbID`, `title`,
 `year` o directamente `mediaKey`.
@@ -107,6 +144,31 @@ Estadísticas agregadas por género (tarea 11). Query opcional: `genre`.
   "genres": ["Action", "Crime", "Drama", "Sci-Fi"]
 }
 ```
+
+**Filtro del panel ("INFO x GEN")**: si se manda `genre`, la respuesta incluye
+además `selection` con **todo el informe de ese género** (no el global): sus
+conteos y porcentajes, la nota media y el desglose por obra. Sin `genre`,
+`selection` es `null`.
+
+```json
+{
+  "selection": {
+    "genre": "Sci-Fi",
+    "genres": ["Sci-Fi"],
+    "reviews": { "positive": 12, "negative": 4, "neutral": 6, "unclassified": 0, "total": 22, "percent": { "positive": 54.55, "negative": 18.18, "neutral": 27.27, "unclassified": 0 } },
+    "avgRating": 7.4,
+    "ratingsCount": 9,
+    "works": [ { "mediaKey": "movie:tt1375666", "imdbID": "tt1375666", "mediaType": "movie", "title": "Inception", "year": "2010", "positive": 3, "negative": 1, "neutral": 0, "unclassified": 0, "total": 4, "percent": { "...": 0 }, "avgRating": 9, "ratingsCount": 1 } ]
+  }
+}
+```
+
+- `genre` admite varios separados por coma (`?genre=Sci-Fi,Drama`); una reseña
+  que pertenezca a dos de los géneros pedidos cuenta **una sola vez**.
+- `totals` sigue siendo el global de todas las reseñas, para que el panel pueda
+  comparar el género con el total.
+- Las reseñas de ese género, con su texto, se piden a
+  `GET /api/admin/reviews?genre=Sci-Fi`.
 
 ### `GET /api/admin/catalog/search`
 Buscador de películas y series (tarea 4). Usa el catálogo de Firestore ya
@@ -135,7 +197,7 @@ y el proveedor de sentimiento activo.
 
 ## Análisis de sentimiento
 
-`src/backend/services/sentimentService.js` clasifica cada reseña como
+`src-backend/services/sentimentService.js` clasifica cada reseña como
 `positive`, `negative` o `neutral`.
 
 1. **Por defecto (léxico ES/EN, sin clave ni coste):** se ejecuta al crear o
@@ -162,15 +224,19 @@ GEMINI_MODEL=gemini-2.0-flash
 > nada: el analizador léxico ya clasifica las tres categorías y alimenta los
 > gráficos.
 
-La clasificación se guarda en la reseña:
+La clasificación se guarda en la reseña con la forma que usa el panel del equipo
+(`score` normalizado entre -1 y 1, y `magnitude`):
 
 ```json
 {
-  "sentiment": { "label": "positive", "score": 7, "confidence": 0.97, "provider": "lexicon", "version": "lexicon-es-en-v1", "analyzedAt": "..." },
+  "sentiment": { "label": "positive", "score": 0.98, "magnitude": 7, "confidence": 0.94, "rawScore": 7, "provider": "lexicon", "version": "lexicon-es-en-v1", "analyzedAt": "..." },
   "sentimentLabel": "positive",
   "genre": "Sci-Fi, Action"
 }
 ```
+
+Bandas de `score` usadas para la distribución: `<= -0.6` muy negativa,
+`<= -0.2` negativa, `<= 0.2` neutra, `<= 0.6` positiva y `> 0.6` muy positiva.
 
 ## Dataset de pruebas (tarea 13)
 
@@ -202,12 +268,14 @@ node scripts/seedAdminDataset.js --cleanup                # borra lo generado
 npm test
 ```
 
-Se ejecutan 19 pruebas con `node --test` en **modo local (memoria)**, sin tocar
+Se ejecutan 25 pruebas con `node --test` en **modo local (memoria)**, sin tocar
 Firestore (`DISABLE_FIREBASE=1`), levantando la app real y llamándola por HTTP:
-sentimiento, creación de reseñas con género y clasificación, permisos
-401/403/200, cambio de rol, listado, filtrado por género y sentimiento, borrado
-administrativo, estadísticas por obra y por género, análisis masivo, buscador de
-catálogo y generador de dataset.
+sentimiento (incluida su forma normalizada), creación de reseñas con género y
+clasificación, permisos 401/403/200, cambio de rol (escribe `role` e `isAdmin`),
+compatibilidad de `isAdmin`, listado, filtrado por género y sentimiento, borrado
+administrativo (por la ruta de admin y por la pública), estadísticas por obra y
+por género, análisis masivo, endpoints de sentimiento del equipo, validación de
+etiquetas, buscador de catálogo y generador de dataset.
 
 Para trabajar sin tocar la base de datos real (por ejemplo en pruebas manuales):
 
@@ -215,8 +283,40 @@ Para trabajar sin tocar la base de datos real (por ejemplo en pruebas manuales):
 DISABLE_FIREBASE=1 npm start
 ```
 
+## Compatibilidad con la rama del compañero (Rama-Dani)
+
+Esta rama está pensada para convivir con el trabajo de administración de
+`Rama-Dani` y ampliarlo, sin duplicar ni romper nada:
+
+| Punto | Cómo se resuelve aquí |
+| --- | --- |
+| Campo de rol | Se leen y escriben `role` **y** `isAdmin` |
+| `GET /api/admin/reviews/sentiment` | Se reimplementa con la misma respuesta |
+| `POST /api/admin/reviews/sentiment/batch` | Se mantiene la URL, pero el sentimiento lo calcula el servidor (antes se guardaba el que mandaba el cliente) |
+| Borrado de reseñas | El administrador puede borrar cualquier reseña, también desde `DELETE /api/reviews/:id` |
+| Permisos | Sin sesión **401**, usuario normal **403** |
+| Validación | `label` solo `positive/negative/neutral`, `score` en `[-1, 1]`, `magnitude >= 0` |
+
+### Limpieza al integrar Rama-Dani
+
+Rama-Dani trae scripts de desarrollo que **no** deben quedarse en el repo
+(reescriben ficheros fuente con `readFileSync`/`writeFileSync`). Al mergear esa
+rama, borrar:
+
+```
+add_sentiment.js  add_sentiment_v3.js  add_sentiment_v4.js  add_sentiment_v6.js
+fix_review_model.js  fix_review_model_v2.js  check-server.js
+```
+
+En esta rama ya se han quitado los equivalentes que había en la raíz
+(`check_reviews.ps1`, `check_reviews2.ps1`, `fix_reviews.js`, `fix_reviews.ps1`
+y los duplicados de `scripts/check/` y `scripts/fix/`).
+
 ## Notas
 
+- **Layout del proyecto:** se usa el del equipo, `src-backend/`,
+  `server.js`, `.env.example` y `README.md` en la raíz, y `.env` y
+  `firebase-key.json` en la raíz (ignorados por Git).
 - Las lecturas de estadísticas leen como máximo 5000 reseñas y cachean el
   catálogo unos minutos (`CATALOG_CACHE_TTL_MS`), para no disparar los costes de
   Firestore en un proyecto de este tamaño.

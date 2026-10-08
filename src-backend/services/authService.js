@@ -31,8 +31,24 @@ function defaultPrefs() {
 
 // ---- Roles (tarea 1: sistema de roles Admin/User) ----
 // Solo existen dos roles: "user" (por defecto) y "admin".
+// `role` es el campo propio. Además se acepta el booleano `isAdmin` que usa el
+// resto del equipo en Firestore, para que las dos implementaciones convivan sin
+// que nadie se quede sin acceso al panel.
 function normalizeRole(raw) {
     return String(raw || "").trim().toLowerCase() === "admin" ? "admin" : "user";
+}
+
+function roleOfUser(user) {
+    const role = String((user && user.role) || "").trim().toLowerCase();
+    if (role === "admin" || role === "user") return role;
+    if (user && user.isAdmin === true) return "admin";
+    return "user";
+}
+
+// Se escribe siempre `role` y, por compatibilidad, también `isAdmin`.
+function rolePatch(role) {
+    const clean = normalizeRole(role);
+    return { role: clean, isAdmin: clean === "admin" };
 }
 
 // ADMIN_EMAILS="admin@x.com,otro@y.com" en el .env: esas cuentas reciben rol
@@ -51,11 +67,22 @@ function roleForNewUser(email) {
 }
 
 function isAdminUser(user) {
-    return Boolean(user) && normalizeRole(user.role) === "admin";
+    return Boolean(user) && roleOfUser(user) === "admin";
 }
 
+// Compatibilidad con el código del equipo: su authService exporta estos mismos
+// nombres (`USER_ROLES`, `hasRole`, `isAdmin`) y sus rutas los importan, así que
+// los exponemos también aquí para que el merge no rompa nada.
+const USER_ROLES = { USER: "user", ADMIN: "admin" };
+
+function hasRole(user, role) {
+    return roleOfUser(user) === normalizeRole(role);
+}
+
+const isAdmin = isAdminUser;
+
 function publicUser(user) {
-    const role = normalizeRole(user.role);
+    const role = roleOfUser(user);
     return {
         id: user.id,
         name: user.name,
@@ -219,7 +246,7 @@ const authService = {
                 firebaseUid: decoded.uid || null,
                 photoURL: decoded.picture || null,
                 emailVerified: Boolean(decoded.email_verified),
-                role: roleForNewUser(email),
+                ...rolePatch(roleForNewUser(email)),
                 prefs: defaultPrefs(),
                 createdAt: new Date().toISOString()
             };
@@ -236,7 +263,8 @@ const authService = {
             if ((!user.name || user.name.length < 2) && displayName) patch.name = displayName;
             if (!user.photoURL && decoded.picture) patch.photoURL = decoded.picture;
             // Backfill de rol para cuentas creadas antes de existir roles.
-            if (!user.role) patch.role = roleForNewUser(email);
+            // Si el usuario ya tiene isAdmin:true (campo del equipo) se respeta.
+            if (!user.role) Object.assign(patch, rolePatch(user.isAdmin === true ? "admin" : roleForNewUser(email)));
             if (Object.keys(patch).length > 0) {
                 Object.assign(user, patch);
                 if (!db) {
@@ -372,13 +400,15 @@ const authService = {
         if (clean !== "admin" && clean !== "user") throw new Error("Rol inválido (usa 'admin' o 'user')");
         const user = await authService.getById(key);
         if (!user) return null;
+        // Se guarda `role` y también `isAdmin` para que lo lea el resto del equipo.
+        const patch = rolePatch(clean);
         if (!db) {
-            user.role = clean;
+            Object.assign(user, patch);
             localUsers.set(key, user);
         } else {
-            await db.collection("users").doc(key).set({ role: clean }, { merge: true });
+            await db.collection("users").doc(key).set(patch, { merge: true });
         }
-        return publicUser({ ...user, role: clean });
+        return publicUser({ ...user, ...patch });
     },
 
     getTop5: async (id) => {
@@ -431,4 +461,4 @@ const authService = {
     }
 };
 
-module.exports = { authService, cardUser, isAdminUser };
+module.exports = { authService, cardUser, isAdminUser, isAdmin, hasRole, USER_ROLES };

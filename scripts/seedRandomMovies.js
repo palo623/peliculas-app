@@ -12,9 +12,9 @@
  * 400 películas consumen aproximadamente 440 peticiones de OMDb.
  */
 
-const firebaseConn = require("../src/backend/models/firebase");
-const { omdbService } = require("../src/backend/services/omdbService");
-const { MovieModel } = require("../src/backend/models/movieModel");
+const firebaseConn = require("../src-backend/models/firebase");
+const { omdbService } = require("../src-backend/services/omdbService");
+const { MovieModel } = require("../src-backend/models/movieModel");
 
 const db = firebaseConn.getDb();
 const args = process.argv.slice(2);
