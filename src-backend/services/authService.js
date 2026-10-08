@@ -25,11 +25,31 @@ function defaultPrefs() {
     return {
         favoriteGenres: [],      // máx 3, strings (ej: ["Action", "Drama", "Sci-Fi"])
         likesMovies: null,       // true | false | null
-        onboardingDone: false    // true cuando completó el cuestionario
+        onboardingDone: false,   // true cuando completó el cuestionario
+        nickname: null,          // apodo visible público
+        colorTheme: "default"    // default, vibrant, neon, pastel
     };
 }
 
+const USER_ROLES = {
+    USER: "user",
+    ADMIN: "admin"
+};
+
+function defaultRole() {
+    return USER_ROLES.USER;
+}
+
+function isAdmin(user) {
+    return user && user.role === USER_ROLES.ADMIN;
+}
+
+function hasRole(user, role) {
+    return user && user.role === role;
+}
+
 function publicUser(user) {
+    const prefs = user.prefs || defaultPrefs();
     return {
         id: user.id,
         name: user.name,
@@ -37,7 +57,38 @@ function publicUser(user) {
         nickname: user.nickname || null,
         photoURL: user.photoURL || null,
         provider: user.provider || (user.passHash ? "password" : "firebase"),
-        prefs: user.prefs || defaultPrefs()
+        nickname: prefs.nickname || user.name,
+        colorTheme: prefs.colorTheme || "default",
+        role: user.role || defaultRole(),
+        prefs: prefs
+    };
+}
+
+function cardUser(user) {
+    return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        photoURL: user.photoURL || null,
+        provider: user.provider || (user.passHash ? "password" : "firebase")
+    };
+}
+
+function cleanTop5Item(item) {
+    if (!item || typeof item !== "object") throw new Error("Cada favorita del Top 5 debe ser un objeto");
+    const title = String(item.title || "").trim().slice(0, 200);
+    const imdbID = String(item.imdbID || "").trim();
+    if (!title && !imdbID) throw new Error("Cada favorita necesita 'title' o 'imdbID'");
+    if (imdbID && !/^tt\d+$/i.test(imdbID)) throw new Error("IMDb ID inválido en el Top 5");
+    const type = String(item.type || "movie").toLowerCase().trim();
+    if (type !== "movie" && type !== "series") throw new Error("Tipo inválido en el Top 5");
+    return {
+        movieId: String(item.movieId || "").trim().slice(0, 300) || null,
+        imdbID: imdbID || null,
+        title: title || imdbID,
+        year: String(item.year || "").trim().slice(0, 9) || null,
+        poster: String(item.poster || "").trim().slice(0, 500) || null,
+        type
     };
 }
 
@@ -215,6 +266,7 @@ const authService = {
                 photoURL: decoded.picture || null,
                 emailVerified: Boolean(decoded.email_verified),
                 prefs: defaultPrefs(),
+                role: defaultRole(),
                 createdAt: new Date().toISOString()
             };
             if (!db) {
@@ -278,10 +330,267 @@ const authService = {
         return merged;
     },
 
+    getById: async (userId) => {
+        return getUserById(userId);
+    },
+
+    getTop5: async (userId) => {
+        const user = await getUserById(userId);
+        return user && Array.isArray(user.top5) ? user.top5 : [];
+    },
+
+    setTop5: async (userId, items) => {
+        if (!userId || !Array.isArray(items)) throw new Error("Top 5 inválido");
+        const top5 = items.slice(0, 5).map(cleanTop5Item);
+        if (!db) {
+            const user = localUsers.get(userId);
+            if (user) {
+                user.top5 = top5;
+                localUsers.set(userId, user);
+            }
+            return top5;
+        }
+        await db.collection("users").doc(userId).set({ top5 }, { merge: true });
+        return top5;
+    },
+
+    // Actualiza perfil público (nickname, colorTheme)
+    updateProfile: async (token, { nickname, colorTheme }) => {
+        const session = await readSession(token);
+        if (!session) return null;
+        const prefs = {};
+        if (nickname !== undefined) {
+            const clean = String(nickname).trim().slice(0, 30);
+            if (clean.length < 2) throw new Error("El apodo debe tener al menos 2 caracteres");
+            prefs.nickname = clean;
+        }
+        if (colorTheme !== undefined) {
+            const validThemes = ["default", "vibrant", "neon", "pastel"];
+            if (!validThemes.includes(colorTheme)) throw new Error("Tema de color no válido");
+            prefs.colorTheme = colorTheme;
+        }
+        if (Object.keys(prefs).length === 0) return null;
+        const merged = await updateUserPrefs(session.userId, prefs);
+        return merged;
+    },
+
+    // Obtiene perfil público de un usuario por ID
+    getPublicProfile: async (userId) => {
+        if (!userId) return null;
+        let user = null;
+        if (!db) {
+            for (const u of localUsers.values()) {
+                if (u.id === userId) {
+                    user = u;
+                    break;
+                }
+            }
+        } else {
+            const doc = await db.collection("users").doc(userId).get();
+            if (doc.exists) user = Object.assign({ id: doc.id }, doc.data());
+        }
+        if (!user) return null;
+        return publicUser(user);
+    },
+
+    // Busca usuarios por nombre/apodo (para añadir amigos)
+    searchUsers: async (query, currentUserIdOrOptions) => {
+        if (!query || !query.trim()) return [];
+        const searchTerm = query.trim().toLowerCase();
+        const options = currentUserIdOrOptions && typeof currentUserIdOrOptions === "object"
+            ? currentUserIdOrOptions
+            : { excludeId: currentUserIdOrOptions };
+        const excludedId = options.excludeId || null;
+        const maxResults = Math.min(Math.max(Number.parseInt(options.limit, 10) || 20, 1), 50);
+        let users = [];
+        if (!db) {
+            for (const u of localUsers.values()) {
+                if (u.id !== excludedId) {
+                    users.push(u);
+                }
+            }
+        } else {
+            const snapshot = await db.collection("users").get();
+            snapshot.forEach((doc) => {
+                const u = Object.assign({ id: doc.id }, doc.data());
+                if (u.id !== excludedId) users.push(u);
+            });
+        }
+        return users
+            .filter((u) => {
+                const name = (u.name || "").toLowerCase();
+                const nickname = (u.prefs?.nickname || "").toLowerCase();
+                const email = (u.email || "").toLowerCase();
+                return name.includes(searchTerm) || nickname.includes(searchTerm) || email.includes(searchTerm);
+            })
+                .slice(0, maxResults)
+            .map((u) => publicUser(u));
+    },
+
+    // Sistema de seguimiento (follow/unfollow)
+    followUser: async (token, targetUserId) => {
+        const session = await readSession(token);
+        if (!session) return null;
+        if (session.userId === targetUserId) throw new Error("No puedes seguirte a ti mismo");
+
+        if (!db) {
+            const me = localUsers.get(session.userId);
+            const target = localUsers.get(targetUserId);
+            if (!me || !target) throw new Error("Usuario no encontrado");
+            me.following = me.following || [];
+            target.followers = target.followers || [];
+            if (!me.following.includes(targetUserId)) me.following.push(targetUserId);
+            if (!target.followers.includes(session.userId)) target.followers.push(session.userId);
+            localUsers.set(session.userId, me);
+            localUsers.set(targetUserId, target);
+            return { ok: true };
+        }
+
+        const meRef = db.collection("users").doc(session.userId);
+        const targetRef = db.collection("users").doc(targetUserId);
+
+        await db.runTransaction(async (transaction) => {
+            const meDoc = await transaction.get(meRef);
+            const targetDoc = await transaction.get(targetRef);
+            if (!meDoc.exists || !targetDoc.exists) throw new Error("Usuario no encontrado");
+
+            const meData = meDoc.data();
+            const targetData = targetDoc.data();
+
+            const following = meData.following || [];
+            const followers = targetData.followers || [];
+
+            if (!following.includes(targetUserId)) {
+                following.push(targetUserId);
+                transaction.update(meRef, { following });
+            }
+            if (!followers.includes(session.userId)) {
+                followers.push(session.userId);
+                transaction.update(targetRef, { followers });
+            }
+        });
+        return { ok: true };
+    },
+
+    unfollowUser: async (token, targetUserId) => {
+        const session = await readSession(token);
+        if (!session) return null;
+        if (session.userId === targetUserId) throw new Error("No puedes dejar de seguirte a ti mismo");
+
+        if (!db) {
+            const me = localUsers.get(session.userId);
+            const target = localUsers.get(targetUserId);
+            if (!me || !target) throw new Error("Usuario no encontrado");
+            me.following = (me.following || []).filter((id) => id !== targetUserId);
+            target.followers = (target.followers || []).filter((id) => id !== session.userId);
+            localUsers.set(session.userId, me);
+            localUsers.set(targetUserId, target);
+            return { ok: true };
+        }
+
+        const meRef = db.collection("users").doc(session.userId);
+        const targetRef = db.collection("users").doc(targetUserId);
+
+        await db.runTransaction(async (transaction) => {
+            const meDoc = await transaction.get(meRef);
+            const targetDoc = await transaction.get(targetRef);
+            if (!meDoc.exists || !targetDoc.exists) throw new Error("Usuario no encontrado");
+
+            const meData = meDoc.data();
+            const targetData = targetDoc.data();
+
+            const following = (meData.following || []).filter((id) => id !== targetUserId);
+            const followers = (targetData.followers || []).filter((id) => id !== session.userId);
+
+            transaction.update(meRef, { following });
+            transaction.update(targetRef, { followers });
+        });
+        return { ok: true };
+    },
+
+    getFollowing: async (token) => {
+        const session = await readSession(token);
+        if (!session) return null;
+        let user = null;
+        if (!db) {
+            user = localUsers.get(session.userId);
+        } else {
+            const doc = await db.collection("users").doc(session.userId).get();
+            if (doc.exists) user = Object.assign({ id: doc.id }, doc.data());
+        }
+        if (!user) return [];
+
+        const followingIds = user.following || [];
+        if (followingIds.length === 0) return [];
+
+        let followingUsers = [];
+        if (!db) {
+            for (const id of followingIds) {
+                const u = localUsers.get(id);
+                if (u) followingUsers.push(publicUser(u));
+            }
+        } else {
+            const snapshot = await db.collection("users").where("__name__", "in", followingIds).get();
+            snapshot.forEach((doc) => {
+                followingUsers.push(publicUser(Object.assign({ id: doc.id }, doc.data())));
+            });
+        }
+        return followingUsers;
+    },
+
+    getFollowers: async (token) => {
+        const session = await readSession(token);
+        if (!session) return null;
+        let user = null;
+        if (!db) {
+            user = localUsers.get(session.userId);
+        } else {
+            const doc = await db.collection("users").doc(session.userId).get();
+            if (doc.exists) user = Object.assign({ id: doc.id }, doc.data());
+        }
+        if (!user) return [];
+
+        const followerIds = user.followers || [];
+        if (followerIds.length === 0) return [];
+
+        let followerUsers = [];
+        if (!db) {
+            for (const id of followerIds) {
+                const u = localUsers.get(id);
+                if (u) followerUsers.push(publicUser(u));
+            }
+        } else {
+            const snapshot = await db.collection("users").where("__name__", "in", followerIds).get();
+            snapshot.forEach((doc) => {
+                followerUsers.push(publicUser(Object.assign({ id: doc.id }, doc.data())));
+            });
+        }
+        return followerUsers;
+    },
+
+    getUserMovies: async (userId) => {
+        if (!userId) return [];
+        const { MovieModel } = require("../models/movieModel");
+        return MovieModel.getAllMovies(userId);
+    },
+
+    isFollowing: async (token, targetUserId) => {
+        const session = await readSession(token);
+        if (!session) return false;
+        let user = null;
+        if (!db) {
+            user = localUsers.get(session.userId);
+        } else {
+            const doc = await db.collection("users").doc(session.userId).get();
+            if (doc.exists) user = Object.assign({ id: doc.id }, doc.data());
+        }
+        if (!user) return false;
+        return (user.following || []).includes(targetUserId);
+    },
     readSession: async (token) => {
         return await readSession(token);
     }
 
 };
 
-module.exports = { authService, findUserByNickname, setUserNickname, isAdmin };
+module.exports = { authService, findUserByNickname, setUserNickname, isAdmin, hasRole, USER_ROLES };

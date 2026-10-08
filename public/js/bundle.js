@@ -9,9 +9,99 @@ const { useState, useEffect } = React;
 const h = React.createElement;
 
 const BRAND = "CineAIros";
-const SLOGAN = "Descubre, explora y guarda tus películas favoritas.";
+const SLOGAN = "Descubre, explora y guarda tus películas favoritas";
+
+// Temas de color disponibles
+const COLOR_THEMES = {
+    default: {
+        name: "Predeterminado",
+        primary: "#b3122e",
+        primaryHover: "#8c0e24",
+        primaryLight: "#fddde5",
+        accent: "#c9a227",
+        background: "#0d1219",
+        surface: "#151c27",
+        text: "#f4f6f9",
+        textMuted: "#a7b1c0",
+        border: "#2a3444",
+        success: "#10b981",
+        error: "#ef4444",
+        primaryRgb: "179, 18, 46"
+    },
+    vibrant: {
+        name: "Colores vivos",
+        primary: "#d62839",
+        primaryHover: "#b3122e",
+        primaryLight: "#ffe1ea",
+        accent: "#f59e0b",
+        background: "#1a0f15",
+        surface: "#25161d",
+        text: "#fdf2f8",
+        textMuted: "#f9a8d4",
+        border: "#6b1d2b",
+        success: "#10b981",
+        error: "#ef4444",
+        primaryRgb: "214, 40, 57"
+    },
+    neon: {
+        name: "Neón",
+        primary: "#a855f7",
+        primaryHover: "#9333ea",
+        primaryLight: "#f3e8ff",
+        accent: "#06b6d4",
+        background: "#0f0f1a",
+        surface: "#1a1a2e",
+        text: "#fafafa",
+        textMuted: "#a1a1aa",
+        border: "#3f3f5c",
+        success: "#22d3ee",
+        error: "#f87171",
+        primaryRgb: "168, 85, 247"
+    },
+    pastel: {
+        name: "Pastel",
+        primary: "#8b5cf6",
+        primaryHover: "#7c3aed",
+        primaryLight: "#ede9fe",
+        accent: "#f472b6",
+        background: "#fafafa",
+        surface: "#ffffff",
+        text: "#4c1d95",
+        textMuted: "#7e69a3",
+        border: "#ddd6fe",
+        success: "#4ade80",
+        error: "#fca5a5",
+        primaryRgb: "139, 92, 246"
+    }
+};
+
+// Aplica el tema al document.documentElement (CSS variables)
+function applyColorTheme(themeKey) {
+    const theme = COLOR_THEMES[themeKey] || COLOR_THEMES.default;
+    const root = document.documentElement;
+    Object.entries(theme).forEach(([key, value]) => {
+        if (key !== "name") {
+            root.style.setProperty("--color-" + key, value);
+        }
+    });
+    root.setAttribute("data-theme", themeKey);
+}
 
 // "Popular ahora" se carga desde Firebase a través de /api/movies/popular.
+
+// Roles de usuario
+const USER_ROLES = {
+    USER: "user",
+    ADMIN: "admin"
+};
+
+function isAdmin(user) {
+    return user && user.role === USER_ROLES.ADMIN;
+}
+
+function hasRole(user, role) {
+    return user && user.role === role;
+}
 
 // Único origen del token: localStorage (así fetchMovies siempre lo ve actualizado).
 function getStoredToken() {
@@ -25,57 +115,6 @@ function getStoredToken() {
 function authHeaders() {
     const tok = getStoredToken();
     return tok ? { Authorization: "Bearer " + tok } : {};
-}
-
-async function loadReviews(mediaType, mediaId, setReviews) {
-    if (!mediaId) {
-        setReviews([]);
-        return;
-    }
-    try {
-        const res = await fetch("/api/reviews/" + encodeURIComponent(mediaType) + "/" + encodeURIComponent(mediaId), {
-            headers: authHeaders()
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "No se pudieron cargar las reseñas");
-        setReviews((data.reviews || []).map((review) => ({
-            ...review,
-            user: review.userName || "Usuario",
-            upvotes: Number(review.upvotes) || 0,
-            downvotes: Number(review.downvotes) || 0,
-            userVote: 0,
-            replies: []
-        })));
-    } catch (error) {
-        setReviews([]);
-    }
-}
-
-async function publishReview(mediaType, detail, text, setReviews, setNewReviewText, setWritingReview, setSubmittingReview) {
-    try {
-        const res = await fetch("/api/reviews", {
-            method: "POST",
-            headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
-            body: JSON.stringify({ mediaType: mediaType, mediaId: detail.imdbID, text: text.trim() })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "No se pudo publicar la reseña");
-        const review = data.review;
-        setReviews((current) => [{
-            ...review,
-            user: review.userName || "Usuario",
-            upvotes: 0,
-            downvotes: 0,
-            userVote: 0,
-            replies: []
-        }, ...current]);
-        setNewReviewText("");
-        setWritingReview(false);
-    } catch (error) {
-        window.alert(error.message);
-    } finally {
-        setSubmittingReview(false);
-    }
 }
 
 function firebaseActionSettings(mode) {
@@ -208,6 +247,330 @@ const GENRES = [
     ["Western", "Western"]
 ];
 
+/* ---------- Reseñas (backend /api/reviews) ----------
+   Capa compartida por Películas, Series y MiCuenta. Antes el front
+   guardaba las reseñas solo en memoria; ahora todo persiste en el
+   backend (Firestore) y varios usuarios comparten las mismas reseñas. */
+function reviewMediaTypeOf(detail, fallback) {
+    const t = String((detail && detail.type) || fallback || "movie").toLowerCase();
+    return t === "series" ? "series" : "movie";
+}
+
+function reviewQueryOf(mediaType, detail) {
+    const parts = ["mediaType=" + encodeURIComponent(mediaType)];
+    if (detail.imdbID) {
+        parts.push("imdbID=" + encodeURIComponent(detail.imdbID));
+    } else {
+        parts.push("title=" + encodeURIComponent(detail.title || ""));
+        if (detail.year) parts.push("year=" + encodeURIComponent(String(detail.year).slice(0, 4)));
+    }
+    return parts.join("&");
+}
+
+function toFrontReview(raw) {
+    const r = Object.assign({}, raw);
+    r.user = raw.userName || raw.user || "Usuario";
+    r.replies = Array.isArray(raw.replies) ? raw.replies : [];
+    return r;
+}
+
+function toFrontReply(raw) {
+    const r = Object.assign({}, raw);
+    r.user = raw.userName || raw.user || "Usuario";
+    return r;
+}
+
+/* Modal de reseñas conectado al backend.
+   Props: detail, mediaType ("movie"|"series"), user|null, onNavigate?(fn), onClose(fn) */
+function ReviewsModal(props) {
+    const detail = props.detail;
+    const user = props.user || null;
+    const onNavigate = props.onNavigate || null;
+    const onClose = props.onClose || (() => {});
+    const mediaType = reviewMediaTypeOf(detail, props.mediaType);
+    const mediaKey = mediaType + "|" + (detail.imdbID || (detail.title + "|" + detail.year));
+
+    const itemsState = React.useState([]);
+    const items = itemsState[0];
+    const setItems = itemsState[1];
+    const totalState = React.useState(0);
+    const total = totalState[0];
+    const setTotal = totalState[1];
+    const sortState = React.useState("relevance");
+    const sort = sortState[0];
+    const setSort = sortState[1];
+    const loadingState = React.useState(true);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+    const errorState = React.useState(null);
+    const error = errorState[0];
+    const setError = errorState[1];
+    const writingState = React.useState(false);
+    const writing = writingState[0];
+    const setWriting = writingState[1];
+    const textState = React.useState("");
+    const text = textState[0];
+    const setText = textState[1];
+    const submittingState = React.useState(false);
+    const submitting = submittingState[0];
+    const setSubmitting = submittingState[1];
+    const replyingState = React.useState(null);
+    const replyingTo = replyingState[0];
+    const setReplyingTo = replyingState[1];
+    const replyTextState = React.useState("");
+    const replyText = replyTextState[0];
+    const setReplyText = replyTextState[1];
+    const replyBusyState = React.useState(false);
+    const replyBusy = replyBusyState[0];
+    const setReplyBusy = replyBusyState[1];
+
+    const goLogin = (target) => {
+        onClose();
+        if (onNavigate) onNavigate(target || "login");
+    };
+
+    // Carga la lista y adjunta las respuestas (best-effort, en paralelo).
+    const load = async (wantedSort) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch("/api/reviews?" + reviewQueryOf(mediaType, detail) + "&sort=" + encodeURIComponent(wantedSort || sort) + "&limit=20", { headers: authHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "No se pudieron cargar las reseñas");
+            const list = (Array.isArray(data.results) ? data.results : []).map(toFrontReview);
+            setTotal(typeof data.total === "number" ? data.total : list.length);
+            const withReplies = await Promise.all(list.map(async (r) => {
+                try {
+                    const rr = await fetch("/api/reviews/" + encodeURIComponent(r.id) + "/replies?limit=20", { headers: authHeaders() });
+                    const dd = await rr.json();
+                    if (rr.ok && Array.isArray(dd.results)) r.replies = dd.results.map(toFrontReply);
+                } catch (e) { /* respuestas opcionales */ }
+                return r;
+            }));
+            setItems(withReplies);
+        } catch (e) {
+            setError(e.message);
+            setItems([]);
+            setTotal(0);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Recarga al abrir otra obra o al cambiar el orden.
+    React.useEffect(() => { load(sort); }, [mediaKey, sort]);
+
+    const handlePublish = async () => {
+        const body = text.trim();
+        if (body.length < 50 || submitting) return;
+        setSubmitting(true);
+        setError(null);
+        try {
+            const payload = { mediaType: mediaType, text: body };
+            if (detail.imdbID) payload.imdbID = detail.imdbID;
+            payload.mediaTitle = detail.title;
+            if (detail.year) payload.mediaYear = String(detail.year).slice(0, 4);
+            const res = await fetch("/api/reviews", {
+                method: "POST",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                if (res.status === 401) { goLogin("login"); return; }
+                throw new Error(data.error || "No se pudo publicar la reseña");
+            }
+            setText("");
+            setWriting(false);
+            await load(sort);
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleVote = async (review, value) => {
+        if (!user) { goLogin("login"); return; }
+        const next = review.userVote === value ? 0 : value;
+        try {
+            const res = await fetch("/api/reviews/" + encodeURIComponent(review.id) + "/vote", {
+                method: "POST",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify({ value: next })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                if (res.status === 401) { goLogin("login"); return; }
+                throw new Error(data.error || "No se pudo votar");
+            }
+            const updated = toFrontReview(data);
+            updated.replies = review.replies;
+            setItems(items.map((r) => (r.id === review.id ? updated : r)));
+        } catch (e) {
+            setError(e.message);
+        }
+    };
+
+    const handleDelete = async (review) => {
+        if (!window.confirm("¿Eliminar tu reseña?")) return;
+        try {
+            const res = await fetch("/api/reviews/" + encodeURIComponent(review.id), {
+                method: "DELETE",
+                headers: authHeaders()
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "No se pudo eliminar");
+            setItems(items.filter((r) => r.id !== review.id));
+            setTotal(Math.max(0, total - 1));
+        } catch (e) {
+            setError(e.message);
+        }
+    };
+
+    const handleReply = async (review) => {
+        const body = replyText.trim();
+        if (!body || replyBusy) return;
+        setReplyBusy(true);
+        try {
+            const res = await fetch("/api/reviews/" + encodeURIComponent(review.id) + "/replies", {
+                method: "POST",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify({ text: body })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                if (res.status === 401) { goLogin("login"); return; }
+                throw new Error(data.error || "No se pudo responder");
+            }
+            setItems(items.map((r) => (r.id === review.id
+                ? Object.assign({}, r, { replies: (r.replies || []).concat([toFrontReply(data)]), replyCount: (r.replyCount || (r.replies || []).length) + 1 })
+                : r)));
+            setReplyText("");
+            setReplyingTo(null);
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setReplyBusy(false);
+        }
+    };
+
+    const authPrompt = () => h("div", { className: "auth-prompt" },
+        h("p", null, "Para escribir una reseña necesitas "),
+        onNavigate ? h("button", { onClick: () => goLogin("login") }, "iniciar sesión") : h("span", null, "iniciar sesión"),
+        h("p", null, " o "),
+        onNavigate ? h("button", { onClick: () => goLogin("register") }, "crear cuenta") : h("span", null, "crear cuenta")
+    );
+
+    return h("div", { className: "modal-backdrop", onClick: onClose },
+        h("div", { className: "modal modal-reviews", onClick: (e) => e.stopPropagation() },
+            h("button", { className: "modal-close", onClick: onClose }, "✕"),
+            h("div", { className: "modal-content" },
+                h("h2", null, "Reseñas de " + detail.title),
+                error ? h("p", { className: "error" }, error) : null,
+                writing ? h("div", { className: "review-form" },
+                    user ? h("div", null,
+                        h("h3", null, "Escribe tu reseña"),
+                        h("textarea", {
+                            value: text,
+                            onChange: (e) => setText(e.target.value),
+                            placeholder: "¿Qué te pareció? (mín. 50 caracteres)",
+                            rows: 4,
+                            maxLength: 2000
+                        }),
+                        text.length > 0 && text.length < 50 ? h("p", { className: "muted" }, "Mínimo 50 caracteres (" + text.length + "/50)") : null,
+                        h("div", { className: "result-actions" },
+                            h("button", {
+                                className: "btn-primary",
+                                onClick: handlePublish,
+                                disabled: submitting || text.trim().length < 50
+                            }, submitting ? "Publicando..." : "Publicar reseña"),
+                            h("button", { className: "btn-ghost", type: "button", onClick: () => { setWriting(false); setText(""); } }, "Cancelar")
+                        )
+                    ) : authPrompt()
+                ) : h("div", { className: "reviews-section" },
+                    h("div", { className: "reviews-header" },
+                        h("h3", null, "Reseñas (" + total + ")"),
+                        h("button", {
+                            className: "btn-ghost btn-small",
+                            onClick: () => setWriting(true)
+                        }, "Escribir reseña")
+                    ),
+                    h("div", { className: "reviews-sort" },
+                        h("label", null, "Ordenar: "),
+                        h("select", {
+                            value: sort,
+                            onChange: (e) => setSort(e.target.value)
+                        },
+                            h("option", { value: "relevance" }, "Mayor relevancia"),
+                            h("option", { value: "votes" }, "Más votados"),
+                            h("option", { value: "recent" }, "Más recientes")
+                        )
+                    ),
+                    loading ? h("p", { className: "muted" }, "Cargando reseñas...") : null,
+                    !loading && items.length === 0 ? h("p", { className: "muted" }, "Aún no hay reseñas. ¡Sé el primero en escribir una!") : null,
+                    !loading && items.length > 0 ? h("div", { className: "reviews-list" },
+                        items.map((review) => h("div", { key: review.id, className: "review-item" },
+                            h("div", { className: "review-header" },
+                                h("strong", null, review.user),
+                                h("span", { className: "review-date" }, new Date(review.createdAt).toLocaleDateString("es-ES"))
+                            ),
+                            review.rating ? h("p", { className: "muted" }, "★ " + review.rating + "/10") : null,
+                            h("p", { className: "review-text" }, review.text),
+                            h("div", { className: "review-actions" },
+                                h("button", {
+                                    className: "vote-btn" + (review.userVote === 1 ? " voted" : ""),
+                                    onClick: () => handleVote(review, 1)
+                                }, "👍 " + review.upvotes),
+                                h("button", {
+                                    className: "vote-btn" + (review.userVote === -1 ? " voted" : ""),
+                                    onClick: () => handleVote(review, -1)
+                                }, "👎 " + review.downvotes),
+                                h("button", {
+                                    className: "btn-ghost btn-small",
+                                    onClick: () => {
+                                        if (!user) { goLogin("login"); return; }
+                                        setReplyingTo(replyingTo === review.id ? null : review.id);
+                                        setReplyText("");
+                                    }
+                                }, "Responder (" + (review.replyCount != null ? review.replyCount : (review.replies || []).length) + ")"),
+                                user && review.userId === user.id ? h("button", {
+                                    className: "btn-ghost btn-small",
+                                    onClick: () => handleDelete(review)
+                                }, "Eliminar") : null
+                            ),
+                            replyingTo === review.id ? h("div", { className: "review-form reply-form" },
+                                h("textarea", {
+                                    value: replyText,
+                                    onChange: (e) => setReplyText(e.target.value),
+                                    placeholder: "Escribe tu respuesta (máx. 1000 caracteres)",
+                                    rows: 2,
+                                    maxLength: 1000
+                                }),
+                                h("div", { className: "result-actions" },
+                                    h("button", {
+                                        className: "btn-primary btn-small",
+                                        onClick: () => handleReply(review),
+                                        disabled: replyBusy || !replyText.trim()
+                                    }, replyBusy ? "Enviando..." : "Responder"),
+                                    h("button", { className: "btn-ghost btn-small", type: "button", onClick: () => { setReplyingTo(null); setReplyText(""); } }, "Cancelar")
+                                )
+                            ) : null,
+                            review.replies && review.replies.length > 0 ? h("div", { className: "review-replies" },
+                                review.replies.map((reply) => h("div", { key: reply.id, className: "reply-item" },
+                                    h("strong", null, reply.user),
+                                    h("span", { className: "reply-date" }, new Date(reply.createdAt).toLocaleDateString("es-ES")),
+                                    h("p", null, reply.text)
+                                ))
+                            ) : null
+                        ))
+                    ) : null
+                )
+            )
+        )
+    );
+}
+
 /* ---------- Header ---------- */
 function SiteHeader(props) {
     const page = props.page;
@@ -218,9 +581,13 @@ function SiteHeader(props) {
     const openState = React.useState(false);
     const open = openState[0];
     const setOpen = openState[1];
+    const userMenuState = React.useState(false);
+    const userMenuOpen = userMenuState[0];
+    const setUserMenuOpen = userMenuState[1];
 
     const go = (target) => {
         setOpen(false);
+        setUserMenuOpen(false);
         onNavigate(target);
     };
 
@@ -247,7 +614,20 @@ function SiteHeader(props) {
                     "Series"
                 ),
                 user
-                    ? h("button", { className: "user-chip", title: "Mi cuenta", onClick: () => go("cuenta") }, user.name)
+                    ? h("div", { className: "user-menu" },
+                        h("button", { className: "user-chip", title: "Mi cuenta", onClick: () => setUserMenuOpen(!userMenuOpen) }, user.nickname || user.name),
+                        userMenuOpen && h("div", { className: "user-dropdown" },
+                            h("button", { className: "dropdown-item", onClick: () => go("cuenta") }, "Mi cuenta"),
+                            h("button", { className: "dropdown-item", onClick: () => go("perfil") }, "Mi perfil público"),
+                            h("button", { className: "dropdown-item", onClick: () => go("buscar-usuarios") }, "Buscar usuarios"),
+                            h("button", { className: "dropdown-item", onClick: () => go("amigos") }, "Amigos"),
+                            h("button", { className: "dropdown-item", onClick: () => go("configuracion") }, "Configuración"),
+                            isAdmin(user) && h("hr", { className: "dropdown-divider" }),
+                            isAdmin(user) && h("button", { className: "dropdown-item", onClick: () => go("admin") }, "Panel de administración"),
+                            h("hr", { className: "dropdown-divider" }),
+                            h("button", { className: "dropdown-item danger", onClick: () => { setUserMenuOpen(false); onLogout(); } }, "Cerrar sesión")
+                        )
+                    )
                     : null,
                 user
                     ? h("button", { className: "nav-link", onClick: () => { setOpen(false); onLogout(); } }, "Salir")
@@ -284,7 +664,7 @@ function SiteFooter(props) {
             ),
             h("div", { className: "footer-col" },
                 h("p", { className: "footer-title" }, "Empieza ahora"),
-                h("p", { className: "muted" }, "Busca tu primera historia y pulsa Guardar."),
+                h("p", { className: "muted" }, "Busca tu primera historia y pulsa Guardar"),
                 h("button", { className: "footer-link", onClick: () => onNavigate("peliculas") }, "Continuar ahora →")
             )
         ),
@@ -302,6 +682,7 @@ function MovieCard(props) {
     const onDelete = props.onDelete;
     const onDetail = props.onDetail;
     const showDelete = props.showDelete;
+    const isSeries = movie.mediaType === "series" || movie.type === "series" || props.mediaType === "series";
 
     return h("article",
         { className: "movie-card", onClick: () => { if (onDetail) onDetail(movie); } },
@@ -311,7 +692,7 @@ function MovieCard(props) {
         ),
         h("div", { className: "movie-card-body" },
             h("h3", { title: movie.title }, movie.title),
-            h("p", { className: "movie-meta" }, (movie.year || "----") + " · Película"),
+            h("p", { className: "movie-meta" }, (movie.year || "----") + (isSeries ? " · Serie" : " · Película")),
             movie.genre ? h("p", { className: "movie-genre" }, movie.genre) : null,
             (showDelete && onDelete)
                 ? h("button", {
@@ -407,7 +788,7 @@ function LandingPage(props) {
         h("section", { className: "hero" },
             h("div", { className: "hero-text" },
                 h("p", { className: "hero-kicker" }, BRAND),
-                h("h1", null, "Descubre, explora", h("br", null), "y guarda tus favoritas."),
+                h("h1", null, "Descubre, explora", h("br", null), "y guarda tus favoritas"),
                 h("p", { className: "hero-sub" }, SLOGAN),
                 h("div", { className: "hero-actions" },
                     h("button", { className: "btn-primary btn-big", onClick: onExplore }, "Continuar ahora →")
@@ -436,7 +817,7 @@ function LandingPage(props) {
             h("div", { className: "feature" },
                 h("span", { className: "feature-icon" }, "01"),
                 h("h3", null, "Encuentra tu próxima favorita"),
-                h("p", null, "Busca entre miles de películas por su título.")
+                h("p", null, "Busca entre miles de películas por su título")
             ),
             h("div", { className: "feature" },
                 h("span", { className: "feature-icon" }, "02"),
@@ -446,12 +827,12 @@ function LandingPage(props) {
             h("div", { className: "feature" },
                 h("span", { className: "feature-icon" }, "03"),
                 h("h3", null, "Guarda tu colección"),
-                h("p", null, "Guarda las que te gusten y tenlas siempre a mano.")
+                h("p", null, "Guarda las que te gusten y tenlas siempre a mano")
             )
         ),
         h("section", { className: "cta-band" },
             h("h2", null, "¿Empezamos?"),
-            h("p", null, "Busca tu primera película, guárdala y aparecerá en tu colección."),
+            h("p", null, "Busca tu primera película, guárdala y aparecerá en tu colección"),
             h("button", { className: "btn-primary btn-big", onClick: onExplore }, "Continuar ahora")
         )
     );
@@ -465,7 +846,7 @@ function AuthChoice(props) {
     return h("div", { className: "auth-wrap" },
         h("div", { className: "auth-card auth-choice" },
             h("h1", null, "Bienvenido a " + BRAND),
-            h("p", { className: "muted" }, "Elige cómo quieres continuar."),
+            h("p", { className: "muted" }, "Elige cómo quieres continuar:"),
             h("div", { className: "choice-buttons" },
                 h("button", { className: "btn-primary btn-big", onClick: onLogin }, "Iniciar sesión"),
                 h("button", { className: "btn-ghost btn-big", onClick: onRegister }, "Crear cuenta")
@@ -751,7 +1132,7 @@ function LoginPage(props) {
     return h("div", { className: "auth-wrap" },
         h("div", { className: "auth-card" },
             h("h1", null, "Entrar"),
-            h("p", { className: "muted" }, "Bienvenido de nuevo a " + BRAND + "."),
+            h("p", { className: "muted" }, "Bienvenido de nuevo a " + BRAND),
             error ? h("p", { className: "error" }, error) : null,
             h("form", { onSubmit: submit },
                 h("div", { className: "auth-field" },
@@ -1243,7 +1624,7 @@ function RegisterPage(props) {
             step === 1 ? (
                 React.createElement(React.Fragment, null,
                     h("h1", null, "Crear cuenta"),
-                    h("p", { className: "muted" }, "Paso 1 de 2: tus datos básicos."),
+                    h("p", { className: "muted" }, "Paso 1 de 2: tus datos básicos"),
                     error ? h("p", { className: "error" }, error) : null,
                     renderStep1(),
                     h("p", { className: "auth-switch" }, "¿Ya tienes cuenta? ",
@@ -1253,7 +1634,7 @@ function RegisterPage(props) {
             ) : (
                 React.createElement(React.Fragment, null,
                     h("h1", null, "Cuéntanos tus gustos"),
-                    h("p", { className: "muted" }, "Paso 2 de 2: preferencias."),
+                    h("p", { className: "muted" }, "Paso 2 de 2: preferencias"),
                     error ? h("p", { className: "error" }, error) : null,
                     renderStep2()
                 )
@@ -1265,7 +1646,6 @@ function RegisterPage(props) {
 /* ---------- MediaPage: Películas con filtros ----------
     Props: movies, loadingList,
    onRefresh(), onDelete(id), onNavigate(page) */
-// MEDIA_PAGE_MARKER
 function MediaPage(props) {
     const user = props.user || null;
     const movies = props.movies;
@@ -1273,7 +1653,6 @@ function MediaPage(props) {
     const onRefresh = props.onRefresh;
     const onDelete = props.onDelete;
     const onNavigate = props.onNavigate;
-    const friends = props.friends || [];
     const omdbType = "movie";
 
     const queryState = React.useState("");
@@ -1327,25 +1706,10 @@ function MediaPage(props) {
     const detailLoadingState = React.useState(false);
     const detailLoading = detailLoadingState[0];
     const setDetailLoading = detailLoadingState[1];
-    // Reviews state
-    const showReviewsState = React.useState(false);
-    const showReviews = showReviewsState[0];
-    const setShowReviews = showReviewsState[1];
-    const reviewsSortState = React.useState("relevance");
-    const reviewsSort = reviewsSortState[0];
-    const setReviewsSort = reviewsSortState[1];
-    const reviewsState = React.useState([]);
-    const reviews = reviewsState[0];
-    const setReviews = reviewsState[1];
-    const writingReviewState = React.useState(false);
-    const writingReview = writingReviewState[0];
-    const setWritingReview = writingReviewState[1];
-    const newReviewTextState = React.useState("");
-    const newReviewText = newReviewTextState[0];
-    const setNewReviewText = newReviewTextState[1];
-    const submittingReviewState = React.useState(false);
-    const submittingReview = submittingReviewState[0];
-    const setSubmittingReview = submittingReviewState[1];
+    // Reseña abierta en el modal compartido ReviewsModal (backend /api/reviews).
+    const reviewsDetailState = React.useState(null);
+    const reviewsDetail = reviewsDetailState[0];
+    const setReviewsDetail = reviewsDetailState[1];
     // Segundos de espera cuando el servidor nos frena (429): el botón se
     // desactiva con cuenta atrás para no realimentar el bloqueo.
     const cooldownState = React.useState(0);
@@ -1532,7 +1896,7 @@ function MediaPage(props) {
         const genre = genreFilter || "";
         const hasFilters = year !== null || min > 0 || genre !== "";
         if (!q && !hasFilters) {
-            setError("Escribe un título o elige algún filtro para explorar.");
+            setError("Escribe un título o elige algún filtro para explorar");
             return;
         }
         setLoading(true);
@@ -1755,7 +2119,6 @@ function MediaPage(props) {
                     result.runtime ? h("p", null, h("strong", null, "Duración:"), " " + result.runtime) : null,
                     result.actors ? h("p", null, h("strong", null, "Actores:"), " " + result.actors) : null,
                     result.rating ? h("p", null, h("strong", null, "Nota IMDb:"), " ★ " + result.rating) : null,
-                    h(SeasonsBlock, { serie: result }),
                     h("p", null, h("strong", null, "Sinopsis:"), " " + result.plot),
                     resultWarning ? h("p", { className: "muted" }, "ℹ " + resultWarning) : null,
                     h("div", { className: "result-actions" },
@@ -1775,7 +2138,7 @@ function MediaPage(props) {
                 showDelete: false,
                 emptyText: "Haz una búsqueda para ver aquí más resultados."
             }),
-        h("p", { className: "muted hint" }, user ? "Lo que guardes lo encontrarás en tu página personal." : "Entra en tu cuenta para tener tu página personal con tu colección."),
+        h("p", { className: "muted hint" }, user ? "Lo que guardes lo encontrarás en tu página personal." : "Entra en tu cuenta para tener tu página personal con tu colección"),
         detail ? h("div", { className: "modal-backdrop", onClick: () => setDetail(null) },
             h("div", { className: "modal", onClick: (e) => e.stopPropagation() },
                 h("button", { className: "modal-close", onClick: () => setDetail(null) }, "✕"),
@@ -1791,167 +2154,25 @@ function MediaPage(props) {
                         detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
                         detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
                         detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
-                        h(SeasonsBlock, { serie: detail }),
                         detail.plot ? h("p", null, detail.plot) : null,
                         h("div", { className: "result-actions" },
                             h("button", {
                                 onClick: () => handleSave(detail),
                                 disabled: saving
                             }, saving ? "Guardando..." : (user ? "Guardar en mi colección" : "Entrar para guardar")),
-                            h("button", { className: "btn-ghost", type: "button", onClick: () => { setShowReviews(true); setWritingReview(false); loadReviews("movie", detail.imdbID, setReviews); } }, "Reseñas"),
+                            h("button", { className: "btn-ghost", type: "button", onClick: () => setReviewsDetail(detail) }, "Reseñas"),
                             h("button", { className: "btn-ghost", type: "button", onClick: () => setDetail(null) }, "Cerrar")
                         )
                     )
                 )
             )
         ) : null,
-        detail && showReviews ? h("div", { className: "modal-backdrop", onClick: () => { setShowReviews(false); setWritingReview(false); } },
-            h("div", { className: "modal modal-reviews", onClick: (e) => e.stopPropagation() },
-                h("button", { className: "modal-close", onClick: () => { setShowReviews(false); setWritingReview(false); } }, "✕"),
-                h("div", { className: "modal-content" },
-                    h("h2", null, "Reseñas de " + detail.title),
-                    writingReview ? h("div", { className: "review-form" },
-                        user ? h("div", null,
-                            h("h3", null, "Escribe tu reseña"),
-                            h("textarea", {
-                                value: newReviewText,
-                                onChange: (e) => setNewReviewText(e.target.value),
-                                placeholder: "¿Qué te pareció? (mín. 50 caracteres)",
-                                rows: 4,
-                                maxLength: 2000
-                            }),
-                            newReviewText.length > 0 && newReviewText.length < 50 ? h("p", { className: "muted" }, "Mínimo 50 caracteres (" + newReviewText.length + "/50)") : null,
-                            h("div", { className: "result-actions" },
-                                h("button", {
-                                    className: "btn-primary",
-                                    onClick: () => {
-                                        if (newReviewText.trim().length >= 50) {
-                                            setSubmittingReview(true);
-                                            publishReview("movie", detail, newReviewText, setReviews, setNewReviewText, setWritingReview, setSubmittingReview);
-                                        }
-                                    },
-                                    disabled: submittingReview || newReviewText.trim().length < 50
-                                }, submittingReview ? "Publicando..." : "Publicar reseña"),
-                                h("button", { className: "btn-ghost", type: "button", onClick: () => { setWritingReview(false); setNewReviewText(""); } }, "Cancelar")
-                            )
-                        ) : h("div", { className: "auth-prompt" },
-                            h("p", null, "Para escribir una reseña necesitas "),
-                            h("button", { onClick: () => { onNavigate("login"); setShowReviews(false); } }, "iniciar sesión"),
-                            h("p", null, " o "),
-                            h("button", { onClick: () => { onNavigate("register"); setShowReviews(false); } }, "crear cuenta")
-                        )
-                    ) : h("div", { className: "reviews-section" },
-                        h("div", { className: "reviews-header" },
-                            h("h3", null, "Reseñas (" + reviews.length + ")"),
-                            h("button", {
-                                className: "btn-ghost btn-small",
-                                onClick: () => setWritingReview(true)
-                            }, "Escribir reseña")
-                        ),
-                        h("div", { className: "reviews-sort" },
-                            h("label", null, "Ordenar: "),
-                            h("select", {
-                                value: reviewsSort,
-                                onChange: (e) => setReviewsSort(e.target.value)
-                            },
-                                h("option", { value: "relevance" }, "Mayor relevancia"),
-                                h("option", { value: "votes" }, "Más votados"),
-                                h("option", { value: "recent" }, "Más recientes")
-                            )
-                        ),
-                        reviews.length === 0 ? h("p", { className: "muted" }, "Aún no hay reseñas. ¡Sé el primero en escribir una!") : h("div", { className: "reviews-list" },
-                            reviews
-                                .slice()
-                                .sort((a, b) => {
-                                    if (reviewsSort === "votes") return (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes);
-                                    if (reviewsSort === "recent") return new Date(b.createdAt) - new Date(a.createdAt);
-                                    return (b.upvotes - b.downvotes + (b.replies?.length || 0)) - (a.upvotes - a.downvotes + (a.replies?.length || 0));
-                                })
-                                .map((review) => h("div", { key: review.id, className: "review-item" },
-                                    h("div", { className: "review-header" },
-                                        h("strong", null, review.user),
-                                        h("span", { className: "review-date" }, new Date(review.createdAt).toLocaleDateString("es-ES"))
-                                    ),
-                                    h("p", { className: "review-text" }, review.text),
-                                    h("div", { className: "review-actions" },
-                                        h("button", {
-                                            className: "vote-btn" + (review.userVote === 1 ? " voted" : ""),
-                                            onClick: () => {
-                                                const updated = reviews.map(r => {
-                                                    if (r.id === review.id) {
-                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
-                                                        if (uv === 1) { up--; uv = 0; }
-                                                        else { up++; if (uv === -1) { down--; } uv = 1; }
-                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
-                                                    }
-                                                    return r;
-                                                });
-                                                setReviews(updated);
-                                            }
-                                        }, "👍 " + review.upvotes),
-                                        h("button", {
-                                            className: "vote-btn" + (review.userVote === -1 ? " voted" : ""),
-                                            onClick: () => {
-                                                const updated = reviews.map(r => {
-                                                    if (r.id === review.id) {
-                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
-                                                        if (uv === -1) { down--; uv = 0; }
-                                                        else { down++; if (uv === 1) { up--; } uv = -1; }
-                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
-                                                    }
-                                                    return r;
-                                                });
-                                                setReviews(updated);
-                                            }
-                                        }, "👎 " + review.downvotes),
-                                        h("button", {
-                                            className: "btn-ghost btn-small",
-                                            onClick: () => alert("Responder a reseña - próximamente")
-                                        }, "Responder (" + (review.replies?.length || 0) + ")")
-                                    ),
-                                    review.replies && review.replies.length > 0 ? h("div", { className: "review-replies" },
-                                        review.replies.map((reply) => h("div", { key: reply.id, className: "reply-item" },
-                                            h("strong", null, reply.user),
-                                            h("span", { className: "reply-date" }, new Date(reply.createdAt).toLocaleDateString("es-ES")),
-                                            h("p", null, reply.text)
-                                        ))
-                                    ) : null
-                                ))
-                        )
-                    )
-                )
-            )
-        ) : null
-    );
-}
-
-/* ---------- SeasonsBlock: temporadas y episodios de una serie ----------
-   Muestra el total de temporadas y un chip por cada una con sus capítulos.
-   Si los datos aún no están enriquecidos, no pinta nada. */
-function SeasonsBlock(props) {
-    const serie = props.serie || {};
-    const total = Number(serie.totalSeasons) || 0;
-    const seasons = Array.isArray(serie.seasons)
-        ? serie.seasons.filter((s) => s && s.season !== undefined && s.season !== null)
-        : [];
-    if (!total && seasons.length === 0) return null;
-    return h("div", { className: "seasons-block" },
-        total ? h("p", null, h("strong", null, "Temporadas:"), " " + String(total)) : null,
-        seasons.length > 0
-            ? h("div", { className: "season-chips" },
-                seasons.map((s) =>
-                    h("span", { key: String(s.season), className: "season-chip" },
-                        "T" + Number(s.season) + " · " + Number(s.episodes) + (Number(s.episodes) === 1 ? " capítulo" : " capítulos")
-                    )
-                )
-            )
-            : null
+        reviewsDetail ? h(ReviewsModal, { detail: reviewsDetail, mediaType: omdbType, user: user, onNavigate: onNavigate, onClose: () => setReviewsDetail(null) }) : null
     );
 }
 
 /* ---------- SeriesPage: pantalla de búsqueda y descubrimiento de series ----------
    Props: user, series, loadingList, onRefresh(), onDelete(id), onNavigate(page) */
-// SERIES_PAGE_MARKER
 function SeriesPage(props) {
     const user = props.user || null;
     const series = props.series;
@@ -1959,7 +2180,6 @@ function SeriesPage(props) {
     const onRefresh = props.onRefresh;
     const onDelete = props.onDelete;
     const onNavigate = props.onNavigate;
-    const friends = props.friends || [];
     const omdbType = "series";
 
     const queryState = React.useState("");
@@ -2013,25 +2233,10 @@ function SeriesPage(props) {
     const detailLoadingState = React.useState(false);
     const detailLoading = detailLoadingState[0];
     const setDetailLoading = detailLoadingState[1];
-    // Reviews state
-    const showReviewsState = React.useState(false);
-    const showReviews = showReviewsState[0];
-    const setShowReviews = showReviewsState[1];
-    const reviewsSortState = React.useState("relevance");
-    const reviewsSort = reviewsSortState[0];
-    const setReviewsSort = reviewsSortState[1];
-    const reviewsState = React.useState([]);
-    const reviews = reviewsState[0];
-    const setReviews = reviewsState[1];
-    const writingReviewState = React.useState(false);
-    const writingReview = writingReviewState[0];
-    const setWritingReview = writingReviewState[1];
-    const newReviewTextState = React.useState("");
-    const newReviewText = newReviewTextState[0];
-    const setNewReviewText = newReviewTextState[1];
-    const submittingReviewState = React.useState(false);
-    const submittingReview = submittingReviewState[0];
-    const setSubmittingReview = submittingReviewState[1];
+    // Reseña abierta en el modal compartido ReviewsModal (backend /api/reviews).
+    const reviewsDetailState = React.useState(null);
+    const reviewsDetail = reviewsDetailState[0];
+    const setReviewsDetail = reviewsDetailState[1];
     const cooldownState = React.useState(0);
     const cooldown = cooldownState[0];
     const setCooldown = cooldownState[1];
@@ -2063,8 +2268,6 @@ function SeriesPage(props) {
                             director: data.director,
                             actors: data.actors,
                             type: data.type || item.type,
-                            totalSeasons: data.totalSeasons || null,
-                            seasons: Array.isArray(data.seasons) ? data.seasons : null,
                         }),
                         limited: false
                     };
@@ -2425,7 +2628,6 @@ function SeriesPage(props) {
                     h("p", null, h("strong", null, "Género:"), " " + result.genre),
                     result.actors ? h("p", null, h("strong", null, "Actores:"), " " + result.actors) : null,
                     result.rating ? h("p", null, h("strong", null, "Nota IMDb:"), " ★ " + result.rating) : null,
-                    h(SeasonsBlock, { serie: result }),
                     h("p", null, h("strong", null, "Sinopsis:"), " " + result.plot),
                     resultWarning ? h("p", { className: "muted" }, "ℹ " + resultWarning) : null,
                     h("div", { className: "result-actions" },
@@ -2460,182 +2662,54 @@ function SeriesPage(props) {
                         detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
                         detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
                         detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
-                        h(SeasonsBlock, { serie: detail }),
                         detail.plot ? h("p", null, detail.plot) : null,
                         h("div", { className: "result-actions" },
                             h("button", {
                                 onClick: () => handleSave(detail),
                                 disabled: saving
                             }, saving ? "Guardando..." : (user ? "Guardar en mi colección" : "Entrar para guardar")),
-                            h("button", { className: "btn-ghost", type: "button", onClick: () => { setShowReviews(true); setWritingReview(false); loadReviews("series", detail.imdbID, setReviews); } }, "Reseñas"),
+                            h("button", { className: "btn-ghost", type: "button", onClick: () => setReviewsDetail(detail) }, "Reseñas"),
                             h("button", { className: "btn-ghost", type: "button", onClick: () => setDetail(null) }, "Cerrar")
                         )
                     )
                 )
             )
         ) : null,
-        detail && showReviews ? h("div", { className: "modal-backdrop", onClick: () => { setShowReviews(false); setWritingReview(false); } },
-            h("div", { className: "modal modal-reviews", onClick: (e) => e.stopPropagation() },
-                h("button", { className: "modal-close", onClick: () => { setShowReviews(false); setWritingReview(false); } }, "✕"),
-                h("div", { className: "modal-content" },
-                    h("h2", null, "Reseñas de " + detail.title),
-                    writingReview ? h("div", { className: "review-form" },
-                        user ? h("div", null,
-                            h("h3", null, "Escribe tu reseña"),
-                            h("textarea", {
-                                value: newReviewText,
-                                onChange: (e) => setNewReviewText(e.target.value),
-                                placeholder: "¿Qué te pareció? (mín. 50 caracteres)",
-                                rows: 4,
-                                maxLength: 2000
-                            }),
-                            newReviewText.length > 0 && newReviewText.length < 50 ? h("p", { className: "muted" }, "Mínimo 50 caracteres (" + newReviewText.length + "/50)") : null,
-                            h("div", { className: "result-actions" },
-                                h("button", {
-                                    className: "btn-primary",
-                                    onClick: () => {
-                                        if (newReviewText.trim().length >= 50) {
-                                            setSubmittingReview(true);
-                                            publishReview("series", detail, newReviewText, setReviews, setNewReviewText, setWritingReview, setSubmittingReview);
-                                        }
-                                    },
-                                    disabled: submittingReview || newReviewText.trim().length < 50
-                                }, submittingReview ? "Publicando..." : "Publicar reseña"),
-                                h("button", { className: "btn-ghost", type: "button", onClick: () => { setWritingReview(false); setNewReviewText(""); } }, "Cancelar")
-                            )
-                        ) : h("div", { className: "auth-prompt" },
-                            h("p", null, "Para escribir una reseña necesitas "),
-                            h("button", { onClick: () => { onNavigate("login"); setShowReviews(false); } }, "iniciar sesión"),
-                            h("p", null, " o "),
-                            h("button", { onClick: () => { onNavigate("register"); setShowReviews(false); } }, "crear cuenta")
-                        )
-                    ) : h("div", { className: "reviews-section" },
-                        h("div", { className: "reviews-header" },
-                            h("h3", null, "Reseñas (" + reviews.length + ")"),
-                            h("button", {
-                                className: "btn-ghost btn-small",
-                                onClick: () => setWritingReview(true)
-                            }, "Escribir reseña")
-                        ),
-                        h("div", { className: "reviews-sort" },
-                            h("label", null, "Ordenar: "),
-                            h("select", {
-                                value: reviewsSort,
-                                onChange: (e) => setReviewsSort(e.target.value)
-                            },
-                                h("option", { value: "relevance" }, "Mayor relevancia"),
-                                h("option", { value: "votes" }, "Más votados"),
-                                h("option", { value: "recent" }, "Más recientes")
-                            )
-                        ),
-                        reviews.length === 0 ? h("p", { className: "muted" }, "Aún no hay reseñas. ¡Sé el primero en escribir una!") : h("div", { className: "reviews-list" },
-                            reviews
-                                .slice()
-                                .sort((a, b) => {
-                                    if (reviewsSort === "votes") return (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes);
-                                    if (reviewsSort === "recent") return new Date(b.createdAt) - new Date(a.createdAt);
-                                    return (b.upvotes - b.downvotes + (b.replies?.length || 0)) - (a.upvotes - a.downvotes + (a.replies?.length || 0));
-                                })
-                                .map((review) => h("div", { key: review.id, className: "review-item" },
-                                    h("div", { className: "review-header" },
-                                        h("strong", null, review.user),
-                                        h("span", { className: "review-date" }, new Date(review.createdAt).toLocaleDateString("es-ES"))
-                                    ),
-                                    h("p", { className: "review-text" }, review.text),
-                                    h("div", { className: "review-actions" },
-                                        h("button", {
-                                            className: "vote-btn" + (review.userVote === 1 ? " voted" : ""),
-                                            onClick: () => {
-                                                const updated = reviews.map(r => {
-                                                    if (r.id === review.id) {
-                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
-                                                        if (uv === 1) { up--; uv = 0; }
-                                                        else { up++; if (uv === -1) { down--; } uv = 1; }
-                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
-                                                    }
-                                                    return r;
-                                                });
-                                                setReviews(updated);
-                                            }
-                                        }, "👍 " + review.upvotes),
-                                        h("button", {
-                                            className: "vote-btn" + (review.userVote === -1 ? " voted" : ""),
-                                            onClick: () => {
-                                                const updated = reviews.map(r => {
-                                                    if (r.id === review.id) {
-                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
-                                                        if (uv === -1) { down--; uv = 0; }
-                                                        else { down++; if (uv === 1) { up--; } uv = -1; }
-                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
-                                                    }
-                                                    return r;
-                                                });
-                                                setReviews(updated);
-                                            }
-                                        }, "👎 " + review.downvotes),
-                                        h("button", {
-                                            className: "btn-ghost btn-small",
-                                            onClick: () => alert("Responder a reseña - próximamente")
-                                        }, "Responder (" + (review.replies?.length || 0) + ")")
-                                    ),
-                                    review.replies && review.replies.length > 0 ? h("div", { className: "review-replies" },
-                                        review.replies.map((reply) => h("div", { key: reply.id, className: "reply-item" },
-                                            h("strong", null, reply.user),
-                                            h("span", { className: "reply-date" }, new Date(reply.createdAt).toLocaleDateString("es-ES")),
-                                            h("p", null, reply.text)
-                                        ))
-                                    ) : null
-                                ))
-                        )
-                    )
-                )
-            )
-        ) : null
+        reviewsDetail ? h(ReviewsModal, { detail: reviewsDetail, mediaType: omdbType, user: user, onNavigate: onNavigate, onClose: () => setReviewsDetail(null) }) : null
     );
 }
 
 /* ---------- MiCuenta: pantalla personal del usuario ----------
    Props: user, movies, series, loadingList, loadingSeries, onDelete(id), onDeleteSeries(id) */
-// MI_CUENTA_MARKER
 function MiCuenta(props) {
     const user = props.user;
     const movies = props.movies;
-    const series = props.series || [];
+    const seriesList = Array.isArray(props.series) ? props.series : [];
     const loadingList = props.loadingList;
     const loadingSeries = props.loadingSeries;
     const onDelete = props.onDelete;
-    const onDeleteSeries = props.onDeleteSeries;
+    const onDeleteSeries = props.onDeleteSeries || null;
     const detailState = React.useState(null);
     const detail = detailState[0];
     const setDetail = detailState[1];
-    const detailLoadingState = React.useState(false);
-    const detailLoading = detailLoadingState[0];
-    const setDetailLoading = detailLoadingState[1];
     const detailTypeState = React.useState("movie");
     const detailType = detailTypeState[0];
     const setDetailType = detailTypeState[1];
-    // Reviews state
-    const showReviewsState = React.useState(false);
-    const showReviews = showReviewsState[0];
-    const setShowReviews = showReviewsState[1];
-    const reviewsSortState = React.useState("relevance");
-    const reviewsSort = reviewsSortState[0];
-    const setReviewsSort = reviewsSortState[1];
-    const reviewsState = React.useState([]);
-    const reviews = reviewsState[0];
-    const setReviews = reviewsState[1];
-    const writingReviewState = React.useState(false);
-    const writingReview = writingReviewState[0];
-    const setWritingReview = writingReviewState[1];
-    const newReviewTextState = React.useState("");
-    const newReviewText = newReviewTextState[0];
-    const setNewReviewText = newReviewTextState[1];
-    const submittingReviewState = React.useState(false);
-    const submittingReview = submittingReviewState[0];
-    const setSubmittingReview = submittingReviewState[1];
-    const shownMovies = movies || [];
+    const detailLoadingState = React.useState(false);
+    const detailLoading = detailLoadingState[0];
+    const setDetailLoading = detailLoadingState[1];
+    // Reseña abierta en el modal compartido ReviewsModal (backend /api/reviews).
+    const reviewsDetailState = React.useState(null);
+    const reviewsDetail = reviewsDetailState[0];
+    const setReviewsDetail = reviewsDetailState[1];
+    const reviewsMediaState = React.useState("movie");
+    const reviewsMediaType = reviewsMediaState[0];
+    const setReviewsMediaType = reviewsMediaState[1];
+    const shownMovies = Array.isArray(movies) ? movies : [];
+    const shown = shownMovies;
     const recentMovies = shownMovies.slice(0, 10);
-    const shownSeries = series || [];
+    const recent = recentMovies;
+    const shownSeries = seriesList;
     const recentSeries = shownSeries.slice(0, 10);
 
     // Top 5 combinado (películas + series) - estado para que el usuario pueda editarlo
@@ -2645,12 +2719,118 @@ function MiCuenta(props) {
     const editingTop5State = React.useState(false);
     const editingTop5 = editingTop5State[0];
     const setEditingTop5 = editingTop5State[1];
+    const top5QueryState = React.useState("");
+    const top5Query = top5QueryState[0];
+    const setTop5Query = top5QueryState[1];
+    const top5GlobalState = React.useState([]);
+    const top5Global = top5GlobalState[0];
+    const setTop5Global = top5GlobalState[1];
+    const top5SearchingState = React.useState(false);
+    const top5Searching = top5SearchingState[0];
+    const setTop5Searching = top5SearchingState[1];
+    const top5SearchErrorState = React.useState(null);
+    const top5SearchError = top5SearchErrorState[0];
+    const setTop5SearchError = top5SearchErrorState[1];
+
+    // Cargar Top 5 guardado del backend al montar
+    React.useEffect(() => {
+        if (!user) return;
+        let alive = true;
+        fetch("/api/users/me/top5", { headers: authHeaders() })
+            .then(r => r.json())
+            .then(data => {
+                if (alive && Array.isArray(data.results)) {
+                    setTop5(data.results);
+                }
+            })
+            .catch(() => { /* silencioso */ });
+        return () => { alive = false; };
+    }, [user]);
+
+    // Guardar Top 5 en el backend
+    const saveTop5 = async () => {
+        if (!user) return;
+        try {
+            await fetch("/api/users/me/top5", {
+                method: "PUT",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify({ top5 })
+            });
+            setEditingTop5(false);
+        } catch (e) {
+            alert("No se pudo guardar el Top 5: " + e.message);
+        }
+    };
 
     // Combinar películas y series para selección en Top 5
     const allItems = [
         ...shownMovies.map(m => ({ ...m, mediaType: 'movie' })),
         ...shownSeries.map(s => ({ ...s, mediaType: 'series' }))
     ];
+    const norm = (v) => String(v || "").toLowerCase();
+    const isInTop5 = (item) => top5.some(t => String(t.id || t.imdbID || t.title) === String(item.id || item.imdbID || item.title) && (t.mediaType || "movie") === (item.mediaType || "movie"));
+    const withTop5Id = (item, media) => Object.assign({ id: item.id || item.imdbID || (String(item.title || "") + "|" + String(item.year || "")) }, item, { mediaType: media });
+    // Búsqueda global en catálogo (sin necesitar tenerlas guardadas): películas + series.
+    React.useEffect(() => {
+        const q = top5Query.trim();
+        if (!editingTop5 || q.length < 2) {
+            setTop5Global([]);
+            setTop5SearchError(null);
+            setTop5Searching(false);
+            return;
+        }
+        let alive = true;
+        setTop5Searching(true);
+        setTop5SearchError(null);
+        const timer = setTimeout(async () => {
+            try {
+                const [mRes, sRes] = await Promise.all([
+                    fetch("/api/movies/search-list?s=" + encodeURIComponent(q)).then(r => r.json().catch(() => ({}))),
+                    fetch("/api/series/search-list?s=" + encodeURIComponent(q)).then(r => r.json().catch(() => ({})))
+                ]);
+                if (!alive) return;
+                const mItems = Array.isArray(mRes.results) ? mRes.results : (Array.isArray(mRes) ? mRes : []);
+                const sItems = Array.isArray(sRes.results) ? sRes.results : (Array.isArray(sRes) ? sRes : []);
+                const merged = [
+                    ...mItems.map(m => withTop5Id(m, "movie")),
+                    ...sItems.map(s => withTop5Id(s, "series"))
+                ];
+                const seen = new Set();
+                const deduped = [];
+                for (const it of merged) {
+                    const key = String(it.mediaType) + "|" + String(it.id);
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    if (isInTop5(it)) continue;
+                    deduped.push(it);
+                }
+                setTop5Global(deduped.slice(0, 24));
+            } catch (e) {
+                if (alive) setTop5SearchError("No se pudo buscar en el catálogo. Inténtalo de nuevo.");
+            } finally {
+                if (alive) setTop5Searching(false);
+            }
+        }, 400);
+        return () => { alive = false; clearTimeout(timer); };
+    }, [top5Query, editingTop5]);
+    const clearTop5Search = () => {
+        setTop5Query("");
+        setTop5Global([]);
+        setTop5SearchError(null);
+    };
+    const collectionCandidates = allItems.filter(item => {
+        if (isInTop5(item)) return false;
+        const q = top5Query.trim().toLowerCase();
+        if (!q) return true;
+        return norm(item.title).indexOf(q) !== -1;
+    });
+    const top5Candidates = (() => {
+        const q = top5Query.trim();
+        if (q.length < 2) return collectionCandidates;
+        const inCollection = new Set(collectionCandidates.map(c => String(c.mediaType) + "|" + String(c.id || c.imdbID || c.title)));
+        const extras = top5Global.filter(g => !isInTop5(g) && !inCollection.has(String(g.mediaType) + "|" + String(g.id)));
+        return [...collectionCandidates.map(c => Object.assign({}, c, { _source: "Colección" })), ...extras.map(e => Object.assign({}, e, { _source: "Catálogo" }))];
+    })();
 
     // Amistades state
     const friendsTabState = React.useState("friends"); // friends, requests, search
@@ -2681,18 +2861,20 @@ function MiCuenta(props) {
     const shareLink = shareLinkState[0];
     const setShareLink = shareLinkState[1];
 
-    const openDetail = async (item) => {
+    const openDetail = async (item, forcedType) => {
+        const media = forcedType || item.mediaType || item.type || detailType || "movie";
+        const kind = media === "series" ? "series" : "movie";
+        setDetailType(kind);
         if (item.plot || item.director) {
             setDetail(item);
             return;
         }
         setDetailLoading(true);
         try {
-            const isSeries = detailType === "series" || item.type === "series";
-            const baseUrl = isSeries ? "/api/series/search" : "/api/movies/search";
+            const base = kind === "series" ? "/api/series/search" : "/api/movies/search";
             const url = item.imdbID
-                ? baseUrl + "?i=" + encodeURIComponent(item.imdbID)
-                : baseUrl + "?t=" + encodeURIComponent(item.title);
+                ? base + "?i=" + encodeURIComponent(item.imdbID)
+                : base + "?t=" + encodeURIComponent(item.title);
             const res = await fetch(url);
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "No se pudo cargar el detalle");
@@ -2702,6 +2884,13 @@ function MiCuenta(props) {
         } finally {
             setDetailLoading(false);
         }
+    };
+    const openDetailMovie = (m) => openDetail(m, "movie");
+    const openDetailSeries = (s) => openDetail(Object.assign({}, s, { mediaType: "series" }), "series");
+    const openReviews = (item, forcedType) => {
+        const media = forcedType || item.mediaType || item.type || detailType || "movie";
+        setReviewsMediaType(media === "series" ? "series" : "movie");
+        setReviewsDetail(item);
     };
 
     const loadFriends = async () => {
@@ -2731,10 +2920,8 @@ function MiCuenta(props) {
 
     const handleSearch = async (e) => {
         e.preventDefault();
-        let q = searchQuery.trim().toLowerCase();
+        const q = searchQuery.trim().toLowerCase();
         if (!q) { setSearchError("Escribe un nickname"); return; }
-        // Quitar @ si el usuario lo incluye
-        if (q.startsWith("@")) q = q.slice(1);
         if (q === (user.nickname || "").toLowerCase()) { setSearchError("No te puedes buscar a ti mismo"); return; }
         setSearching(true);
         setSearchError(null);
@@ -2840,11 +3027,11 @@ function MiCuenta(props) {
 
     return h("div", { className: "movies-page" },
         h("div", { className: "page-head" },
-            h("h1", null, "Hola, " + (user.nickname ? user.nickname : user.name)),
+            h("h1", null, "Hola, " + user.name),
             h("p", { className: "muted" }, user.email),
-            user.nickname ? h("p", { className: "muted" }, "Nombre: " + user.name) : null
+            user.nickname ? h("p", { className: "muted" }, "Nickname: @" + user.nickname) : null
         ),
-        
+
         /* ----- Índice / Tabla de contenidos ----- */
         h("nav", { className: "profile-toc" },
             h("h3", null, "📋 Índice"),
@@ -2853,14 +3040,14 @@ function MiCuenta(props) {
                 h("li", null, h("a", { href: "#peliculas-recientes", onClick: (e) => { e.preventDefault(); document.getElementById("peliculas-recientes")?.scrollIntoView({ behavior: "smooth" }); } }, "🎬 Películas recientes")),
                 h("li", null, h("a", { href: "#todas-peliculas", onClick: (e) => { e.preventDefault(); document.getElementById("todas-peliculas")?.scrollIntoView({ behavior: "smooth" }); } }, "📁 Todas las películas")),
                 h("li", null, h("a", { href: "#series-recientes", onClick: (e) => { e.preventDefault(); document.getElementById("series-recientes")?.scrollIntoView({ behavior: "smooth" }); } }, "📺 Series recientes")),
-                h("li", null, h("a", { href: "#todas-series", onClick: (e) => { e.preventDefault(); document.getElementById("todas-series")?.scrollIntoView({ behavior: "smooth" }); } }, "📁 Todas las series")),
-                h("li", null, h("a", { href: "#amistades", onClick: (e) => { e.preventDefault(); document.getElementById("amistades")?.scrollIntoView({ behavior: "smooth" }); } }, "👥 Amistades"))
+                h("li", null, h("a", { href: "#todas-series", onClick: (e) => { e.preventDefault(); document.getElementById("todas-series")?.scrollIntoView({ behavior: "smooth" }); } }, "📁 Todas las series"))
             )
         ),
 
         h("div", { className: "hero-stats account-stats" },
-            h("div", null, h("strong", null, String((movies || []).length)), h("span", null, "películas")),
-            h("div", null, h("strong", null, String((series || []).length)), h("span", null, "series"))
+            h("div", null, h("strong", null, String(shownMovies.length + shownSeries.length)), h("span", null, "guardadas")),
+            h("div", null, h("strong", null, String(shownMovies.length)), h("span", null, "películas")),
+            h("div", null, h("strong", null, String(shownSeries.length)), h("span", null, "series"))
         ),
 
         /* ----- Top 5 Combinado (Películas + Series) ----- */
@@ -2871,7 +3058,7 @@ function MiCuenta(props) {
                     ? h("button", { className: "btn-primary btn-small", onClick: () => setEditingTop5(true) }, "Crear Top 5")
                     : editingTop5
                         ? h("div", { style: { display: "flex", gap: "0.5rem" } },
-                            h("button", { className: "btn-primary btn-small", onClick: () => setEditingTop5(false) }, "Guardar"),
+                            h("button", { className: "btn-primary btn-small", onClick: saveTop5 }, "Guardar"),
                             h("button", { className: "btn-ghost btn-small", onClick: () => { setTop5([]); setEditingTop5(false); } }, "Limpiar")
                         )
                         : top5.length > 0
@@ -2880,50 +3067,82 @@ function MiCuenta(props) {
             ),
 
             editingTop5 ? h("div", { className: "top5-editor" },
-                h("p", { className: "muted", style: { marginBottom: "1rem" } }, "Arrastra o haz click para añadir/quitar. Máximo 5 items."),
-                h("div", { className: "top5-available", style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "0.75rem", maxHeight: "300px", overflow: "auto" } },
-                    allItems.filter(item => !top5.some(t => t.id === item.id && t.mediaType === item.mediaType)).map(item =>
+                h("p", { className: "muted", style: { marginBottom: "0.75rem" } }, "Busca cualquier película o serie y haz click para añadir al Top (" + top5.length + "/5)."),
+                h("form", {
+                    className: "top5-search top5-search--modern",
+                    onSubmit: (e) => { e.preventDefault(); }
+                },
+                    h("span", { className: "top5-search-icon", "aria-hidden": "true" }, "🔍"),
+                    h("input", {
+                        type: "text",
+                        value: top5Query,
+                        onChange: (e) => setTop5Query(e.target.value),
+                        placeholder: "Buscar películas y series...",
+                        maxLength: 100,
+                        autoComplete: "off",
+                        className: "top5-search-input",
+                        "aria-label": "Buscar películas y series para el Top 5"
+                    }),
+                    top5Query
+                        ? h("button", { type: "button", className: "top5-search-clear", onClick: clearTop5Search, "aria-label": "Limpiar búsqueda" }, "✕")
+                        : null
+                ),
+                h("p", { className: "muted", style: { marginBottom: "0.75rem" } },
+                    top5Searching
+                        ? "Buscando en catálogo..."
+                        : (top5Query.trim().length >= 2
+                            ? (String(top5Candidates.length) + " resultados (películas + series)")
+                            : (String(top5Candidates.length) + " en tu colección"))
+                ),
+                top5SearchError ? h("p", { className: "error" }, top5SearchError) : null,
+                top5.length >= 5 ? h("p", { className: "muted" }, "Top completo: quita alguno para añadir otro.") : null,
+                top5Candidates.length === 0
+                    ? h("p", { className: "muted", style: { textAlign: "center", padding: "1rem" } }, top5Searching ? "Buscando..." : (top5Query.trim().length >= 2 ? "Sin resultados para esa búsqueda. Prueba con otro título." : "Guarda o busca películas y series para crear tu Top 5."))
+                    : h("div", { className: "top5-available", style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "0.75rem", maxHeight: "320px", overflow: "auto" } },
+                        top5Candidates.map(item =>
                         h("div", {
                             key: item.id + "-" + item.mediaType,
                             className: "top5-item-available",
                             onClick: () => top5.length < 5 && setTop5([...top5, item]),
-                            style: { 
-                                padding: "0.75rem", background: "var(--surface)", border: "1px solid var(--line)", 
+                            style: {
+                                padding: "0.75rem", background: "var(--surface)", border: "1px solid var(--line)",
                                 borderRadius: "8px", cursor: "pointer", textAlign: "center",
                                 transition: "all 0.2s", opacity: top5.length >= 5 ? 0.5 : 1
                             }
                         },
-                            h("img", { 
-                                src: item.poster || "https://via.placeholder.com/150x225?text=Sin+imagen", 
-                                alt: item.title, 
+                            h("img", {
+                                src: item.poster || "https://via.placeholder.com/150x225?text=Sin+imagen",
+                                alt: item.title,
                                 style: { width: "100%", aspectRatio: "2/3", objectFit: "cover", borderRadius: "4px", marginBottom: "0.5rem" }
                             }),
                             h("div", { style: { fontWeight: 600, fontSize: "0.85rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, item.title),
-                            h("span", { className: "watching-badge", style: { fontSize: "0.7rem", marginTop: "0.25rem", display: "inline-block" } }, item.mediaType === "movie" ? "🎬 Película" : "📺 Serie")
+                            h("div", { style: { fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.15rem" } }, item.year || "----"),
+                            h("span", { className: "watching-badge", style: { fontSize: "0.7rem", marginTop: "0.25rem", display: "inline-block" } }, item.mediaType === "movie" ? "🎬 Película" : "📺 Serie"),
+                            item._source ? h("span", { className: "top5-source", style: { fontSize: "0.68rem", marginTop: "0.2rem", display: "inline-block", color: "var(--muted)" } }, item._source) : null
                         )
                     )
                 )
             ) : top5.length > 0 ? h("div", { className: "top5-display" },
                 h("ol", { style: { display: "flex", flexDirection: "column", gap: "0.75rem", counterReset: "top5" } },
                     top5.map((item, idx) =>
-                        h("li", { 
+                        h("li", {
                             key: item.id + "-" + item.mediaType + "-" + idx,
-                            style: { 
-                                display: "flex", gap: "1rem", padding: "1rem", background: "var(--surface)", 
+                            style: {
+                                display: "flex", gap: "1rem", padding: "1rem", background: "var(--surface)",
                                 border: "1px solid var(--line)", borderRadius: "8px",
                                 position: "relative"
                             }
                         },
-                            h("span", { 
-                                style: { 
-                                    fontSize: "2rem", fontWeight: 900, color: "var(--bronze)", 
+                            h("span", {
+                                style: {
+                                    fontSize: "2rem", fontWeight: 900, color: "var(--bronze)",
                                     minWidth: "50px", textAlign: "center",
                                     display: "flex", alignItems: "center", justifyContent: "center"
-                                } 
+                                }
                             }, idx + 1),
-                            h("img", { 
-                                src: item.poster || "https://via.placeholder.com/100x150?text=Sin+imagen", 
-                                alt: item.title, 
+                            h("img", {
+                                src: item.poster || "https://via.placeholder.com/100x150?text=Sin+imagen",
+                                alt: item.title,
                                 style: { width: "80px", aspectRatio: "2/3", objectFit: "cover", borderRadius: "6px", flexShrink: 0 }
                             }),
                             h("div", { style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" } },
@@ -2931,7 +3150,7 @@ function MiCuenta(props) {
                                 h("span", { className: "watching-badge", style: { width: "fit-content", fontSize: "0.75rem" } }, item.mediaType === "movie" ? "🎬 Película" : "📺 Serie"),
                                 item.rating && h("span", { style: { color: "var(--bronze-bright)", fontSize: "0.9rem" } }, "★ " + item.rating)
                             ),
-                            h("button", { 
+                            h("button", {
                                 className: "btn-ghost btn-small",
                                 onClick: () => setTop5(top5.filter((_, i) => i !== idx)),
                                 style: { alignSelf: "flex-start" }
@@ -2939,134 +3158,249 @@ function MiCuenta(props) {
                         )
                     )
                 )
-            ) : h("p", { className: "muted", style: { textAlign: "center", padding: "2rem" } }, 
+            ) : h("p", { className: "muted", style: { textAlign: "center", padding: "2rem" } },
                 "Aún no has creado tu Top 5. ¡Añade tus películas y series favoritas!"
             )
         ),
 
-        /* ----- Películas recientes ----- */
-        h("h2", { id: "peliculas-recientes" }, "Películas guardadas recientemente"),
-        h(MovieCarousel, {
-            title: "Últimas películas",
-            subtitle: "Tus últimas adiciones",
-            movies: recentMovies,
-            onDelete: onDelete,
-            onDetail: (m) => { setDetail(m); setDetailType("movie"); },
-            showDelete: true,
-            emptyText: "Aún no guardaste películas. Explora Películas y pulsa Guardar."
-        }),
-        h("h2", { id: "todas-peliculas" }, "Todas tus películas"),
-        loadingList ? h("p", { className: "muted" }, "Cargando lista...") : null,
-        (!loadingList && shownMovies.length === 0)
-            ? h("p", { className: "muted" }, "Vacío por ahora.")
-            : null,
-        h("div", { className: "movies-grid" },
-            shownMovies.map((movie) =>
-                h(MovieCard, { key: movie.id, movie: movie, onDelete: onDelete, onDetail: (m) => { setDetail(m); setDetailType("movie"); }, showDelete: true })
+        /* ----- Películas ----- */
+        h("section", { id: "peliculas-recientes", className: "account-section" },
+            h("h2", null, "🎬 Películas guardadas recientemente"),
+            detailLoading && detailType === "movie" ? h("p", { className: "muted" }, "Cargando detalle...") : null,
+            h(MovieCarousel, {
+                title: "Guardadas recientemente",
+                subtitle: "Tus últimas películas",
+                movies: recentMovies,
+                onDelete: onDelete,
+                onDetail: openDetailMovie,
+                showDelete: true,
+                emptyText: "Aún no guardaste películas. Explora Películas y pulsa Guardar"
+            })
+        ),
+        h("section", { id: "todas-peliculas", className: "account-section" },
+            h("h2", null, "📁 Todas tus películas (" + shownMovies.length + ")"),
+            loadingList ? h("p", { className: "muted" }, "Cargando lista...") : null,
+            (!loadingList && shownMovies.length === 0)
+                ? h("p", { className: "muted" }, "Vacío por ahora. Guarda alguna película para verla aquí.")
+                : null,
+            h("div", { className: "movies-grid" },
+                shownMovies.map((movie) =>
+                    h(MovieCard, { key: movie.id, movie: movie, mediaType: "movie", onDelete: onDelete, onDetail: openDetailMovie, showDelete: true })
+                )
             )
         ),
 
-        /* ----- Series recientes ----- */
-        h("h2", { id: "series-recientes" }, "Series guardadas recientemente"),
-        h(MovieCarousel, {
-            title: "Últimas series",
-            subtitle: "Tus últimas adiciones",
-            movies: recentSeries,
-            onDelete: onDeleteSeries,
-            onDetail: (s) => { setDetail(s); setDetailType("series"); },
-            showDelete: true,
-            emptyText: "Aún no guardaste series. Explora Series y pulsa Guardar."
-        }),
-        h("h2", { id: "todas-series" }, "Todas tus series"),
-        loadingSeries ? h("p", { className: "muted" }, "Cargando lista...") : null,
-        (!loadingSeries && shownSeries.length === 0)
-            ? h("p", { className: "muted" }, "Vacío por ahora.")
-            : null,
-        h("div", { className: "movies-grid" },
-            shownSeries.map((serie) =>
-                h(MovieCard, { key: serie.id, movie: serie, onDelete: onDeleteSeries, onDetail: (s) => { setDetail(s); setDetailType("series"); }, showDelete: true })
+        /* ----- Series ----- */
+        h("section", { id: "series-recientes", className: "account-section" },
+            h("h2", null, "📺 Series guardadas recientemente"),
+            detailLoading && detailType === "series" ? h("p", { className: "muted" }, "Cargando detalle...") : null,
+            h(MovieCarousel, {
+                title: "Últimas series",
+                subtitle: "Tus últimas adiciones",
+                movies: recentSeries.map(s => Object.assign({}, s, { mediaType: "series" })),
+                onDelete: onDeleteSeries,
+                onDetail: openDetailSeries,
+                showDelete: !!onDeleteSeries,
+                emptyText: "Aún no guardaste series. Explora Series y pulsa Guardar"
+            })
+        ),
+        h("section", { id: "todas-series", className: "account-section" },
+            h("h2", null, "📁 Todas tus series (" + shownSeries.length + ")"),
+            loadingSeries ? h("p", { className: "muted" }, "Cargando lista...") : null,
+            (!loadingSeries && shownSeries.length === 0)
+                ? h("p", { className: "muted" }, "Vacío por ahora. Guarda alguna serie para verla aquí.")
+                : null,
+            h("div", { className: "movies-grid" },
+                shownSeries.map((serie) =>
+                    h(MovieCard, { key: serie.id, movie: Object.assign({}, serie, { mediaType: "series" }), mediaType: "series", onDelete: onDeleteSeries, onDetail: openDetailSeries, showDelete: !!onDeleteSeries })
+                )
             )
         ),
 
-        // Amistades section
-        h("section", { id: "amistades", className: "friends-section", style: { marginTop: "3rem" } },
-            h("h2", null, "Amistades"),
-            h("div", { className: "friends-tabs" },
-                h("button", { className: "tab-btn" + (friendsTab === "friends" ? " active" : ""), onClick: () => setFriendsTab("friends") }, "Mis amigos (" + friends.length + ")"),
-                h("button", { className: "tab-btn" + (friendsTab === "requests" ? " active" : ""), onClick: () => setFriendsTab("requests") }, "Solicitudes" + (requests.length > 0 ? " (" + requests.length + ")" : "")),
-                h("button", { className: "tab-btn" + (friendsTab === "search" ? " active" : ""), onClick: () => setFriendsTab("search") }, "Buscar amigos")
-            ),
 
-            friendsTab === "friends" ? h("div", { className: "friends-content" },
-                loadingFriends ? h("p", { className: "muted" }, "Cargando amigos...") : null,
-                !loadingFriends && friends.length === 0 ? h("p", { className: "muted" }, "Aún no tienes amigos. Busca a alguien por su nickname o comparte tu enlace.") : null,
-                !loadingFriends && friends.length > 0 ? h("div", { className: "friends-list" },
-                    friends.map((friend) =>
-                        h("div", { key: friend.id, className: "friend-item" },
-                            h("div", { className: "friend-info" },
-                                friend.photoURL ? h("img", { src: friend.photoURL, alt: "", className: "friend-avatar" }) : null,
-                                h("div", null,
-                                    h("strong", null, friend.name),
-                                    friend.nickname ? h("span", { className: "friend-nickname" }, " @" + friend.nickname) : null
-                                )
-                            ),
-                            h("button", { className: "btn-ghost btn-small", onClick: () => removeFriend(friend.id) }, "Eliminar")
-                        )
-                    )
-                ) : null
-            ) : null,
 
-            friendsTab === "requests" ? h("div", { className: "friends-content" },
-                requests.length === 0 ? h("p", { className: "muted" }, "No tienes solicitudes pendientes.") : null,
-                requests.length > 0 ? h("div", { className: "requests-list" },
-                    requests.map((req) =>
-                        h("div", { key: req.id, className: "request-item" },
-                            h("div", { className: "friend-info" },
-                                req.photoURL ? h("img", { src: req.photoURL, alt: "", className: "friend-avatar" }) : null,
-                                h("div", null,
-                                    h("strong", null, req.name),
-                                    req.nickname ? h("span", { className: "friend-nickname" }, " @" + req.nickname) : null
-                                )
-                            ),
-                            h("div", { className: "request-actions" },
-                                h("button", { className: "btn-primary btn-small", onClick: () => acceptRequest(req.id) }, "Aceptar"),
-                                h("button", { className: "btn-ghost btn-small", onClick: () => declineRequest(req.id) }, "Rechazar")
-                            )
-                        )
-                    )
-                ) : null
-            ) : null,
-
-            friendsTab === "search" ? h("div", { className: "friends-content" },
-                h("form", { onSubmit: handleSearch, className: "friend-search-form" },
-                    h("input", {
-                        type: "text",
-                        value: searchQuery,
-                        onChange: (e) => setSearchQuery(e.target.value),
-                        placeholder: "Buscar por nickname (ej. @juan)",
-                        maxLength: 30,
-                        autoComplete: "off"
+        detail ? h("div", { className: "modal-backdrop", onClick: () => setDetail(null) },
+            h("div", { className: "modal", onClick: (e) => e.stopPropagation() },
+                h("button", { className: "modal-close", onClick: () => setDetail(null) }, "✕"),
+                h("div", { className: "modal-content" },
+                    h("img", {
+                        src: detail.poster || "https://via.placeholder.com/300x450?text=Sin+imagen",
+                        alt: detail.title
                     }),
-                    h("button", { type: "submit", disabled: searching || !searchQuery.trim() }, searching ? "Buscando..." : "Buscar")
-                ),
-                searchError ? h("p", { className: "error" }, searchError) : null,
-                searchResults.length > 0 ? h("div", { className: "search-results" },
-                    searchResults.map((result) =>
-                        h("div", { key: result.id, className: "search-result-item" },
-                            h("div", { className: "friend-info" },
-                                result.photoURL ? h("img", { src: result.photoURL, alt: "", className: "friend-avatar" }) : null,
-                                h("div", null,
-                                    h("strong", null, result.name),
-                                    result.nickname ? h("span", { className: "friend-nickname" }, " @" + result.nickname) : null
-                                )
-                            ),
-                            h("button", { className: "btn-primary btn-small", onClick: () => sendRequest(result.id) }, "Agregar")
+                    h("div", null,
+                        h("h2", null, detail.title + " (" + (detail.year || "----") + ")"),
+                        h("p", { className: "muted" }, detailType === "series" ? "📺 Serie" : "🎬 Película"),
+                        detail.genre ? h("p", null, h("strong", null, "Género:"), " " + detail.genre) : null,
+                        detail.runtime ? h("p", null, h("strong", null, "Duración:"), " " + detail.runtime) : null,
+                        detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
+                        detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
+                        detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
+                        detail.plot ? h("p", null, detail.plot) : null,
+                        h("div", { className: "result-actions" },
+                            h("button", { className: "btn-ghost", type: "button", onClick: () => openReviews(detail, detailType) }, "Reseñas"),
+                            h("button", { className: "btn-ghost", type: "button", onClick: () => setDetail(null) }, "Cerrar")
                         )
                     )
-                ) : null
-            ) : null
-        ),
+                )
+            )
+        ) : null,
+        reviewsDetail ? h(ReviewsModal, { detail: reviewsDetail, mediaType: reviewsMediaType, user: user, onClose: () => setReviewsDetail(null) }) : null
+    );
+}
 
+/* ---------- UserProfile: perfil público de otro usuario ---------- */
+function UserProfile(props) {
+    const userId = props.userId;
+    const currentUser = props.currentUser;
+    const onNavigate = props.onNavigate;
+    const profileState = React.useState(null);
+    const profile = profileState[0];
+    const setProfile = profileState[1];
+    const moviesState = React.useState([]);
+    const movies = moviesState[0];
+    const setMovies = moviesState[1];
+    const loadingState = React.useState(true);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+    const followingState = React.useState(false);
+    const isFollowing = followingState[0];
+    const setIsFollowing = followingState[1];
+    const followLoadingState = React.useState(false);
+    const followLoading = followLoadingState[0];
+    const setFollowLoading = followLoadingState[1];
+    const detailState = React.useState(null);
+    const detail = detailState[0];
+    const setDetail = detailState[1];
+    const detailLoadingState = React.useState(false);
+    const detailLoading = detailLoadingState[0];
+    const setDetailLoading = detailLoadingState[1];
+
+    const loadProfile = async () => {
+        try {
+            const res = await fetch("/api/users/" + encodeURIComponent(userId));
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Usuario no encontrado");
+            setProfile(data.user);
+            if (currentUser) {
+                const followRes = await fetch("/api/users/" + encodeURIComponent(userId) + "/is-following", {
+                    headers: authHeaders()
+                });
+                const followData = await followRes.json();
+                setIsFollowing(followData.following || false);
+            }
+        } catch (e) {
+            setProfile(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadMovies = async () => {
+        try {
+            const res = await fetch("/api/users/" + encodeURIComponent(userId) + "/movies");
+            const data = await res.json();
+            setMovies(Array.isArray(data.movies) ? data.movies : []);
+        } catch (e) {
+            setMovies([]);
+        }
+    };
+
+    React.useEffect(() => {
+        loadProfile();
+        loadMovies();
+    }, [userId]);
+
+    const handleFollow = async () => {
+        if (!currentUser) {
+            onNavigate("auth");
+            return;
+        }
+        setFollowLoading(true);
+        try {
+            if (isFollowing) {
+                await fetch("/api/users/" + encodeURIComponent(userId) + "/follow", {
+                    method: "DELETE",
+                    headers: authHeaders()
+                });
+                setIsFollowing(false);
+            } else {
+                await fetch("/api/users/" + encodeURIComponent(userId) + "/follow", {
+                    method: "POST",
+                    headers: authHeaders()
+                });
+                setIsFollowing(true);
+            }
+        } catch (e) {
+            // error silencioso
+        } finally {
+            setFollowLoading(false);
+        }
+    };
+
+    const openDetail = async (movie) => {
+        if (movie.plot || movie.director) {
+            setDetail(movie);
+            return;
+        }
+        setDetailLoading(true);
+        try {
+            const url = movie.imdbID
+                ? "/api/movies/search?i=" + encodeURIComponent(movie.imdbID)
+                : "/api/movies/search?t=" + encodeURIComponent(movie.title);
+            const res = await fetch(url);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "No se pudo cargar el detalle");
+            setDetail(data);
+        } catch (err) {
+            setDetail(movie);
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
+    if (loading) return h("div", { className: "movies-page" }, h("p", { className: "muted" }, "Cargando perfil..."));
+    if (!profile) return h("div", { className: "movies-page" }, h("p", { className: "error" }, "Usuario no encontrado"));
+
+    const isOwnProfile = currentUser && currentUser.id === profile.id;
+    const shown = movies || [];
+    const recent = shown.slice(0, 10);
+
+    return h("div", { className: "movies-page" },
+        h("div", { className: "profile-header" },
+            h("div", { className: "profile-avatar" },
+                profile.photoURL ? h("img", { src: profile.photoURL, alt: profile.nickname || profile.name }) : h("span", null, (profile.nickname || profile.name || "U")[0].toUpperCase())
+            ),
+            h("div", { className: "profile-info" },
+                h("h1", null, profile.nickname || profile.name),
+                h("p", { className: "muted" }, "@" + (profile.id.split("@")[0] || profile.id)),
+                !isOwnProfile && currentUser && h("button", {
+                    className: "btn-primary" + (isFollowing ? " following" : ""),
+                    onClick: handleFollow,
+                    disabled: followLoading
+                }, followLoading ? "..." : (isFollowing ? "Dejar de seguir" : "Seguir"))
+            )
+        ),
+        h("div", { className: "hero-stats account-stats" },
+            h("div", null, h("strong", null, String(shown.length)), h("span", null, "películas")),
+            h("div", null, h("strong", null, profile.prefs?.followers?.length || 0), h("span", null, "seguidores")),
+            h("div", null, h("strong", null, profile.prefs?.following?.length || 0), h("span", null, "siguiendo"))
+        ),
+        detailLoading ? h("p", { className: "muted" }, "Cargando detalle...") : null,
+        h(MovieCarousel, {
+            title: "Guardadas recientemente",
+            subtitle: "Películas de " + (profile.nickname || profile.name),
+            movies: recent,
+            onDelete: null,
+            onDetail: openDetail,
+            showDelete: false,
+            emptyText: "Aún no ha guardado películas"
+        }),
+        h("h2", null, "Todas las películas"),
+        h("div", { className: "movies-grid" },
+            shown.map((movie) =>
+                h(MovieCard, { key: movie.id, movie: movie, onDelete: null, onDetail: openDetail, showDelete: false })
+            )
+        ),
         detail ? h("div", { className: "modal-backdrop", onClick: () => setDetail(null) },
             h("div", { className: "modal", onClick: (e) => e.stopPropagation() },
                 h("button", { className: "modal-close", onClick: () => setDetail(null) }, "✕"),
@@ -3078,133 +3412,353 @@ function MiCuenta(props) {
                     h("div", null,
                         h("h2", null, detail.title + " (" + detail.year + ")"),
                         detail.genre ? h("p", null, h("strong", null, "Género:"), " " + detail.genre) : null,
-                        detail.runtime ? h("p", null, h("strong", null, "Duración:"), " " + detail.runtime) : null,
                         detail.director ? h("p", null, h("strong", null, "Director:"), " " + detail.director) : null,
                         detail.actors ? h("p", null, h("strong", null, "Actores:"), " " + detail.actors) : null,
                         detail.rating ? h("p", null, h("strong", null, "IMDb:"), " ★ " + detail.rating) : null,
-                        detail.plot ? h("p", null, detail.plot) : null,
-                        h("div", { className: "result-actions" },
-                            h("button", { className: "btn-ghost", type: "button", onClick: () => { setShowReviews(true); setWritingReview(false); loadReviews("movie", detail.imdbID, setReviews); } }, "Reseñas"),
-                            h("button", { className: "btn-ghost", type: "button", onClick: () => setDetail(null) }, "Cerrar")
-                        )
-                    )
-                )
-            )
-        ) : null,
-        detail && showReviews ? h("div", { className: "modal-backdrop", onClick: () => { setShowReviews(false); setWritingReview(false); } },
-            h("div", { className: "modal modal-reviews", onClick: (e) => e.stopPropagation() },
-                h("button", { className: "modal-close", onClick: () => { setShowReviews(false); setWritingReview(false); } }, "✕"),
-                h("div", { className: "modal-content" },
-                    h("h2", null, "Reseñas de " + detail.title),
-                    writingReview ? h("div", { className: "review-form" },
-                        user ? h("div", null,
-                            h("h3", null, "Escribe tu reseña"),
-                            h("textarea", {
-                                value: newReviewText,
-                                onChange: (e) => setNewReviewText(e.target.value),
-                                placeholder: "¿Qué te pareció? (mín. 50 caracteres)",
-                                rows: 4,
-                                maxLength: 2000
-                            }),
-                            newReviewText.length > 0 && newReviewText.length < 50 ? h("p", { className: "muted" }, "Mínimo 50 caracteres (" + newReviewText.length + "/50)") : null,
-                            h("div", { className: "result-actions" },
-                                h("button", {
-                                    className: "btn-primary",
-                                    onClick: () => {
-                                        if (newReviewText.trim().length >= 50) {
-                                            setSubmittingReview(true);
-                                            publishReview("movie", detail, newReviewText, setReviews, setNewReviewText, setWritingReview, setSubmittingReview);
-                                        }
-                                    },
-                                    disabled: submittingReview || newReviewText.trim().length < 50
-                                }, submittingReview ? "Publicando..." : "Publicar reseña"),
-                                h("button", { className: "btn-ghost", type: "button", onClick: () => { setWritingReview(false); setNewReviewText(""); } }, "Cancelar")
-                            )
-                        ) : h("div", { className: "auth-prompt" },
-                            h("p", null, "Para escribir una reseña necesitas iniciar sesión")
-                        )
-                    ) : h("div", { className: "reviews-section" },
-                        h("div", { className: "reviews-header" },
-                            h("h3", null, "Reseñas (" + reviews.length + ")"),
-                            h("button", {
-                                className: "btn-ghost btn-small",
-                                onClick: () => setWritingReview(true)
-                            }, "Escribir reseña")
-                        ),
-                        h("div", { className: "reviews-sort" },
-                            h("label", null, "Ordenar: "),
-                            h("select", {
-                                value: reviewsSort,
-                                onChange: (e) => setReviewsSort(e.target.value)
-                            },
-                                h("option", { value: "relevance" }, "Mayor relevancia"),
-                                h("option", { value: "votes" }, "Más votados"),
-                                h("option", { value: "recent" }, "Más recientes")
-                            )
-                        ),
-                        reviews.length === 0 ? h("p", { className: "muted" }, "Aún no hay reseñas. ¡Sé el primero en escribir una!") : h("div", { className: "reviews-list" },
-                            reviews
-                                .slice()
-                                .sort((a, b) => {
-                                    if (reviewsSort === "votes") return (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes);
-                                    if (reviewsSort === "recent") return new Date(b.createdAt) - new Date(a.createdAt);
-                                    return (b.upvotes - b.downvotes + (b.replies?.length || 0)) - (a.upvotes - a.downvotes + (a.replies?.length || 0));
-                                })
-                                .map((review) => h("div", { key: review.id, className: "review-item" },
-                                    h("div", { className: "review-header" },
-                                        h("strong", null, review.user),
-                                        h("span", { className: "review-date" }, new Date(review.createdAt).toLocaleDateString("es-ES"))
-                                    ),
-                                    h("p", { className: "review-text" }, review.text),
-                                    h("div", { className: "review-actions" },
-                                        h("button", {
-                                            className: "vote-btn" + (review.userVote === 1 ? " voted" : ""),
-                                            onClick: () => {
-                                                const updated = reviews.map(r => {
-                                                    if (r.id === review.id) {
-                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
-                                                        if (uv === 1) { up--; uv = 0; }
-                                                        else { up++; if (uv === -1) { down--; } uv = 1; }
-                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
-                                                    }
-                                                    return r;
-                                                });
-                                                setReviews(updated);
-                                            }
-                                        }, "👍 " + review.upvotes),
-                                        h("button", {
-                                            className: "vote-btn" + (review.userVote === -1 ? " voted" : ""),
-                                            onClick: () => {
-                                                const updated = reviews.map(r => {
-                                                    if (r.id === review.id) {
-                                                        let up = r.upvotes, down = r.downvotes, uv = r.userVote;
-                                                        if (uv === -1) { down--; uv = 0; }
-                                                        else { down++; if (uv === 1) { up--; } uv = -1; }
-                                                        return { ...r, upvotes: up, downvotes: down, userVote: uv };
-                                                    }
-                                                    return r;
-                                                });
-                                                setReviews(updated);
-                                            }
-                                        }, "👎 " + review.downvotes),
-                                        h("button", {
-                                            className: "btn-ghost btn-small",
-                                            onClick: () => alert("Responder a reseña - próximamente")
-                                        }, "Responder (" + (review.replies?.length || 0) + ")")
-                                    ),
-                                    review.replies && review.replies.length > 0 ? h("div", { className: "review-replies" },
-                                        review.replies.map((reply) => h("div", { key: reply.id, className: "reply-item" },
-                                            h("strong", null, reply.user),
-                                            h("span", { className: "reply-date" }, new Date(reply.createdAt).toLocaleDateString("es-ES")),
-                                            h("p", null, reply.text)
-                                        ))
-                                    ) : null
-                                ))
-                        )
+                        detail.plot ? h("p", null, detail.plot) : null
                     )
                 )
             )
         ) : null
+    );
+}
+
+/* ---------- UserSearch: buscar y seguir usuarios ---------- */
+function UserSearch(props) {
+    const currentUser = props.currentUser;
+    const onNavigate = props.onNavigate;
+    const queryState = React.useState("");
+    const query = queryState[0];
+    const setQuery = queryState[1];
+    const resultsState = React.useState([]);
+    const results = resultsState[0];
+    const setResults = resultsState[1];
+    const loadingState = React.useState(false);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+    const followingMapState = React.useState({});
+    const followingMap = followingMapState[0];
+    const setFollowingMap = followingMapState[1];
+
+    const search = async (q) => {
+        if (!q || !q.trim()) {
+            setResults([]);
+            return;
+        }
+        setLoading(true);
+        try {
+            const res = await fetch("/api/users/search?q=" + encodeURIComponent(q.trim()));
+            const data = await res.json();
+            setResults(Array.isArray(data.users) ? data.users : []);
+            // Cargar estado de seguimiento
+            if (currentUser && data.users.length > 0) {
+                const ids = data.users.map(u => u.id);
+                const followRes = await fetch("/api/users/me/following", { headers: authHeaders() });
+                const followData = await followRes.json();
+                const followingIds = (followData.users || []).map(u => u.id);
+                const map = {};
+                followingIds.forEach(id => map[id] = true);
+                setFollowingMap(map);
+            }
+        } catch (e) {
+            setResults([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        const timer = setTimeout(() => search(query), 300);
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    const handleFollow = async (targetUserId) => {
+        if (!currentUser) {
+            onNavigate("auth");
+            return;
+        }
+        const isF = followingMap[targetUserId];
+        try {
+            if (isF) {
+                await fetch("/api/users/" + encodeURIComponent(targetUserId) + "/follow", {
+                    method: "DELETE",
+                    headers: authHeaders()
+                });
+            } else {
+                await fetch("/api/users/" + encodeURIComponent(targetUserId) + "/follow", {
+                    method: "POST",
+                    headers: authHeaders()
+                });
+            }
+            setFollowingMap(prev => ({ ...prev, [targetUserId]: !isF }));
+        } catch (e) {
+            // error silencioso
+        }
+    };
+
+    return h("div", { className: "movies-page" },
+        h("div", { className: "page-head" },
+            h("h1", null, "Buscar usuarios"),
+            h("p", { className: "muted" }, "Encuentra amigos y descubre sus colecciones")
+        ),
+        h("div", { className: "search-bar" },
+            h("input", {
+                type: "text",
+                placeholder: "Buscar por nombre, apodo o email...",
+                value: query,
+                onChange: (e) => setQuery(e.target.value),
+                autoFocus: true
+            })
+        ),
+        loading ? h("p", { className: "muted" }, "Buscando...") : null,
+        !loading && query && results.length === 0 ? h("p", { className: "muted" }, "No se encontraron usuarios") : null,
+        h("div", { className: "user-list" },
+            results.map((u) =>
+                h("div", { key: u.id, className: "user-item" },
+                    h("div", { className: "user-avatar" },
+                        u.photoURL ? h("img", { src: u.photoURL, alt: u.nickname || u.name }) : h("span", null, (u.nickname || u.name || "U")[0].toUpperCase())
+                    ),
+                    h("div", { className: "user-info" },
+                        h("strong", null, u.nickname || u.name),
+                        h("span", { className: "muted" }, "@" + (u.id.split("@")[0] || u.id))
+                    ),
+                    u.id !== currentUser?.id && h("button", {
+                        className: "btn-primary btn-small" + (followingMap[u.id] ? " following" : ""),
+                        onClick: () => handleFollow(u.id)
+                    }, followingMap[u.id] ? "Siguiendo" : "Seguir")
+                )
+            )
+        )
+    );
+}
+
+/* ---------- FriendsPage: mis amigos (following/followers) ---------- */
+function FriendsPage(props) {
+    const currentUser = props.currentUser;
+    const onNavigate = props.onNavigate;
+    const tabState = React.useState("following");
+    const tab = tabState[0];
+    const setTab = tabState[1];
+    const followingState = React.useState([]);
+    const following = followingState[0];
+    const setFollowing = followingState[1];
+    const followersState = React.useState([]);
+    const followers = followersState[0];
+    const setFollowers = followersState[1];
+    const loadingState = React.useState(true);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+    const followingMapState = React.useState({});
+    const followingMap = followingMapState[0];
+    const setFollowingMap = followingMapState[1];
+
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [followRes, followerRes] = await Promise.all([
+                fetch("/api/users/me/following", { headers: authHeaders() }),
+                fetch("/api/users/me/followers", { headers: authHeaders() })
+            ]);
+            const followData = await followRes.json();
+            const followerData = await followerRes.json();
+            setFollowing(Array.isArray(followData.users) ? followData.users : []);
+            setFollowers(Array.isArray(followerData.users) ? followerData.users : []);
+            const ids = [...(followData.users || []).map(u => u.id), ...(followerData.users || []).map(u => u.id)];
+            const uniqueIds = [...new Set(ids)];
+            const map = {};
+            uniqueIds.forEach(id => map[id] = true);
+            setFollowingMap(map);
+        } catch (e) {
+            setFollowing([]);
+            setFollowers([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        loadData();
+    }, []);
+
+    const handleUnfollow = async (targetUserId) => {
+        try {
+            await fetch("/api/users/" + encodeURIComponent(targetUserId) + "/follow", {
+                method: "DELETE",
+                headers: authHeaders()
+            });
+            setFollowing(prev => prev.filter(u => u.id !== targetUserId));
+            setFollowers(prev => prev.filter(u => u.id !== targetUserId));
+            setFollowingMap(prev => ({ ...prev, [targetUserId]: false }));
+        } catch (e) {
+            // error silencioso
+        }
+    };
+
+    const handleFollow = async (targetUserId) => {
+        try {
+            await fetch("/api/users/" + encodeURIComponent(targetUserId) + "/follow", {
+                method: "POST",
+                headers: authHeaders()
+            });
+            setFollowingMap(prev => ({ ...prev, [targetUserId]: true }));
+            loadData();
+        } catch (e) {
+            // error silencioso
+        }
+    };
+
+    const currentList = tab === "following" ? following : followers;
+    const currentListTitle = tab === "following" ? "Siguiendo" : "Seguidores";
+
+    if (loading) return h("div", { className: "movies-page" }, h("p", { className: "muted" }, "Cargando..."));
+
+    return h("div", { className: "movies-page" },
+        h("div", { className: "page-head" },
+            h("h1", null, "Mis amigos"),
+            h("p", { className: "muted" }, "Gestiona a quién sigues y quién te sigue")
+        ),
+        h("div", { className: "tabs" },
+            h("button", { className: "tab" + (tab === "following" ? " active" : ""), onClick: () => setTab("following") }, "Siguiendo (" + following.length + ")"),
+            h("button", { className: "tab" + (tab === "followers" ? " active" : ""), onClick: () => setTab("followers") }, "Seguidores (" + followers.length + ")")
+        ),
+        currentList.length === 0 ? h("p", { className: "muted" }, tab === "following" ? "No sigues a nadie todavía. Busca usuarios para empezar." : "Aún no tienes seguidores") : null,
+        h("div", { className: "user-list" },
+            currentList.map((u) =>
+                h("div", { key: u.id, className: "user-item" },
+                    h("div", { className: "user-avatar" },
+                        u.photoURL ? h("img", { src: u.photoURL, alt: u.nickname || u.name }) : h("span", null, (u.nickname || u.name || "U")[0].toUpperCase())
+                    ),
+                    h("div", { className: "user-info" },
+                        h("strong", null, u.nickname || u.name),
+                        h("span", { className: "muted" }, "@" + (u.id.split("@")[0] || u.id))
+                    ),
+                    u.id !== currentUser.id && h("button", {
+                        className: "btn-primary btn-small" + (followingMap[u.id] ? " following" : ""),
+                        onClick: () => followingMap[u.id] ? handleUnfollow(u.id) : handleFollow(u.id)
+                    }, followingMap[u.id] ? "Dejar de seguir" : "Seguir")
+                )
+            )
+        )
+    );
+}
+
+/* ---------- ProfileSettings: configuración de perfil ---------- */
+function ProfileSettings(props) {
+    const currentUser = props.currentUser;
+    const onNavigate = props.onNavigate;
+    const nicknameState = React.useState(currentUser?.nickname || currentUser?.name || "");
+    const nickname = nicknameState[0];
+    const setNickname = nicknameState[1];
+    const themeState = React.useState(currentUser?.colorTheme || "default");
+    const theme = themeState[0];
+    const setTheme = themeState[1];
+    const errorState = React.useState(null);
+    const error = errorState[0];
+    const setError = errorState[1];
+    const successState = React.useState(null);
+    const success = successState[0];
+    const setSuccess = successState[1];
+    const loadingState = React.useState(false);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+
+    React.useEffect(() => {
+        if (currentUser) {
+            setNickname(currentUser.nickname || currentUser.name || "");
+            setTheme(currentUser.colorTheme || "default");
+        }
+    }, [currentUser]);
+
+    React.useEffect(() => {
+        applyColorTheme(theme);
+    }, [theme]);
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setError(null);
+        setSuccess(null);
+        const cleanNickname = nickname.trim();
+        if (cleanNickname.length < 2) {
+            setError("El apodo debe tener al menos 2 caracteres");
+            return;
+        }
+        if (cleanNickname.length > 30) {
+            setError("El apodo no puede exceder 30 caracteres");
+            return;
+        }
+        setLoading(true);
+        try {
+            const res = await fetch("/api/auth/profile", {
+                method: "PUT",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify({ nickname: cleanNickname, colorTheme: theme })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "No se pudo actualizar");
+            setSuccess("Perfil actualizado correctamente");
+            // Actualizar usuario en estado global
+            if (props.onUpdateUser) {
+                props.onUpdateUser({ ...currentUser, nickname: cleanNickname, colorTheme: theme, prefs: { ...currentUser.prefs, nickname: cleanNickname, colorTheme: theme } });
+            }
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return h("div", { className: "movies-page" },
+        h("div", { className: "page-head" },
+            h("h1", null, "Configuración de perfil"),
+            h("p", { className: "muted" }, "Personaliza tu apodo visible y el tema de color")
+        ),
+        error ? h("div", { className: "error-toast" }, error) : null,
+        success ? h("div", { className: "success-toast" }, success) : null,
+        h("form", { className: "settings-form", onSubmit: handleSave },
+            h("div", { className: "settings-section" },
+                h("h2", null, "Apodo visible"),
+                h("div", { className: "auth-field" },
+                    h("label", null, "Apodo (nombre público)"),
+                    h("input", {
+                        type: "text",
+                        value: nickname,
+                        onChange: (e) => setNickname(e.target.value),
+                        placeholder: "Tu apodo",
+                        maxLength: 30,
+                        autoComplete: "nickname"
+                    }),
+                    h("small", { className: "muted" }, "Este nombre será visible para otros usuarios. Mínimo 2, máximo 30 caracteres.")
+                )
+            ),
+            h("div", { className: "settings-section" },
+                h("h2", null, "Tema de color"),
+                h("p", { className: "muted" }, "Elige una paleta de colores para la interfaz (botones, enlaces, acentos)"),
+                h("div", { className: "theme-options" },
+                    Object.entries(COLOR_THEMES).map(([key, t]) =>
+                        h("button", {
+                            key: key,
+                            type: "button",
+                            className: "theme-option" + (theme === key ? " selected" : ""),
+                            onClick: () => setTheme(key),
+                            style: {
+                                borderColor: t.primary,
+                                backgroundColor: theme === key ? t.primaryLight : "transparent"
+                            }
+                        },
+                            h("div", { className: "theme-preview", style: { backgroundColor: t.primary } }),
+                            h("div", null,
+                                h("strong", null, t.name),
+                                h("br"),
+                                h("small", { className: "muted" }, "Principal: " + t.primary + " · Acento: " + t.accent)
+                            )
+                        )
+                    )
+                )
+            ),
+            h("button", { className: "btn-primary", type: "submit", disabled: loading },
+                loading ? "Guardando..." : "Guardar cambios"
+            )
+        )
     );
 }
 
@@ -3215,7 +3769,7 @@ function ChatAgent() {
     const setIsOpen = isOpenState[1];
 
     const messagesState = React.useState([
-        { role: "assistant", content: "¡Hola! Soy CineBot 🎬, tu asistente en CineAIros. ¿En qué te ayudo hoy? Puedes preguntarme por películas, series, cómo usar la app, recomendaciones…", time: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) }
+        { role: "assistant", content: "¡Hola! Soy CineBot 🎬, tu asistente en CineAIros. ¿En qué te ayudo hoy? Puedes preguntarme por películas, series, cómo usar la página web, recomendaciones…", time: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) }
     ]);
     const messages = messagesState[0];
     const setMessages = messagesState[1];
@@ -3223,7 +3777,6 @@ function ChatAgent() {
     const inputState = React.useState("");
     const input = inputState[0];
     const setInput = inputState[1];
-
     const loadingState = React.useState(false);
     const loading = loadingState[0];
     const setLoading = loadingState[1];
@@ -3393,6 +3946,150 @@ function ChatAgent() {
     );
 }
 
+/* ---------- AdminRoute: wrapper que protege rutas de administrador ---------- */
+function AdminRoute(props) {
+    const user = props.user;
+    const children = props.children;
+    const onNavigate = props.onNavigate;
+
+    if (!user) {
+        return h("div", { className: "movies-page" },
+            h("div", { className: "auth-card", style: { textAlign: "center", padding: "3rem" } },
+                h("h2", null, "Acceso restringido"),
+                h("p", { className: "muted" }, "Debes iniciar sesión para acceder a esta página."),
+                h("button", { className: "btn-primary", onClick: () => onNavigate("login") }, "Iniciar sesión")
+            )
+        );
+    }
+
+    if (!isAdmin(user)) {
+        return h("div", { className: "movies-page" },
+            h("div", { className: "auth-card", style: { textAlign: "center", padding: "3rem" } },
+                h("h2", null, "Acceso denegado"),
+                h("p", { className: "muted" }, "Esta página es solo para administradores."),
+                h("button", { className: "btn-primary", onClick: () => onNavigate("home") }, "Ir al inicio")
+            )
+        );
+    }
+
+    return children;
+}
+
+/* ---------- AdminDashboard: panel de administración ---------- */
+function AdminDashboard(props) {
+    const user = props.user;
+    const onNavigate = props.onNavigate;
+    const statsState = React.useState({ users: 0, movies: 0, series: 0 });
+    const stats = statsState[0];
+    const setStats = statsState[1];
+    const usersState = React.useState([]);
+    const users = usersState[0];
+    const setUsers = usersState[1];
+    const loadingState = React.useState(true);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+    const errorState = React.useState(null);
+    const error = errorState[0];
+    const setError = errorState[1];
+    const activeTabState = React.useState("stats");
+    const activeTab = activeTabState[0];
+    const setActiveTab = activeTabState[1];
+
+    const loadStats = async () => {
+        try {
+            const res = await fetch("/api/admin/stats", { headers: authHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al cargar estadísticas");
+            setStats(data);
+        } catch (e) {
+            setError(e.message);
+        }
+    };
+
+    const loadUsers = async () => {
+        try {
+            setLoading(true);
+            const res = await fetch("/api/admin/users", { headers: authHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al cargar usuarios");
+            setUsers(data.users || []);
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        loadStats();
+        loadUsers();
+    }, []);
+
+    const changeUserRole = async (userId, newRole) => {
+        try {
+            const res = await fetch("/api/admin/users/" + encodeURIComponent(userId) + "/role", {
+                method: "PUT",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify({ role: newRole })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al cambiar rol");
+            setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+        } catch (e) {
+            alert(e.message);
+        }
+    };
+
+    if (loading && activeTab === "users") {
+        return h("div", { className: "movies-page" }, h("p", { className: "muted" }, "Cargando..."));
+    }
+
+    return h("div", { className: "movies-page" },
+        h("div", { className: "page-head" },
+            h("h1", null, "Panel de Administración"),
+            h("p", { className: "muted" }, "Gestión de usuarios y estadísticas del sistema")
+        ),
+        h("div", { className: "admin-tabs" },
+            h("button", { className: "tab" + (activeTab === "stats" ? " active" : ""), onClick: () => setActiveTab("stats") }, "Estadísticas"),
+            h("button", { className: "tab" + (activeTab === "users" ? " active" : ""), onClick: () => setActiveTab("users") }, "Usuarios (" + users.length + ")")
+        ),
+        error ? h("p", { className: "error" }, error) : null,
+        activeTab === "stats" && h("div", { className: "admin-stats" },
+            h("div", { className: "hero-stats account-stats" },
+                h("div", null, h("strong", null, String(stats.users)), h("span", null, "Usuarios")),
+                h("div", null, h("strong", null, String(stats.movies)), h("span", null, "Películas guardadas")),
+                h("div", null, h("strong", null, String(stats.series)), h("span", null, "Series guardadas"))
+            ),
+            h("p", { className: "muted", style: { marginTop: "1rem" } }, "Bienvenido, " + user.name + " (Administrador)")
+        ),
+        activeTab === "users" && h("div", { className: "admin-users" },
+            h("div", { className: "movies-grid" },
+                users.map((u) =>
+                    h("div", { key: u.id, className: "movie-card", style: { maxWidth: "400px", flex: "1 1 300px" } },
+                        h("div", { className: "movie-card-body" },
+                            h("h3", null, u.name || u.nickname || "Sin nombre"),
+                            h("p", { className: "movie-meta" }, u.email),
+                            h("p", { className: "movie-meta" }, "Rol: " + (u.role || "user")),
+                            u.createdAt && h("p", { className: "muted", style: { fontSize: "0.8rem" } }, "Registrado: " + new Date(u.createdAt).toLocaleDateString("es-ES")),
+                            h("div", { className: "result-actions", style: { marginTop: "1rem" } },
+                                h("select", {
+                                    value: u.role || "user",
+                                    onChange: (e) => changeUserRole(u.id, e.target.value),
+                                    className: "role-select"
+                                },
+                                    h("option", { value: "user" }, "Usuario"),
+                                    h("option", { value: "admin" }, "Administrador")
+                                )
+                            )
+                        )
+                    )
+                )
+            ),
+            users.length === 0 && h("p", { className: "muted", style: { textAlign: "center", padding: "2rem" } }, "No hay usuarios registrados")
+        )
+    );
+}
+
 /* ---------- CookieConsentBanner ---------- */
 function CookieConsentBanner() {
     const consentState = React.useState(false);
@@ -3471,9 +4168,6 @@ function App() {
             const data = await res.json();
             if (!res.ok) throw new Error("invalid");
             setUser(data.user);
-            if (!data.user.prefs || !data.user.prefs.onboardingDone) {
-                navigate("cuestionario");
-            }
         } catch (e) {
             try {
                 window.localStorage.removeItem("cineairos_token");
@@ -3488,6 +4182,15 @@ function App() {
         fetchSeries();
         restoreSession();
     }, []);
+
+    // Aplicar tema de color del usuario al cargar y cuando cambia
+    useEffect(() => {
+        if (user && user.colorTheme) {
+            applyColorTheme(user.colorTheme);
+        } else {
+            applyColorTheme("default");
+        }
+    }, [user]);
 
     const fetchMovies = async () => {
         setLoadingList(true);
@@ -3586,12 +4289,8 @@ function App() {
         }
         setUser(userValue);
         setToast({ type: "success", text: "Hola, " + userValue.name });
-        if (!userValue.prefs || !userValue.prefs.onboardingDone) {
-            navigate("cuestionario");
-            return;
-        }
         await fetchMovies();
-        navigate("peliculas");
+        navigate("home");
     };
 
     const handleLogout = async () => {
@@ -3650,16 +4349,26 @@ function App() {
                 ? h(RegisterPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), questionnaireOnly: true })
                 : page === "cuenta"
                 ? (user
-                    ? h(MiCuenta, { 
-                        user: user, 
-                        movies: movies, 
-                        series: series, 
-                        loadingList: loadingList, 
-                        loadingSeries: loadingSeries,
-                        onDelete: handleDelete,
-                        onDeleteSeries: handleDeleteSeries
-                    })
+                    ? h(MiCuenta, { user: user, movies: movies, series: series, loadingList: loadingList, loadingSeries: loadingSeries, onDelete: handleDelete, onDeleteSeries: handleDeleteSeries })
                     : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
+                : page === "perfil"
+                ? (user
+                    ? h(UserProfile, { userId: new URLSearchParams(window.location.search).get("id") || user.id, currentUser: user, onNavigate: navigate, onDetail: (m) => { /* handled by parent */ } })
+                    : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
+                : page === "buscar-usuarios"
+                ? (user
+                    ? h(UserSearch, { currentUser: user, onNavigate: navigate })
+                    : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
+                : page === "amigos"
+                ? (user
+                    ? h(FriendsPage, { currentUser: user, onNavigate: navigate })
+                    : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
+                : page === "configuracion"
+                ? (user
+                    ? h(ProfileSettings, { currentUser: user, onNavigate: navigate, onUpdateUser: (u) => setUser(u) })
+                    : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
+                : page === "admin"
+                ? h(AdminRoute, { user: user, onNavigate: navigate }, h(AdminDashboard, { user: user, onNavigate: navigate }))
                 : page === "series"
                 ? h(SeriesPage, {
                     key: page,

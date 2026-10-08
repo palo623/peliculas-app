@@ -6,6 +6,7 @@
 // Soporta credenciales por .env o por firebase-key.json (legacy).
 const firebaseConn = require("./firebase");
 const db = firebaseConn.getDb();
+const { omdbService } = require("../services/omdbService");
 
 // Almacén en memoria para que el modo local sí persista mientras el servidor corre.
 const localSeries = [];
@@ -210,41 +211,6 @@ const SeriesModel = {
         }
     },
 
-    claimOrphanSeries: async (userId) => {
-        if (!userId) return 0;
-        if (!db) {
-            let claimed = 0;
-            localSeries.forEach((m) => {
-                if (!m.userId) {
-                    m.userId = userId;
-                    claimed++;
-                }
-            });
-            if (claimed) console.log(`Reclamadas ${claimed} locales para ${userId}`);
-            return claimed;
-        }
-        try {
-            const snapshot = await db.collection("series").get();
-            const batch = db.batch();
-            let claimed = 0;
-            snapshot.forEach((doc) => {
-                const data = doc.data() || {};
-                if (!data.userId && String(data.type || "").toLowerCase() === "series") {
-                    batch.update(doc.ref, { userId });
-                    claimed++;
-                }
-            });
-            if (claimed) {
-                await batch.commit();
-                console.log(`Reclamadas ${claimed} en Firestore para ${userId}`);
-            }
-            return claimed;
-        } catch (error) {
-            console.error("Error al reclamar series:", error.message || error);
-            return 0;
-        }
-    },
-
     getSeriesById: async (id, userId) => {
         if (!id) throw new Error("Falta el id");
         if (!db) {
@@ -362,6 +328,24 @@ const SeriesModel = {
         const pool = withPoster.length >= want ? withPoster : unique;
 
         return shuffleInPlace([...pool]).slice(0, want).map(toPopularItem);
+    },
+
+    getSeasons: async (imdbID) => {
+        const id = (imdbID || "").trim();
+        if (!/^tt\d+$/i.test(id)) {
+            throw new Error("IMDb ID inválido");
+        }
+        const data = await omdbService.getById(id);
+        const totalSeasons = Number.parseInt(data.totalSeasons, 10) || 0;
+        const seasons = [];
+        for (let s = 1; s <= totalSeasons; s++) {
+            seasons.push({ season: s, episodes: 0 });
+        }
+        return { totalSeasons, seasons };
+    },
+
+    getEpisodes: async (imdbID, season) => {
+        return omdbService.getEpisodesBySeason(imdbID, season);
     }
 };
 

@@ -4,7 +4,7 @@ const { agentService } = require("C:\\Users\\carlos-eduardo.perei\\Desktop\\proy
     console.log("Testing query 'The Godfather'...");
     const result = await agentService.processQuery("The Godfather");
     console.log("Result:", JSON.stringify(result, null, 2));
-    
+
     console.log("\nTesting query 'Inception'...");
     const result2 = await agentService.processQuery("Inception");
     console.log("Result2:", JSON.stringify(result2, null, 2));

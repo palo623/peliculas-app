@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { authService, findUserByNickname, setUserNickname } = require("../services/authService");
+const { authService, findUserByNickname, setUserNickname, isAdmin } = require("../services/authService");
 const firebaseConn = require("../models/firebase");
 const db = firebaseConn.getDb();
 
@@ -61,7 +61,7 @@ router.get("/auth/me", async (req, res) => {
 });
 
 // PUT /api/auth/prefs { favoriteGenres, likesMovies, onboardingDone }
-router.put("/auth/prefs", async (req, res) => {
+router.put("/api/auth/prefs", async (req, res) => {
     try {
         const token = tokenFromHeader(req);
         const body = req.body || {};
@@ -79,6 +79,131 @@ router.put("/auth/prefs", async (req, res) => {
         res.json({ ok: true, prefs });
     } catch (error) {
         res.status(400).json({ error: error.message || "No se pudo actualizar" });
+    }
+});
+
+// PUT /api/auth/profile { nickname, colorTheme }
+router.put("/auth/profile", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        const body = req.body || {};
+        if (typeof body !== "object") {
+            return res.status(400).json({ error: "Cuerpo de petición inválido" });
+        }
+        const prefs = await authService.updateProfile(token, {
+            nickname: body.nickname,
+            colorTheme: body.colorTheme
+        });
+        if (!prefs) {
+            return res.status(401).json({ error: "Sesión no válida" });
+        }
+        res.json({ ok: true, prefs });
+    } catch (error) {
+        res.status(400).json({ error: error.message || "No se pudo actualizar el perfil" });
+    }
+});
+
+// GET /api/users/:id — Perfil público de un usuario
+router.get("/users/:id", async (req, res) => {
+    try {
+        const user = await authService.getPublicProfile(req.params.id);
+        if (!user) {
+            return res.status(404).json({ error: "Usuario no encontrado" });
+        }
+        res.json({ user });
+    } catch (error) {
+        res.status(500).json({ error: "No se pudo obtener el perfil" });
+    }
+});
+
+// GET /api/users/:id/movies — Películas guardadas de un usuario (público)
+router.get("/users/:id/movies", async (req, res) => {
+    try {
+        const movies = await authService.getUserMovies(req.params.id);
+        res.json({ movies: Array.isArray(movies) ? movies : [] });
+    } catch (error) {
+        res.status(500).json({ error: "No se pudo obtener las películas" });
+    }
+});
+
+// GET /api/users/search?q=texto — Buscar usuarios
+router.get("/users/search", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        let currentUserId = null;
+        if (token) {
+            const me = await authService.me(token);
+            if (me) currentUserId = me.id;
+        }
+        const q = req.query.q || "";
+        const users = await authService.searchUsers(q, currentUserId);
+        res.json({ users });
+    } catch (error) {
+        res.status(500).json({ error: "No se pudo buscar usuarios" });
+    }
+});
+
+// POST /api/users/:id/follow — Seguir a un usuario
+router.post("/users/:id/follow", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        if (!token) return res.status(401).json({ error: "Requiere iniciar sesión" });
+        const result = await authService.followUser(token, req.params.id);
+        if (!result) return res.status(401).json({ error: "Sesión no válida" });
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message || "No se pudo seguir al usuario" });
+    }
+});
+
+// DELETE /api/users/:id/follow — Dejar de seguir a un usuario
+router.delete("/users/:id/follow", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        if (!token) return res.status(401).json({ error: "Requiere iniciar sesión" });
+        const result = await authService.unfollowUser(token, req.params.id);
+        if (!result) return res.status(401).json({ error: "Sesión no válida" });
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message || "No se pudo dejar de seguir" });
+    }
+});
+
+// GET /api/users/me/following — Usuarios que sigo
+router.get("/users/me/following", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        if (!token) return res.status(401).json({ error: "Requiere iniciar sesión" });
+        const following = await authService.getFollowing(token);
+        if (following === null) return res.status(401).json({ error: "Sesión no válida" });
+        res.json({ users: following });
+    } catch (error) {
+        res.status(500).json({ error: "No se pudo obtener seguidos" });
+    }
+});
+
+// GET /api/users/me/followers — Mis seguidores
+router.get("/users/me/followers", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        if (!token) return res.status(401).json({ error: "Requiere iniciar sesión" });
+        const followers = await authService.getFollowers(token);
+        if (followers === null) return res.status(401).json({ error: "Sesión no válida" });
+        res.json({ users: followers });
+    } catch (error) {
+        res.status(500).json({ error: "No se pudo obtener seguidores" });
+    }
+});
+
+// GET /api/users/:id/is-following — Comprobar si sigo a un usuario
+router.get("/users/:id/is-following", async (req, res) => {
+    try {
+        const token = tokenFromHeader(req);
+        if (!token) return res.status(401).json({ error: "Requiere iniciar sesión" });
+        const following = await authService.isFollowing(token, req.params.id);
+        res.json({ following });
+    } catch (error) {
+        res.status(500).json({ error: "No se pudo comprobar" });
     }
 });
 
@@ -300,6 +425,95 @@ router.get("/auth/user/:nickname", async (req, res) => {
         res.json({ user: { id: user.id, name: user.name, nickname: user.nickname, photoURL: user.photoURL } });
     } catch (error) {
         res.status(400).json({ error: error.message || "Error al buscar usuario" });
+    }
+});
+
+// Middleware para verificar que el usuario es admin
+async function requireAdmin(req, res, next) {
+    try {
+        const token = tokenFromHeader(req);
+        if (!token) {
+            return res.status(401).json({ error: "Requiere iniciar sesión" });
+        }
+        const user = await authService.me(token);
+        if (!user) {
+            return res.status(401).json({ error: "Sesión no válida" });
+        }
+        if (!isAdmin(user)) {
+            return res.status(403).json({ error: "Acceso denegado: se requiere rol de administrador" });
+        }
+        req.adminUser = user;
+        next();
+    } catch (error) {
+        res.status(500).json({ error: "Error al verificar permisos de administrador" });
+    }
+}
+
+// Ejemplo de ruta solo para administradores
+router.get("/admin/stats", requireAdmin, async (req, res) => {
+    try {
+        if (!db) {
+            return res.json({ users: 0, movies: 0, series: 0 });
+        }
+        const [usersSnap, moviesSnap, seriesSnap] = await Promise.all([
+            db.collection("users").get(),
+            db.collection("movies").get(),
+            db.collection("series").get()
+        ]);
+        res.json({
+            users: usersSnap.size,
+            movies: moviesSnap.size,
+            series: seriesSnap.size
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message || "Error al obtener estadísticas" });
+    }
+});
+
+// Ruta para listar todos los usuarios (solo admin)
+router.get("/admin/users", requireAdmin, async (req, res) => {
+    try {
+        if (!db) {
+            return res.json({ users: [] });
+        }
+        const snapshot = await db.collection("users").get();
+        const users = [];
+        snapshot.forEach((doc) => {
+            const data = doc.data() || {};
+            users.push({
+                id: doc.id,
+                name: data.name,
+                email: data.email,
+                role: data.role || "user",
+                createdAt: data.createdAt,
+                prefs: data.prefs
+            });
+        });
+        res.json({ users });
+    } catch (error) {
+        res.status(500).json({ error: error.message || "Error al listar usuarios" });
+    }
+});
+
+// Ruta para cambiar rol de usuario (solo admin)
+router.put("/admin/users/:id/role", requireAdmin, async (req, res) => {
+    try {
+        const { role } = req.body || {};
+        if (!role || !["user", "admin"].includes(role)) {
+            return res.status(400).json({ error: "Rol inválido. Use 'user' o 'admin'" });
+        }
+        if (!db) {
+            return res.status(503).json({ error: "No disponible en modo local" });
+        }
+        const userRef = db.collection("users").doc(req.params.id);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: "Usuario no encontrado" });
+        }
+        await userRef.update({ role });
+        res.json({ ok: true, role });
+    } catch (error) {
+        res.status(500).json({ error: error.message || "Error al cambiar rol" });
     }
 });
 

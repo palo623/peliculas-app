@@ -37,6 +37,8 @@ const cors = require("cors");
 const movieRoutes = require("./src-backend/routes/movieRoutes");
 const seriesRoutes = require("./src-backend/routes/seriesRoutes");
 const reviewRoutes = require("./src-backend/routes/reviewRoutes");
+const { startDailyEnrichment } = require("./src-backend/services/seasonEnrichmentService");
+const { agentService } = require("./src-backend/services/agentService");
 const chatAgentRoutes = require("./src-backend/routes/chatAgentRoutes");
 
 const app = express();
@@ -104,7 +106,6 @@ app.use("/api/series/search", (req, res, next) => {
 
 app.use("/api", movieRoutes);
 app.use("/api", seriesRoutes);
-app.use("/api", reviewRoutes);
 app.use("/api", chatAgentRoutes);
 
 // Anti fuerza bruta en login/registro: 20 intentos por IP y minuto.
@@ -144,6 +145,39 @@ app.get("/api/firebase-config", (req, res) => {
 const authRoutes = require("./src-backend/routes/authRoutes");
 app.use("/api", authRoutes);
 
+// Anti-spam de reseñas: 30 escrituras por IP y minuto (lecturas sin límite).
+// Debe registrarse ANTES de las rutas para que Express lo ejecute primero.
+const reviewWriteHits = new Map();
+app.use("/api/reviews", (req, res, next) => {
+    if (req.method === "GET") return next();
+    const now = Date.now();
+    const ip = req.ip || "unknown";
+    const windowMs = 60 * 1000;
+    const hits = (reviewWriteHits.get(ip) || []).filter((t) => now - t < windowMs);
+    hits.push(now);
+    reviewWriteHits.set(ip, hits);
+    if (reviewWriteHits.size > 500) {
+        for (const [key, times] of reviewWriteHits) {
+            if (!times.some((t) => now - t < windowMs)) reviewWriteHits.delete(key);
+        }
+    }
+    if (hits.length > 30) {
+        return res.status(429).json({ error: "Demasiadas reseñas seguidas. Espera un minuto." });
+    }
+    next();
+});
+
+app.use("/api", reviewRoutes);
+const friendsRoutes = require("./src-backend/routes/friendsRoutes");
+app.use("/api", friendsRoutes);
+
+const chatRoutes = require("./src-backend/routes/chatRoutes");
+app.use("/api", chatRoutes);
+
+// Rutas del agente de IA (usa OMDb + LLM opcional)
+const agentRoutes = require("./src-backend/routes/agentRoutes");
+app.use("/api", agentRoutes);
+
 // 404 solo para la API (devuelve JSON, no HTML)
 app.use("/api", (req, res) => {
     res.status(404).json({ error: "Ruta de API no encontrada" });
@@ -164,7 +198,17 @@ app.use((err, req, res, next) => {
 if (!process.env.OMDB_API_KEY) {
     console.warn("AVISO: OMDB_API_KEY no definida. Crea un .env a partir de .env.example");
 }
+if (!process.env.AI_API_KEY) {
+    console.warn("AVISO: AI_API_KEY no definida. Define AI_API_KEY en tu .env para habilitar el agente de IA.");
+}
 
 app.listen(PORT, () => {
     console.log(`Servidor arrancado en http://localhost:${PORT}`);
 });
+
+// Rellena temporadas/episodios de las series desde OMDb en segundo plano:
+// una tanda al arrancar (si hoy no se ha hecho ninguna) y una diaria a la hora
+// configurada. No bloquea el servidor. Se controla con las variables
+// SEASON_ENRICH_ENABLED, SEASON_ENRICH_DAILY_LIMIT, SEASON_ENRICH_HOUR y
+// SEASON_ENRICH_DELAY del .env.
+startDailyEnrichment();
