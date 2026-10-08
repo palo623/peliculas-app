@@ -25,7 +25,9 @@ function defaultPrefs() {
     return {
         favoriteGenres: [],      // máx 3, strings (ej: ["Action", "Drama", "Sci-Fi"])
         likesMovies: null,       // true | false | null
-        onboardingDone: false    // true cuando completó el cuestionario
+        onboardingDone: false,   // true cuando completó el cuestionario
+        nickname: null,          // apodo visible público
+        colorTheme: "default"    // default, vibrant, neon, pastel
     };
 }
 
@@ -91,6 +93,7 @@ function publicUser(user) {
         provider: user.provider || (user.passHash ? "password" : "firebase"),
         role,
         isAdmin: role === "admin",
+        nickname: (user.prefs && user.prefs.nickname) || user.nickname || user.name || null,
         prefs: user.prefs || defaultPrefs()
     };
 }
@@ -146,6 +149,70 @@ async function findUserByEmail(email) {
     const doc = await db.collection("users").doc(email).get();
     if (!doc.exists) return null;
     return Object.assign({ id: doc.id }, doc.data());
+}
+
+// Usuario por id (el id es el email del usuario). Sirve para las dos formas de
+// guardar: memoria (clave = email) y Firestore (doc = email).
+async function storedUserById(userId) {
+    const key = String(userId || "").trim().toLowerCase();
+    if (!key) return null;
+    if (!db) {
+        if (localUsers.has(key)) return localUsers.get(key);
+        for (const user of localUsers.values()) {
+            if (String(user.id || "").toLowerCase() === key) return user;
+        }
+        return null;
+    }
+    const doc = await db.collection("users").doc(key).get();
+    if (!doc.exists) return null;
+    return Object.assign({ id: doc.id }, doc.data());
+}
+
+// ---- Nickname público y color de tema (los usa el front del equipo) ----
+// El nickname se guarda en el campo propio `nickname` y también dentro de
+// `prefs`, porque el front lee los dos sitios.
+function nicknameOf(user) {
+    if (!user) return "";
+    return String(user.nickname || (user.prefs && user.prefs.nickname) || "").trim().toLowerCase();
+}
+
+function nicknameError(message, code) {
+    const err = new Error(message);
+    err.code = code;
+    return err;
+}
+
+async function findUserByNickname(nickname) {
+    const wanted = String(nickname || "").trim().toLowerCase();
+    if (!wanted) return null;
+    const users = await listStoredUsers();
+    return users.find((user) => nicknameOf(user) === wanted) || null;
+}
+
+async function setUserNickname(userId, nickname) {
+    const clean = String(nickname || "").trim().toLowerCase();
+    if (clean.length < 3) throw nicknameError("El nickname debe tener al menos 3 caracteres", "INVALID_NICKNAME");
+    if (clean.length > 30) throw nicknameError("El nickname no puede superar 30 caracteres", "INVALID_NICKNAME");
+    if (!/^[a-z0-9_]+$/.test(clean)) throw nicknameError("El nickname solo puede contener letras, números y guión bajo", "INVALID_NICKNAME");
+
+    const owner = String(userId || "").trim().toLowerCase();
+    const existing = await findUserByNickname(clean);
+    if (existing && String(existing.id || "").toLowerCase() !== owner) {
+        throw nicknameError("Ese nickname ya está en uso", "NICKNAME_TAKEN");
+    }
+
+    const user = await storedUserById(userId);
+    const prefs = { ...defaultPrefs(), ...(user && user.prefs), nickname: clean };
+    if (!db) {
+        if (user) {
+            user.nickname = clean;
+            user.prefs = prefs;
+            localUsers.set(String(user.email || owner).toLowerCase(), user);
+        }
+        return clean;
+    }
+    await db.collection("users").doc(String(userId)).set({ nickname: clean, prefs }, { merge: true });
+    return clean;
 }
 
 async function createSession(userId) {
@@ -316,20 +383,10 @@ const authService = {
 
     // ---- Usuarios (amistades, Top 5 y administración) ----
 
-    getById: async (id) => {
-        const key = String(id || "").trim().toLowerCase();
-        if (!key) return null;
-        if (!db) {
-            if (localUsers.has(key)) return localUsers.get(key);
-            for (const user of localUsers.values()) {
-                if (String(user.id || "").toLowerCase() === key) return user;
-            }
-            return null;
-        }
-        const doc = await db.collection("users").doc(key).get();
-        if (!doc.exists) return null;
-        return Object.assign({ id: doc.id }, doc.data());
-    },
+    getById: async (id) => storedUserById(id),
+
+    // Sesión técnica a partir del token (la usan las rutas de auth/nickname).
+    readSession: async (token) => readSession(token),
 
     // Busca usuarios por nombre o email (para añadir amigos).
     searchUsers: async (query, { excludeId, limit } = {}) => {
@@ -461,4 +518,13 @@ const authService = {
     }
 };
 
-module.exports = { authService, cardUser, isAdminUser, isAdmin, hasRole, USER_ROLES };
+module.exports = {
+    authService,
+    cardUser,
+    isAdminUser,
+    isAdmin,
+    hasRole,
+    USER_ROLES,
+    findUserByNickname,
+    setUserNickname
+};
