@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { authService, findUserByNickname, setUserNickname } = require("../services/authService");
+const { authService, findUserByNickname, setUserNickname, isAdmin } = require("../services/authService");
 const firebaseConn = require("../models/firebase");
 const db = firebaseConn.getDb();
 
@@ -425,6 +425,95 @@ router.get("/auth/user/:nickname", async (req, res) => {
         res.json({ user: { id: user.id, name: user.name, nickname: user.nickname, photoURL: user.photoURL } });
     } catch (error) {
         res.status(400).json({ error: error.message || "Error al buscar usuario" });
+    }
+});
+
+// Middleware para verificar que el usuario es admin
+async function requireAdmin(req, res, next) {
+    try {
+        const token = tokenFromHeader(req);
+        if (!token) {
+            return res.status(401).json({ error: "Requiere iniciar sesión" });
+        }
+        const user = await authService.me(token);
+        if (!user) {
+            return res.status(401).json({ error: "Sesión no válida" });
+        }
+        if (!isAdmin(user)) {
+            return res.status(403).json({ error: "Acceso denegado: se requiere rol de administrador" });
+        }
+        req.adminUser = user;
+        next();
+    } catch (error) {
+        res.status(500).json({ error: "Error al verificar permisos de administrador" });
+    }
+}
+
+// Ejemplo de ruta solo para administradores
+router.get("/admin/stats", requireAdmin, async (req, res) => {
+    try {
+        if (!db) {
+            return res.json({ users: 0, movies: 0, series: 0 });
+        }
+        const [usersSnap, moviesSnap, seriesSnap] = await Promise.all([
+            db.collection("users").get(),
+            db.collection("movies").get(),
+            db.collection("series").get()
+        ]);
+        res.json({
+            users: usersSnap.size,
+            movies: moviesSnap.size,
+            series: seriesSnap.size
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message || "Error al obtener estadísticas" });
+    }
+});
+
+// Ruta para listar todos los usuarios (solo admin)
+router.get("/admin/users", requireAdmin, async (req, res) => {
+    try {
+        if (!db) {
+            return res.json({ users: [] });
+        }
+        const snapshot = await db.collection("users").get();
+        const users = [];
+        snapshot.forEach((doc) => {
+            const data = doc.data() || {};
+            users.push({
+                id: doc.id,
+                name: data.name,
+                email: data.email,
+                role: data.role || "user",
+                createdAt: data.createdAt,
+                prefs: data.prefs
+            });
+        });
+        res.json({ users });
+    } catch (error) {
+        res.status(500).json({ error: error.message || "Error al listar usuarios" });
+    }
+});
+
+// Ruta para cambiar rol de usuario (solo admin)
+router.put("/admin/users/:id/role", requireAdmin, async (req, res) => {
+    try {
+        const { role } = req.body || {};
+        if (!role || !["user", "admin"].includes(role)) {
+            return res.status(400).json({ error: "Rol inválido. Use 'user' o 'admin'" });
+        }
+        if (!db) {
+            return res.status(503).json({ error: "No disponible en modo local" });
+        }
+        const userRef = db.collection("users").doc(req.params.id);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: "Usuario no encontrado" });
+        }
+        await userRef.update({ role });
+        res.json({ ok: true, role });
+    } catch (error) {
+        res.status(500).json({ error: error.message || "Error al cambiar rol" });
     }
 });
 

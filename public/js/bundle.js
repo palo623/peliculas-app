@@ -89,6 +89,20 @@ function applyColorTheme(themeKey) {
 
 // "Popular ahora" se carga desde Firebase a través de /api/movies/popular.
 
+// Roles de usuario
+const USER_ROLES = {
+    USER: "user",
+    ADMIN: "admin"
+};
+
+function isAdmin(user) {
+    return user && user.role === USER_ROLES.ADMIN;
+}
+
+function hasRole(user, role) {
+    return user && user.role === role;
+}
+
 // Único origen del token: localStorage (así fetchMovies siempre lo ve actualizado).
 function getStoredToken() {
     try {
@@ -608,6 +622,8 @@ function SiteHeader(props) {
                             h("button", { className: "dropdown-item", onClick: () => go("buscar-usuarios") }, "Buscar usuarios"),
                             h("button", { className: "dropdown-item", onClick: () => go("amigos") }, "Amigos"),
                             h("button", { className: "dropdown-item", onClick: () => go("configuracion") }, "Configuración"),
+                            isAdmin(user) && h("hr", { className: "dropdown-divider" }),
+                            isAdmin(user) && h("button", { className: "dropdown-item", onClick: () => go("admin") }, "Panel de administración"),
                             h("hr", { className: "dropdown-divider" }),
                             h("button", { className: "dropdown-item danger", onClick: () => { setUserMenuOpen(false); onLogout(); } }, "Cerrar sesión")
                         )
@@ -3930,6 +3946,150 @@ function ChatAgent() {
     );
 }
 
+/* ---------- AdminRoute: wrapper que protege rutas de administrador ---------- */
+function AdminRoute(props) {
+    const user = props.user;
+    const children = props.children;
+    const onNavigate = props.onNavigate;
+
+    if (!user) {
+        return h("div", { className: "movies-page" },
+            h("div", { className: "auth-card", style: { textAlign: "center", padding: "3rem" } },
+                h("h2", null, "Acceso restringido"),
+                h("p", { className: "muted" }, "Debes iniciar sesión para acceder a esta página."),
+                h("button", { className: "btn-primary", onClick: () => onNavigate("login") }, "Iniciar sesión")
+            )
+        );
+    }
+
+    if (!isAdmin(user)) {
+        return h("div", { className: "movies-page" },
+            h("div", { className: "auth-card", style: { textAlign: "center", padding: "3rem" } },
+                h("h2", null, "Acceso denegado"),
+                h("p", { className: "muted" }, "Esta página es solo para administradores."),
+                h("button", { className: "btn-primary", onClick: () => onNavigate("home") }, "Ir al inicio")
+            )
+        );
+    }
+
+    return children;
+}
+
+/* ---------- AdminDashboard: panel de administración ---------- */
+function AdminDashboard(props) {
+    const user = props.user;
+    const onNavigate = props.onNavigate;
+    const statsState = React.useState({ users: 0, movies: 0, series: 0 });
+    const stats = statsState[0];
+    const setStats = statsState[1];
+    const usersState = React.useState([]);
+    const users = usersState[0];
+    const setUsers = usersState[1];
+    const loadingState = React.useState(true);
+    const loading = loadingState[0];
+    const setLoading = loadingState[1];
+    const errorState = React.useState(null);
+    const error = errorState[0];
+    const setError = errorState[1];
+    const activeTabState = React.useState("stats");
+    const activeTab = activeTabState[0];
+    const setActiveTab = activeTabState[1];
+
+    const loadStats = async () => {
+        try {
+            const res = await fetch("/api/admin/stats", { headers: authHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al cargar estadísticas");
+            setStats(data);
+        } catch (e) {
+            setError(e.message);
+        }
+    };
+
+    const loadUsers = async () => {
+        try {
+            setLoading(true);
+            const res = await fetch("/api/admin/users", { headers: authHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al cargar usuarios");
+            setUsers(data.users || []);
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        loadStats();
+        loadUsers();
+    }, []);
+
+    const changeUserRole = async (userId, newRole) => {
+        try {
+            const res = await fetch("/api/admin/users/" + encodeURIComponent(userId) + "/role", {
+                method: "PUT",
+                headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+                body: JSON.stringify({ role: newRole })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al cambiar rol");
+            setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+        } catch (e) {
+            alert(e.message);
+        }
+    };
+
+    if (loading && activeTab === "users") {
+        return h("div", { className: "movies-page" }, h("p", { className: "muted" }, "Cargando..."));
+    }
+
+    return h("div", { className: "movies-page" },
+        h("div", { className: "page-head" },
+            h("h1", null, "Panel de Administración"),
+            h("p", { className: "muted" }, "Gestión de usuarios y estadísticas del sistema")
+        ),
+        h("div", { className: "admin-tabs" },
+            h("button", { className: "tab" + (activeTab === "stats" ? " active" : ""), onClick: () => setActiveTab("stats") }, "Estadísticas"),
+            h("button", { className: "tab" + (activeTab === "users" ? " active" : ""), onClick: () => setActiveTab("users") }, "Usuarios (" + users.length + ")")
+        ),
+        error ? h("p", { className: "error" }, error) : null,
+        activeTab === "stats" && h("div", { className: "admin-stats" },
+            h("div", { className: "hero-stats account-stats" },
+                h("div", null, h("strong", null, String(stats.users)), h("span", null, "Usuarios")),
+                h("div", null, h("strong", null, String(stats.movies)), h("span", null, "Películas guardadas")),
+                h("div", null, h("strong", null, String(stats.series)), h("span", null, "Series guardadas"))
+            ),
+            h("p", { className: "muted", style: { marginTop: "1rem" } }, "Bienvenido, " + user.name + " (Administrador)")
+        ),
+        activeTab === "users" && h("div", { className: "admin-users" },
+            h("div", { className: "movies-grid" },
+                users.map((u) =>
+                    h("div", { key: u.id, className: "movie-card", style: { maxWidth: "400px", flex: "1 1 300px" } },
+                        h("div", { className: "movie-card-body" },
+                            h("h3", null, u.name || u.nickname || "Sin nombre"),
+                            h("p", { className: "movie-meta" }, u.email),
+                            h("p", { className: "movie-meta" }, "Rol: " + (u.role || "user")),
+                            u.createdAt && h("p", { className: "muted", style: { fontSize: "0.8rem" } }, "Registrado: " + new Date(u.createdAt).toLocaleDateString("es-ES")),
+                            h("div", { className: "result-actions", style: { marginTop: "1rem" } },
+                                h("select", {
+                                    value: u.role || "user",
+                                    onChange: (e) => changeUserRole(u.id, e.target.value),
+                                    className: "role-select"
+                                },
+                                    h("option", { value: "user" }, "Usuario"),
+                                    h("option", { value: "admin" }, "Administrador")
+                                )
+                            )
+                        )
+                    )
+                )
+            ),
+            users.length === 0 && h("p", { className: "muted", style: { textAlign: "center", padding: "2rem" } }, "No hay usuarios registrados")
+        )
+    );
+}
+
 /* ---------- CookieConsentBanner ---------- */
 function CookieConsentBanner() {
     const consentState = React.useState(false);
@@ -4207,6 +4367,8 @@ function App() {
                 ? (user
                     ? h(ProfileSettings, { currentUser: user, onNavigate: navigate, onUpdateUser: (u) => setUser(u) })
                     : h(LoginPage, { onAuth: handleAuth, onSwitch: () => navigate("auth"), onForgot: () => navigate("recuperar") }))
+                : page === "admin"
+                ? h(AdminRoute, { user: user, onNavigate: navigate }, h(AdminDashboard, { user: user, onNavigate: navigate }))
                 : page === "series"
                 ? h(SeriesPage, {
                     key: page,
