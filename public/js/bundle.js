@@ -1673,6 +1673,7 @@ function MediaPage(props) {
     const resultState = React.useState(null);
     const result = resultState[0];
     const setResult = resultState[1];
+    const resultRef = React.useRef(null);
     const resultWarningState = React.useState(null);
     const resultWarning = resultWarningState[0];
     const setResultWarning = resultWarningState[1];
@@ -2033,6 +2034,12 @@ function MediaPage(props) {
         }
     };
 
+    React.useEffect(() => {
+        if (result && resultRef.current) {
+            resultRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }, [result]);
+
     const filtersActive = String(yearFilter).trim() !== "" || Number(minRating) > 0 || genreFilter !== "";
 
     return h("div", { className: "movies-page" },
@@ -2104,7 +2111,7 @@ function MediaPage(props) {
         error ? h("p", { className: "error" }, error) : null,
         success ? h("p", { className: "success" }, success) : null,
         (detailLoading || loadingDetails) ? h("p", { className: "muted" }, "Cargando detalles...") : null,
-        result ? h("div", { className: "result" },
+        result ? h("div", { className: "result", ref: resultRef },
             h("div", { className: "result-content" },
                 h("img", {
                     src: result.poster || "https://via.placeholder.com/300x450?text=Sin+imagen",
@@ -2200,6 +2207,7 @@ function SeriesPage(props) {
     const resultState = React.useState(null);
     const result = resultState[0];
     const setResult = resultState[1];
+    const resultRef = React.useRef(null);
     const resultWarningState = React.useState(null);
     const resultWarning = resultWarningState[0];
     const setResultWarning = resultWarningState[1];
@@ -2543,6 +2551,12 @@ function SeriesPage(props) {
         }
     };
 
+    React.useEffect(() => {
+        if (result && resultRef.current) {
+            resultRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }, [result]);
+
     const filtersActive = String(yearFilter).trim() !== "" || Number(minRating) > 0 || genreFilter !== "";
 
     return h("div", { className: "movies-page" },
@@ -2614,7 +2628,7 @@ function SeriesPage(props) {
         error ? h("p", { className: "error" }, error) : null,
         success ? h("p", { className: "success" }, success) : null,
         (detailLoading || loadingDetails) ? h("p", { className: "muted" }, "Cargando detalles...") : null,
-        result ? h("div", { className: "result" },
+        result ? h("div", { className: "result", ref: resultRef },
             h("div", { className: "result-content" },
                 h("img", {
                     src: result.poster || "https://via.placeholder.com/300x450?text=Sin+imagen",
