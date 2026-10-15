@@ -646,7 +646,6 @@ function SiteHeader(props) {
                         userMenuOpen && h("div", { className: "user-dropdown" },
                             h("button", { className: "dropdown-item", onClick: () => go("cuenta") }, "Mi cuenta"),
                             h("button", { className: "dropdown-item", onClick: () => go("perfil") }, "Mi perfil público"),
-                            h("button", { className: "dropdown-item", onClick: () => go("buscar-usuarios") }, "Buscar Usuarios"),
                             h("button", { className: "dropdown-item", onClick: () => go("amigos") }, "Amigos"),
                             h("button", { className: "dropdown-item", onClick: () => go("configuracion") }, "Configuración"),
                             isAdmin(user) && h("hr", { className: "dropdown-divider" }),
