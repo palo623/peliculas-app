@@ -4,3 +4,7 @@ firebase-key.json
 .env.*
 !.env.example
 server.log
+
+# Paquete de credenciales SSH descargado del entorno corporativo: nunca debe
+# versionarse (contiene una clave privada).
+src-backend/b_hector_lopez_pedrosa/

@@ -2530,6 +2530,16 @@ a.footer-link:hover, button.footer-link:hover { color: var(--color-primary); }
     background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
     color: var(--muted);
 }
+.marathon-locked { align-items: center; }
+.marathon-locked-icon {
+    display: flex; align-items: center; justify-content: center;
+    flex: 0 0 auto; width: 2.4rem; height: 2.4rem; border-radius: 999px;
+    background: rgba(179, 18, 46, 0.18); border: 1px solid rgba(179, 18, 46, 0.5);
+    font-size: 1.2rem;
+}
+.marathon-locked-copy { display: flex; flex-direction: column; gap: 0.15rem; flex: 1 1 260px; min-width: 0; }
+.marathon-locked-copy strong { color: #fff; }
+.marathon-locked-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .marathon-stats {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 0.75rem; margin-bottom: 1.25rem;
@@ -2566,6 +2576,20 @@ a.footer-link:hover, button.footer-link:hover { color: var(--color-primary); }
     padding: 0.25rem 0.6rem; border-radius: 999px;
     background: var(--bronze); color: #23180a; font-size: 0.72rem; font-weight: 700;
 }
+.marathon-card.locked .marathon-card-poster img {
+    filter: blur(4px) brightness(0.55);
+    transform: scale(1.04);
+}
+.marathon-card.locked:hover { border-color: var(--bronze); }
+.marathon-lock-badge {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.35rem; padding: 0.5rem;
+    background: rgba(13, 21, 31, 0.35);
+    color: #fff; font-weight: 700; text-align: center;
+}
+.marathon-lock-badge > span { font-size: 1.9rem; line-height: 1; }
+.marathon-lock-badge small { font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; }
 .marathon-card-body { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.85rem; }
 .marathon-card-body h3 { font-size: 1rem; line-height: 1.3; margin: 0; }
 .marathon-card-meta { font-size: 0.8rem; margin: 0; }
@@ -2617,10 +2641,14 @@ a.footer-link:hover, button.footer-link:hover { color: var(--color-primary); }
     gap: 0.9rem; align-items: start;
     padding: 0.85rem;
     background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease;
 }
+.marathon-item:hover { border-color: var(--accent); background: var(--card-hover); }
+.marathon-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .marathon-item.watched { border-color: rgba(123, 216, 143, 0.45); }
 .marathon-item.unlockable { border-color: rgba(179, 18, 46, 0.55); }
 .marathon-item.locked { opacity: 0.55; background: var(--surface-2); }
+.marathon-item.locked:hover { background: var(--surface-2); border-color: var(--bronze); }
 .marathon-item-num {
     display: flex; align-items: center; justify-content: center;
     width: 2rem; height: 2rem; border-radius: 999px;

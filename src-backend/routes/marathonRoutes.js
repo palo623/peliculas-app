@@ -92,10 +92,13 @@ router.get("/marathons", async (req, res) => {
 });
 
 // GET /api/marathons/:id — un maratón con el estado (vista / desbloqueada / con candado).
+// El detalle incluye sinopsis y progreso, así que exige sesión: los invitados
+// sólo ven el escaparate bloqueado del listado.
 router.get("/marathons/:id", async (req, res) => {
+    const me = await authUserOptional(req);
+    if (!me) return res.status(401).json({ error: "Requiere iniciar sesión" });
     try {
-        const me = await authUserOptional(req);
-        const detail = await MarathonModel.getMarathonDetail(req.params.id, me ? me.id : null);
+        const detail = await MarathonModel.getMarathonDetail(req.params.id, me.id);
         if (!detail) return res.status(404).json({ error: "Maratón no encontrado" });
         res.json(detail);
     } catch (error) {

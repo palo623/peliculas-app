@@ -319,6 +319,8 @@ El modal de reseñas del front (Películas, Series y MiCuenta) consume esta API 
 
 Sección de visionado guiado con gamificación. Cada maratón es una lista **ordenada** de obras, y el progreso es estrictamente secuencial:
 
+- El apartado **exige sesión**: un invitado ve el catálogo como escaparate bloqueado (carátulas difuminadas y un aviso con «Crear cuenta» / «Iniciar sesión»), pero no puede abrir el detalle ni marcar obras. El backend responde `401` en `GET /api/marathons/:id`.
+
 - Sólo se puede marcar como vista la **primera obra pendiente**. Mientras no marques la 1ª, el resto aparecen **con candado** (el backend responde `403 MARATHON_LOCKED` indicando qué título falta).
 - Sólo se puede desmarcar la **última** obra vista, así que `watched` es siempre un prefijo de la lista y el progreso nunca se puede “saltar”.
 - Los logros son **permanentes**: se sellan en `marathon_achievements` al conseguirlos, por lo que reiniciar un maratón no retira la insignia.
@@ -337,7 +339,7 @@ El catálogo curado (6 sagas y 6 actores/actrices) vive en `src-backend/data/mar
 | Método | Ruta | Función |
 |---|---|---|
 | `GET` | `/api/marathons` | Catálogo completo. Sin sesión no incluye progreso; con `Bearer` añade resumen por maratón, estadísticas globales y logros. |
-| `GET` | `/api/marathons/:id` | Un maratón con el estado de cada obra (`watched`, `locked`, `unlockable`, `canUnmark`). |
+| `GET` | `/api/marathons/:id` | Un maratón con el estado de cada obra (`watched`, `locked`, `unlockable`, `canUnmark`). **Requiere sesión** (`401` sin `Bearer`). |
 | `POST` | `/api/marathons/:id/items/:itemId/watched` | Marca la primera obra pendiente. `403` si hay una anterior sin ver. |
 | `DELETE` | `/api/marathons/:id/items/:itemId/watched` | Desmarca, sólo si es la última vista. |
 | `DELETE` | `/api/marathons/:id/progress` | Reinicia el maratón y devuelve el detalle ya a cero. |
@@ -364,7 +366,9 @@ items[]                           # dentro del propio documento: leer un marató
   genre
   rating
   runtime
-  plot
+  plot                            # sinopsis en castellano (la que muestra la web)
+  plotOriginal                    # sinopsis original en inglés (OMDb)
+  plotLang: "es"                  # marca de "ya traducida"
   director
   actors
 updatedAt
@@ -538,6 +542,19 @@ node scripts/seedMarathons.js --cleanup          # borra los maratones cargados
 ```
 
 Usa `--dry-run` la primera vez: valida que cada `imdbID` del catálogo curado resuelve al título correcto antes de tocar la base de datos. Requiere `OMDB_API_KEY` y las credenciales de Firebase Admin del `.env`.
+
+### Traducir las sinopsis de los maratones
+
+OMDb devuelve las sinopsis en inglés y el seed las copia tal cual. Para pasarlas al castellano (y dejar el catálogo `movies`/`series` también traducido, para que `--sync-plots` no vuelva a copiar el inglés):
+
+```powershell
+npm run translate:marathons
+node scripts/translateMarathonPlots.js --dry-run    # sólo cuenta lo pendiente
+node scripts/translateMarathonPlots.js --limit=20   # tanda pequeña
+node scripts/translateMarathonPlots.js --force      # retraduce desde plotOriginal
+```
+
+Es idempotente: omite las obras marcadas con `plotLang: "es"` y reaprovecha las sinopsis ya traducidas del catálogo, así que se puede relanzar sin repetir trabajo. Guarda `plot` (castellano), `plotOriginal` (inglés) y `plotLang`. Usa Gemini si hay `GEMINI_API_KEY`; si no, un modelo local de Ollama (`--provider=ollama`, `--model=...`).
 
 ## Modelo de datos
 
