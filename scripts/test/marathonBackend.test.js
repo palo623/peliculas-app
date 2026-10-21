@@ -230,6 +230,9 @@ test("errores: sin sesión 401, maratón y obra inexistentes 404", async () => {
     const anonymous = await watch(null, SAGA_ID, SAGA_ITEMS[0]);
     assert.equal(anonymous.status, 401);
 
+    const anonymousDetail = await api("GET", `/api/marathons/${SAGA_ID}`);
+    assert.equal(anonymousDetail.status, 401, "el detalle exige sesión");
+
     const unknownMarathon = await api("GET", "/api/marathons/no-existe", { token: userOne.token });
     assert.equal(unknownMarathon.status, 404);
 

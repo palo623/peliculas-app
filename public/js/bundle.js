@@ -107,6 +107,27 @@ function authHeaders() {
     return tok ? { Authorization: "Bearer " + tok } : {};
 }
 
+// Página a la que volver tras autenticarse. Sirve para que quien pulsa un
+// maratón bloqueado y se registra acabe dentro de Maratones, no en el inicio.
+const POST_AUTH_KEY = "cineairos_post_auth";
+function setPostAuthPage(page) {
+    try {
+        window.sessionStorage.setItem(POST_AUTH_KEY, page);
+    } catch (e) {
+        /* sin almacenamiento */
+    }
+}
+
+function takePostAuthPage() {
+    try {
+        const page = window.sessionStorage.getItem(POST_AUTH_KEY);
+        window.sessionStorage.removeItem(POST_AUTH_KEY);
+        return page;
+    } catch (e) {
+        return null;
+    }
+}
+
 function firebaseActionSettings(mode) {
     return {
         url: window.location.origin + "/?mode=" + encodeURIComponent(mode),
@@ -4793,15 +4814,21 @@ function MarathonCard(props) {
     const marathon = props.marathon;
     const progress = marathon.progress;
     const completed = !!(progress && progress.completed);
-    const statusText = !progress || progress.watchedCount === 0
-        ? "Sin empezar"
-        : completed
-            ? "Completada"
-            : progress.watchedCount + " de " + progress.total + " vistas";
+    const locked = !!props.locked;
+    const statusText = locked
+        ? "Bloqueado · inicia sesión"
+        : !progress || progress.watchedCount === 0
+            ? "Sin empezar"
+            : completed
+                ? "Completada"
+                : progress.watchedCount + " de " + progress.total + " vistas";
 
     return h("button", {
-        className: "marathon-card" + (completed ? " completed" : ""),
-        onClick: () => props.onOpen(marathon.id)
+        className: "marathon-card" + (completed ? " completed" : "") + (locked ? " locked" : ""),
+        onClick: () => props.onOpen(marathon.id),
+        "aria-label": locked
+            ? "Maratón bloqueado. Inicia sesión o crea una cuenta para desbloquearlo."
+            : undefined
     },
         h("div", { className: "marathon-card-poster" },
             h("img", {
@@ -4809,7 +4836,13 @@ function MarathonCard(props) {
                 alt: "",
                 onError: (e) => { e.target.src = POSTER_FALLBACK; }
             }),
-            completed ? h("span", { className: "marathon-flag" }, "Completada") : null
+            completed ? h("span", { className: "marathon-flag" }, "Completada") : null,
+            locked
+                ? h("span", { className: "marathon-lock-badge", "aria-hidden": "true" },
+                    h("span", null, "🔒"),
+                    h("small", null, "Inicia sesión")
+                )
+                : null
         ),
         h("div", { className: "marathon-card-body" },
             h("span", { className: "marathon-kind " + marathon.kind }, marathonKindLabel(marathon.kind)),
@@ -4835,13 +4868,14 @@ function MarathonItem(props) {
         item.rating ? "★ " + item.rating : null
     ].filter(Boolean).join(" · ");
 
-    return h("div", { className: "marathon-item " + state },
+    // Toda la fila abre la ficha al hacer clic; el título sigue siendo un
+    // botón real para poder abrirla con el teclado (Enter/Espacio).
+    return h("div", {
+        className: "marathon-item " + state + (props.expanded ? " expanded" : ""),
+        onClick: props.onToggle
+    },
         h("span", { className: "marathon-item-num" }, item.watched ? "✓" : item.order),
-        h("button", {
-            className: "marathon-item-poster",
-            onClick: props.onToggle,
-            title: props.expanded ? "Ocultar ficha" : "Ver ficha"
-        },
+        h("div", { className: "marathon-item-poster" },
             h("img", {
                 src: item.poster || POSTER_FALLBACK,
                 alt: "",
@@ -4849,7 +4883,12 @@ function MarathonItem(props) {
             })
         ),
         h("div", { className: "marathon-item-info" },
-            h("button", { className: "marathon-item-title", onClick: props.onToggle },
+            h("button", {
+                className: "marathon-item-title",
+                onClick: (e) => { e.stopPropagation(); props.onToggle(); },
+                "aria-expanded": !!props.expanded,
+                title: props.expanded ? "Ocultar ficha" : "Ver ficha"
+            },
                 item.title + (item.year ? " (" + item.year + ")" : "")
             ),
             h("p", { className: "muted marathon-item-meta" }, meta),
@@ -4871,14 +4910,14 @@ function MarathonItem(props) {
             item.unlockable
                 ? h("button", {
                     className: "btn-primary btn-small",
-                    onClick: props.onWatch,
+                    onClick: (e) => { e.stopPropagation(); props.onWatch(); },
                     disabled: props.busy || props.guest
                 }, props.busy ? "Guardando..." : "Marcar como vista")
                 : null,
             item.canUnmark
                 ? h("button", {
                     className: "btn-ghost btn-small",
-                    onClick: props.onUnwatch,
+                    onClick: (e) => { e.stopPropagation(); props.onUnwatch(); },
                     disabled: props.busy
                 }, "Desmarcar")
                 : null
@@ -4938,6 +4977,14 @@ function MaratonesPage(props) {
     const user = props.user || null;
     const onNavigate = props.onNavigate;
     const guest = !user;
+
+    // Un invitado sólo puede ver el escaparate bloqueado: cualquier intento de
+    // abrir o modificar un maratón le lleva al alta y, al terminar, de vuelta
+    // aquí (takePostAuthPage en App).
+    const goToAuth = (page) => {
+        setPostAuthPage("maratones");
+        onNavigate(page);
+    };
 
     const dataState = React.useState(null);
     const data = dataState[0];
@@ -5005,6 +5052,10 @@ function MaratonesPage(props) {
     };
 
     const openDetail = async (id) => {
+        if (guest) {
+            goToAuth("auth");
+            return;
+        }
         setSelectedId(id);
         setExpandedItemId(null);
         setActionError(null);
@@ -5038,7 +5089,7 @@ function MaratonesPage(props) {
     // y logros) además de pintar la respuesta.
     const mutate = async (itemId, method, url, successMessage) => {
         if (guest) {
-            onNavigate("login");
+            goToAuth("login");
             return;
         }
         setBusyItemId(itemId || "reset");
@@ -5126,9 +5177,16 @@ function MaratonesPage(props) {
             h("p", { className: "muted" }, "Sagas y filmografías de actores en orden. Marca cada obra como vista para desbloquear la siguiente.")
         ),
         guest
-            ? h("div", { className: "marathon-guest" },
-                h("span", null, "Inicia sesión para guardar tu progreso, desbloquear obras y conseguir logros."),
-                h("button", { className: "btn-primary btn-small", onClick: () => onNavigate("login") }, "Entrar")
+            ? h("div", { className: "marathon-guest marathon-locked" },
+                h("span", { className: "marathon-locked-icon", "aria-hidden": "true" }, "🔒"),
+                h("div", { className: "marathon-locked-copy" },
+                    h("strong", null, "Los maratones están bloqueados"),
+                    h("span", { className: "muted" }, "Crea una cuenta gratis o inicia sesión para guardar tu progreso, desbloquear obras y conseguir logros.")
+                ),
+                h("div", { className: "marathon-locked-actions" },
+                    h("button", { className: "btn-primary btn-small", onClick: () => goToAuth("register") }, "Crear cuenta"),
+                    h("button", { className: "btn-ghost btn-small", onClick: () => goToAuth("login") }, "Iniciar sesión")
+                )
             )
             : null,
         data && data.me ? h(MarathonStats, { stats: data.me.stats }) : null,
@@ -5146,6 +5204,7 @@ function MaratonesPage(props) {
                     visible.map((marathon) => h(MarathonCard, {
                         key: marathon.id,
                         marathon: marathon,
+                        locked: guest,
                         onOpen: openDetail
                     }))
                 ),
@@ -6516,6 +6575,15 @@ function App() {
     // Las páginas con URL propia (/admin y /perfil?id=usuario) se reflejan en la
     // barra de direcciones: se pueden compartir y funcionan atrás/adelante.
     const navigate = (target, params) => {
+        // Si el usuario abandona el alta, no se arrastra el "volver a Maratones"
+        // a un inicio de sesión posterior desde otra página.
+        if (target !== "auth" && target !== "login" && target !== "register") {
+            try {
+                window.sessionStorage.removeItem(POST_AUTH_KEY);
+            } catch (e) {
+                /* sin almacenamiento */
+            }
+        }
         setToast(null);
         setPage(target);
         const askedId = params && params.userId ? String(params.userId) : null;
@@ -6556,7 +6624,7 @@ function App() {
         setUser(userValue);
         setToast({ type: "success", text: "Hola, " + userValue.name });
         await fetchMovies();
-        navigate("home");
+        navigate(takePostAuthPage() || "home");
     };
 
     const handleLogout = async () => {
