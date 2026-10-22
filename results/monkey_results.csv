@@ -5,3 +5,5 @@ Call log:
 ",CineAIros · Películas
 2026-10-22T12:33:13.563286,1,http://localhost:8080/,click_nav,button | text='Maratones' | class='nav-link',590.17,success,,CineAIros · Películas
 2026-10-22T12:33:19.011914,2,http://localhost:8080/,click_nav,button | text='Series' | class='nav-link',586.55,success,,CineAIros · Películas
+2026-10-22T12:37:34.751655,3,http://localhost:8080/,click_carousel,"article | text='O Papel da Vida2012–2015 · SerieDocumental, Progra' | class='movie-card'",460.98,success,,CineAIros · Películas
+2026-10-22T12:41:25.202165,4,http://localhost:8080/,click_carousel,"div | text='★ 7.6Dark Matter2024– · SerieDrama, Ciencia ficció' | class='carousel-item'",14997.95,success,,CineAIros · Películas
