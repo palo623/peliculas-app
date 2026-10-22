@@ -1,0 +1,7 @@
+timestamp,action_number,url,action_type,element_description,duration_ms,result,error_message,page_title
+2026-10-22T12:33:08.134809,0,http://localhost:8080/,login,Login form submit,13137.73,error,"Page.wait_for_selector: Timeout 10000ms exceeded.
+Call log:
+  - waiting for locator(""input[type='email'][autocomplete='email']"") to be visible
+",CineAIros · Películas
+2026-10-22T12:33:13.563286,1,http://localhost:8080/,click_nav,button | text='Maratones' | class='nav-link',590.17,success,,CineAIros · Películas
+2026-10-22T12:33:19.011914,2,http://localhost:8080/,click_nav,button | text='Series' | class='nav-link',586.55,success,,CineAIros · Películas

@@ -1,0 +1,12 @@
+base_url: "http://localhost:8080"
+test_user:
+  email: "palo623@vidalibarraquer.net"
+  password: "123456"
+max_actions: 100
+action_delay_ms: [500, 2000]
+timeout_ms: 15000
+headless: false
+viewport:
+  width: 1280
+  height: 720
+results_dir: "results"

@@ -1,0 +1,52 @@
+================================================================================
+INFORME DE MONKEY TESTING - CineAIros
+================================================================================
+
+1. CONFIGURACION DE LA PRUEBA
+----------------------------------------
+   URL Base:           http://localhost:8080
+   Usuario de prueba:  palo623@vidalibarraquer.net
+   Acciones objetivo:  100
+   Delay entre acciones: 500-2000 ms
+   Timeout:            15000 ms
+   Modo navegador:     Headed
+   Viewport:           1280x720
+
+2. RESUMEN EJECUTIVO
+----------------------------------------
+   Fecha/Hora:         2026-10-22 12:31:57
+   Duracion total:     27.0 segundos
+   Acciones totales:   2
+   Exitosas:           1 (50.0%)
+   Errores:            1
+   Timeouts:           0
+   Omitidas:           0
+
+3. METRICAS DE RENDIMIENTO (Solo acciones exitosas)
+----------------------------------------
+   Tiempo medio:       596.47 ms
+   Tiempo minimo:      596.47 ms
+   Tiempo maximo:      596.47 ms
+   Desviacion estandar: 0.00 ms
+
+4. DISTRIBUCION POR TIPO DE ACCION
+----------------------------------------
+   login                     |   1 | OK  0 |   0.0% |     0.0ms
+   click_nav                 |   1 | OK  1 | 100.0% |   596.5ms
+
+5. ERRORES DETECTADOS
+----------------------------------------
+   Accion #  0 | login                | error    | Locator.fill: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("input
+
+6. CONCLUSION
+----------------------------------------
+   CRITICO: Alta tasa de fallos, revisar estabilidad de la aplicacion.
+
+   Tasa de exito: 50.0%
+   Acciones/segundo: 0.07
+
+================================================================================
+Fin del informe
+================================================================================
