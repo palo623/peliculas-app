@@ -101,6 +101,9 @@ DANGEROUS_TEXT_PATTERNS = [
     "cambiar rol", "promover", "degradar", "hacer admin",
     "votar", "upvote", "downvote",
     "responder", "reply", "comentar",
+    "cerrar sesión", "cerrar sesion", "salir",
+    "quitar", "enviar solicitud", "añadir amigo", "agregar amigo",
+    "send request", "add friend",
     "confirmar", "confirm", "estoy seguro",
 ]
 
@@ -151,6 +154,9 @@ SAFE_SELECTORS = {
         ".tab:not(.active)",
         ".marathon-tabs .tab",
         "#amigos .tab, #amistades .tab",
+    ],
+    "account_sections": [
+        ".profile-toc a[href^='#']",
     ],
     "profile_links": [
         ".user-item--link",
@@ -320,11 +326,7 @@ class SafeNavigator:
         self.action_count = 0
 
     async def wait_for_spa_ready(self):
-        try:
-            await self.page.wait_for_selector("#boot-loading", state="hidden", timeout=10000)
-        except:
-            pass
-        await self.page.wait_for_load_state("networkidle", timeout=self.config.timeout_ms)
+        await self.page.wait_for_selector("#boot-loading", state="hidden", timeout=10000)
         await asyncio.sleep(0.5)
 
     async def login(self) -> bool:
@@ -364,28 +366,87 @@ class SafeNavigator:
                 await self.wait_for_spa_ready()
 
             print("[LOGIN] Buscando boton Iniciar sesion...")
-            login_btn = self.page.locator("button:has-text('Iniciar sesion')").first
+            login_btn = self.page.locator(
+                "button:has-text('Iniciar sesión'), button:has-text('Iniciar sesion')"
+            ).first
             if await login_btn.count() > 0:
                 print("[LOGIN] Click Iniciar sesion")
                 await login_btn.click()
                 await self.wait_for_spa_ready()
 
             print("[LOGIN] Esperando formulario de login...")
-            # Wait for the form to appear
-            await self.page.wait_for_selector("input[type='email'][autocomplete='email']", timeout=10000)
+            # Wait for the form to appear - try multiple selectors
+            email_selectors = [
+                "input[type='email'][autocomplete='email']",
+                "input[type='email'][placeholder*='correo']",
+                "input[type='email'][placeholder*='@']",
+                "input[type='email']",
+                ".auth-field input[type='email']",
+                "form[onSubmit] input[type='email']",
+            ]
+            email_input = None
+            for sel in email_selectors:
+                try:
+                    await self.page.wait_for_selector(sel, timeout=5000)
+                    email_input = self.page.locator(sel).first
+                    print(f"[LOGIN] Encontrado input email con selector: {sel}")
+                    break
+                except:
+                    continue
+            
+            if not email_input:
+                raise Exception("No se encontro input de email en el formulario")
 
             print("[LOGIN] Rellenando formulario...")
-            email_input = self.page.locator("input[type='email'][autocomplete='email']").first
-            pass_input = self.page.locator("input[type='password'][autocomplete='current-password']").first
+            pass_selectors = [
+                "input[type='password'][autocomplete='current-password']",
+                "input[type='password'][placeholder*='contrase']",
+                "input[type='password']",
+                ".auth-field input[type='password']",
+                "form[onSubmit] input[type='password']",
+            ]
+            pass_input = None
+            for sel in pass_selectors:
+                try:
+                    pass_input = self.page.locator(sel).first
+                    await pass_input.wait_for(state="visible", timeout=3000)
+                    print(f"[LOGIN] Encontrado input password con selector: {sel}")
+                    break
+                except:
+                    continue
+            
+            if not pass_input:
+                raise Exception("No se encontro input de password en el formulario")
 
             await email_input.fill(self.config.test_email)
             await pass_input.fill(self.config.test_password)
 
-            submit_btn = self.page.locator("form button[type='submit'].btn-primary").first
+            submit_selectors = [
+                "form button[type='submit'].btn-primary",
+                "form button[type='submit']",
+                "button[type='submit'].btn-primary",
+                "button[type='submit']",
+                ".auth-card form button[type='submit']",
+            ]
+            submit_btn = None
+            for sel in submit_selectors:
+                try:
+                    submit_btn = self.page.locator(sel).first
+                    await submit_btn.wait_for(state="visible", timeout=3000)
+                    print(f"[LOGIN] Encontrado boton submit con selector: {sel}")
+                    break
+                except:
+                    continue
+            
+            if not submit_btn:
+                raise Exception("No se encontro boton submit en el formulario")
+
             await submit_btn.click()
 
-            await self.page.wait_for_load_state("networkidle", timeout=self.config.timeout_ms)
-            await asyncio.sleep(2)
+            await self.page.wait_for_function(
+                "() => localStorage.getItem('cineairos_token')",
+                timeout=self.config.timeout_ms
+            )
 
             token = await self.page.evaluate("() => localStorage.getItem('cineairos_token')")
             if token:
@@ -423,13 +484,17 @@ class SafeNavigator:
 
     async def find_safe_elements(self) -> List[Tuple[Locator, str, str]]:
         safe_elements = []
+        max_candidates_per_selector = 2
 
         for category, selectors in SAFE_SELECTORS.items():
             for selector in selectors:
                 try:
                     elements = self.page.locator(selector)
                     count = await elements.count()
-                    for i in range(count):
+                    candidate_indexes = random.sample(
+                        range(count), min(count, max_candidates_per_selector)
+                    )
+                    for i in candidate_indexes:
                         el = elements.nth(i)
                         if await el.is_visible() and await el.is_enabled():
                             if not await is_dangerous_element(el, self.page):
@@ -499,6 +564,11 @@ class SafeNavigator:
                 await element.click()
                 action_type = "click_tab"
                 await self.wait_for_spa_ready()
+
+            elif category == "account_sections":
+                await element.click()
+                action_type = "click_account_section"
+                await asyncio.sleep(0.3)
 
             elif category == "profile_links":
                 await element.click()
@@ -636,13 +706,25 @@ class MonkeyTester:
         try:
             login_ok = await self.navigator.login()
             if not login_ok:
-                print("[WARN] No se pudo hacer login, continuando solo areas publicas...")
+                raise RuntimeError("No se pudo iniciar sesión; no es posible probar Mi cuenta.")
 
             await self.page.goto(self.config.base_url, wait_until="domcontentloaded", timeout=30000)
             await self.navigator.wait_for_spa_ready()
+            user_menu = self.page.locator("header .user-chip").first
+            await user_menu.wait_for(state="visible", timeout=self.config.timeout_ms)
+            await user_menu.click()
+            account_link = self.page.locator(".user-dropdown .dropdown-item:has-text('Mi cuenta')").first
+            await account_link.wait_for(state="visible", timeout=5000)
+            await account_link.click()
+            await self.page.locator(".profile-toc").wait_for(state="visible", timeout=self.config.timeout_ms)
+            print("[OK] Mi cuenta abierta; comienza el recorrido aleatorio.")
 
             consecutive_errors = 0
             max_consecutive_errors = 10
+            account_focus_actions = min(30, self.config.max_actions)
+            account_categories = {
+                "account_sections", "carousels", "detail_buttons", "modals", "scrollable"
+            }
 
             for i in range(self.config.max_actions):
                 if consecutive_errors >= max_consecutive_errors:
@@ -650,6 +732,11 @@ class MonkeyTester:
                     break
 
                 safe_elements = await self.navigator.find_safe_elements()
+                if i < account_focus_actions:
+                    safe_elements = [
+                        candidate for candidate in safe_elements
+                        if candidate[1] in account_categories
+                    ]
 
                 if not safe_elements:
                     print("[WARN] No se encontraron elementos seguros, esperando y reintentando...")
@@ -684,6 +771,7 @@ class MonkeyTester:
         except Exception as e:
             print(f"\n[CRITICAL] Error critico: {e}")
             traceback.print_exc()
+            raise
         finally:
             await self.teardown()
             self.generate_reports()

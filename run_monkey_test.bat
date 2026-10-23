@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 echo ==========================================
 echo  CineAIros - Monkey Testing Automatizado
 echo ==========================================
@@ -30,6 +31,12 @@ echo.
 echo 🚀 Ejecutando Monkey Test...
 echo.
 python tests/monkey_test.py
+if errorlevel 1 (
+    echo.
+    echo ❌ El Monkey Test ha fallado. Revisa el error anterior.
+    pause
+    exit /b 1
+)
 
 echo.
 echo ✅ Completado. Revisa la carpeta results/

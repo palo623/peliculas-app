@@ -6,7 +6,7 @@ INFORME DE MONKEY TESTING - CineAIros
 ----------------------------------------
    URL Base:           http://localhost:8080
    Usuario de prueba:  palo623@vidalibarraquer.net
-   Acciones objetivo:  100
+   Acciones objetivo:  250
    Delay entre acciones: 500-2000 ms
    Timeout:            15000 ms
    Modo navegador:     Headed
@@ -14,38 +14,184 @@ INFORME DE MONKEY TESTING - CineAIros
 
 2. RESUMEN EJECUTIVO
 ----------------------------------------
-   Fecha/Hora:         2026-10-22 12:31:57
-   Duracion total:     27.0 segundos
-   Acciones totales:   2
-   Exitosas:           1 (50.0%)
-   Errores:            1
-   Timeouts:           0
+   Fecha/Hora:         2026-10-23 10:48:15
+   Duracion total:     3141.2 segundos
+   Acciones totales:   251
+   Exitosas:           205 (81.7%)
+   Errores:            0
+   Timeouts:           46
    Omitidas:           0
 
 3. METRICAS DE RENDIMIENTO (Solo acciones exitosas)
 ----------------------------------------
-   Tiempo medio:       596.47 ms
-   Tiempo minimo:      596.47 ms
-   Tiempo maximo:      596.47 ms
-   Desviacion estandar: 0.00 ms
+   Tiempo medio:       588.09 ms
+   Tiempo minimo:      38.75 ms
+   Tiempo maximo:      9159.81 ms
+   Desviacion estandar: 945.62 ms
 
 4. DISTRIBUCION POR TIPO DE ACCION
 ----------------------------------------
-   login                     |   1 | OK  0 |   0.0% |     0.0ms
-   click_nav                 |   1 | OK  1 | 100.0% |   596.5ms
+   click_nav                 |  60 | OK 60 | 100.0% |   838.8ms
+   click_carousel            |  43 | OK 43 | 100.0% |   588.4ms
+   scroll                    |  28 | OK 28 | 100.0% |   512.7ms
+   chatbot                   |  19 | OK  0 |   0.0% |     0.0ms
+   select_filter_unknown     |  18 | OK 18 | 100.0% |    87.4ms
+   carousels                 |  16 | OK  0 |   0.0% |     0.0ms
+   click_account_section     |  14 | OK 14 | 100.0% |   349.1ms
+   click_tab                 |  13 | OK 13 | 100.0% |   568.8ms
+   type_search               |  12 | OK 12 | 100.0% |   626.9ms
+   navigation                |  11 | OK  0 |   0.0% |     0.0ms
+   click_modal               |  10 | OK 10 | 100.0% |   386.8ms
+   type_filter_year          |   6 | OK  6 | 100.0% |    89.6ms
+   login                     |   1 | OK  1 | 100.0% |  4790.7ms
 
 5. ERRORES DETECTADOS
 ----------------------------------------
-   Accion #  0 | login                | error    | Locator.fill: Timeout 15000ms exceeded.
+   Accion # 33 | navigation           | timeout  | Locator.click: Timeout 15000ms exceeded.
 Call log:
-  - waiting for locator("input
+  - waiting for locator("foot
+   Accion # 39 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".mov
+   Accion # 40 | navigation           | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("nav 
+   Accion # 42 | navigation           | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("head
+   Accion # 52 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion # 59 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion # 71 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion # 79 | navigation           | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("foot
+   Accion # 83 | navigation           | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("foot
+   Accion # 88 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion # 91 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".car
+   Accion # 92 | navigation           | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("head
+   Accion # 93 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".mov
+   Accion # 94 | navigation           | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("nav 
+   Accion # 95 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".mov
+   Accion # 96 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".mov
+   Accion # 98 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".top
+   Accion #100 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".car
+   Accion #101 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".top
+   Accion #102 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".car
+   Accion #113 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #121 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #127 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #128 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #138 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #146 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".car
+   Accion #147 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #153 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #156 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".top
+   Accion #157 | navigation           | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("nav 
+   Accion #159 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #163 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #173 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #178 | navigation           | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("head
+   Accion #179 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".car
+   Accion #180 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".car
+   Accion #182 | navigation           | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("foot
+   Accion #183 | navigation           | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("foot
+   Accion #187 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #196 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #198 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #216 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #219 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".car
+   Accion #231 | chatbot              | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".cha
+   Accion #235 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".top
+   Accion #237 | carousels            | timeout  | Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(".top
 
 6. CONCLUSION
 ----------------------------------------
-   CRITICO: Alta tasa de fallos, revisar estabilidad de la aplicacion.
+   ACEPTABLE: Se detectaron varios fallos, requiere investigacion.
 
-   Tasa de exito: 50.0%
-   Acciones/segundo: 0.07
+   Tasa de exito: 81.7%
+   Acciones/segundo: 0.08
 
 ================================================================================
 Fin del informe

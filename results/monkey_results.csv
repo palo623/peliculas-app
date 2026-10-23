@@ -1,6 +1,2297 @@
 timestamp,action_number,url,action_type,element_description,duration_ms,result,error_message,page_title
-2026-10-22T12:48:59.501039,0,http://localhost:8080/,login,Login form submit,12961.72,error,"Page.wait_for_selector: Timeout 10000ms exceeded.
+2026-10-23T09:56:02.369883,0,http://localhost:8080/,login,Login form submit,4790.72,success,,CineAIros · Películas
+2026-10-23T09:56:06.898221,1,http://localhost:8080/,click_carousel,button | text='›' | aria-label='Siguiente',352.77,success,,CineAIros · Películas
+2026-10-23T09:56:10.711194,2,http://localhost:8080/,click_carousel,button | text='‹' | aria-label='Anterior',339.76,success,,CineAIros · Películas
+2026-10-23T09:56:14.742334,3,http://localhost:8080/,click_carousel,button | text='‹' | aria-label='Anterior',344.94,success,,CineAIros · Películas
+2026-10-23T09:56:18.442751,4,http://localhost:8080/,click_carousel,button | text='›' | aria-label='Siguiente',343.95,success,,CineAIros · Películas
+2026-10-23T09:56:22.074889,5,http://localhost:8080/,click_account_section,a | text='📁 Todas las series',363.39,success,,CineAIros · Películas
+2026-10-23T09:56:25.488732,6,http://localhost:8080/,click_carousel,button | text='‹' | aria-label='Anterior',351.99,success,,CineAIros · Películas
+2026-10-23T09:56:29.322505,7,http://localhost:8080/,click_account_section,a | text='⭐ Mis 5 favoritas',344.38,success,,CineAIros · Películas
+2026-10-23T09:56:33.552934,8,http://localhost:8080/,click_carousel,button | text='›' | aria-label='Siguiente',454.38,success,,CineAIros · Películas
+2026-10-23T09:56:37.184814,9,http://localhost:8080/,click_carousel,button | text='‹' | aria-label='Anterior',338.14,success,,CineAIros · Películas
+2026-10-23T09:56:40.732730,10,http://localhost:8080/,click_carousel,button | text='›' | aria-label='Siguiente',349.61,success,,CineAIros · Películas
+2026-10-23T09:56:44.014949,11,http://localhost:8080/,click_carousel,button | text='‹' | aria-label='Anterior',346.97,success,,CineAIros · Películas
+2026-10-23T09:56:48.082122,12,http://localhost:8080/,click_account_section,a | text='⭐ Mis 5 favoritas',370.78,success,,CineAIros · Películas
+2026-10-23T09:56:51.430574,13,http://localhost:8080/,click_account_section,a | text='📁 Todas las películas',338.04,success,,CineAIros · Películas
+2026-10-23T09:56:54.624445,14,http://localhost:8080/,click_account_section,a | text='📺 Series recientes',360.66,success,,CineAIros · Películas
+2026-10-23T09:56:58.210845,15,http://localhost:8080/,click_account_section,a | text='📺 Series recientes',353.24,success,,CineAIros · Películas
+2026-10-23T09:57:02.576696,16,http://localhost:8080/,click_account_section,a | text='📁 Todas las series',350.67,success,,CineAIros · Películas
+2026-10-23T09:57:06.907900,17,http://localhost:8080/,click_account_section,a | text='📁 Todas las series',344.78,success,,CineAIros · Películas
+2026-10-23T09:57:10.875900,18,http://localhost:8080/,click_account_section,a | text='⭐ Mis 5 favoritas',352.42,success,,CineAIros · Películas
+2026-10-23T09:57:13.805611,19,http://localhost:8080/,click_account_section,a | text='📁 Todas las películas',349.14,success,,CineAIros · Películas
+2026-10-23T09:57:17.037958,20,http://localhost:8080/,click_carousel,button | text='›' | aria-label='Siguiente',350.30,success,,CineAIros · Películas
+2026-10-23T09:57:20.086772,21,http://localhost:8080/,click_account_section,a | text='🎬 Películas recientes',339.98,success,,CineAIros · Películas
+2026-10-23T09:57:22.852562,22,http://localhost:8080/,click_carousel,button | text='›' | aria-label='Siguiente',342.76,success,,CineAIros · Películas
+2026-10-23T09:57:26.451037,23,http://localhost:8080/,click_carousel,button | text='›' | aria-label='Siguiente',339.76,success,,CineAIros · Películas
+2026-10-23T09:57:30.182990,24,http://localhost:8080/,click_carousel,button | text='‹' | aria-label='Anterior',339.37,success,,CineAIros · Películas
+2026-10-23T09:57:34.097742,25,http://localhost:8080/,click_carousel,button | text='›' | aria-label='Siguiente',338.50,success,,CineAIros · Películas
+2026-10-23T09:57:36.614811,26,http://localhost:8080/,click_account_section,a | text='📁 Todas las películas',339.25,success,,CineAIros · Películas
+2026-10-23T09:57:40.397464,27,http://localhost:8080/,click_carousel,button | text='›' | aria-label='Siguiente',348.07,success,,CineAIros · Películas
+2026-10-23T09:57:43.145472,28,http://localhost:8080/,click_account_section,a | text='🎬 Películas recientes',337.98,success,,CineAIros · Películas
+2026-10-23T09:57:46.610780,29,http://localhost:8080/,click_account_section,a | text='📁 Todas las películas',342.60,success,,CineAIros · Películas
+2026-10-23T09:57:49.426909,30,http://localhost:8080/,click_carousel,button | text='‹' | aria-label='Anterior',351.66,success,,CineAIros · Películas
+2026-10-23T09:57:53.193156,31,http://localhost:8080/,click_nav,button | text='Series' | class='footer-link',574.25,success,,CineAIros · Películas
+2026-10-23T09:57:59.856892,32,http://localhost:8080/,click_carousel,img | class='toprank-poster',367.86,success,,CineAIros · Películas
+2026-10-23T09:58:20.980145,33,http://localhost:8080/,navigation,button | text='Películas' | class='footer-link',15027.07,timeout,"Locator.click: Timeout 15000ms exceeded.
 Call log:
-  - waiting for locator(""input[type='email'][autocomplete='email']"") to be visible
+  - waiting for locator(""footer .footer-link"").nth(1)
+    - locator resolved to <button class=""footer-link"">Películas</button>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-banner"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    6 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""cookie-banner"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-banner"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
 ",CineAIros · Películas
-2026-10-22T12:49:04.626188,1,http://localhost:8080/,click_nav,button | text='Películas' | class='nav-link',574.05,success,,CineAIros · Películas
+2026-10-23T09:58:28.846963,34,http://localhost:8080/,click_modal,button | text='Cerrar' | class='btn-ghost',362.50,success,,CineAIros · Películas
+2026-10-23T09:58:36.610661,35,http://localhost:8080/,type_search,input | placeholder='Buscar series... (ej. Breaking Bad)',585.44,success,,CineAIros · Películas
+2026-10-23T09:58:43.026315,36,http://localhost:8080/,click_nav,button | text='Inicio' | class='nav-link',572.02,success,,CineAIros · Películas
+2026-10-23T09:58:45.458024,37,http://localhost:8080/,click_nav,button | text='Películas' | class='footer-link',557.64,success,,CineAIros · Películas
+2026-10-23T09:58:52.688259,38,http://localhost:8080/,click_carousel,"div | text='★ 6.6Sing: Thriller2024 · PelículaAnimación, Corto' | class='carousel-item'",401.74,success,,CineAIros · Películas
+2026-10-23T09:59:15.225352,39,http://localhost:8080/,carousels,article | text='★ 6.1Aileen: Queen of the Serial Killers2025 · Pel' | class='movie-card',15011.90,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".movie-card"").nth(10)
+    - locator resolved to <article class=""movie-card"">…</article>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <p>…</p> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <p>…</p> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  2 × retrying click action
+      - waiting 100ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <h2>Sing: Thriller (2024)</h2> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  6 × retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <p>…</p> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <h2>Sing: Thriller (2024)</h2> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <h2>Sing: Thriller (2024)</h2> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <p>…</p> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T09:59:38.044799,40,http://localhost:8080/,navigation,button | text='Inicio' | class='nav-link',15010.14,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(""nav .nav-link:not(.danger):not(.nav-cta)"").first
+    - locator resolved to <button class=""nav-link"">Inicio</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T09:59:45.770863,41,http://localhost:8080/,click_carousel,div | text='★ 8.2Music by John Williams2024 · PelículaDocument' | class='carousel-item',372.05,success,,CineAIros · Películas
+2026-10-23T10:00:10.552841,42,http://localhost:8080/,navigation,button | text='CineAIros' | aria-label='Ir al inicio' | class='logo',15021.42,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(""header .logo"").first
+    - locator resolved to <button class=""logo"" aria-label=""Ir al inicio"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    28 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:00:19.194522,43,http://localhost:8080/,click_nav,button | text='Películas' | class='footer-link',601.76,success,,CineAIros · Películas
+2026-10-23T10:00:27.256474,44,http://localhost:8080/,click_carousel,button | text='‹' | aria-label='Anterior',364.19,success,,CineAIros · Películas
+2026-10-23T10:00:35.906171,45,http://localhost:8080/,click_nav,button | text='Continuar ahora →' | class='footer-link',557.54,success,,CineAIros · Películas
+2026-10-23T10:00:43.867485,46,http://localhost:8080/,click_nav,button | text='Inicio' | class='nav-link',564.32,success,,CineAIros · Películas
+2026-10-23T10:00:46.966767,47,http://localhost:8080/,click_nav,button | text='Películas' | class='nav-link',564.49,success,,CineAIros · Películas
+2026-10-23T10:00:54.231063,48,http://localhost:8080/,select_filter_unknown,select | text='RelevanciaMejor notaMás recientesMás antiguas',83.30,success,,CineAIros · Películas
+2026-10-23T10:01:03.328335,49,http://localhost:8080/,click_nav,button | text='Maratones' | class='footer-link',582.79,success,,CineAIros · Películas
+2026-10-23T10:01:06.693788,50,http://localhost:8080/,click_tab,button | text='Actores (6)' | class='tab',543.84,success,,CineAIros · Películas
+2026-10-23T10:01:10.292463,51,http://localhost:8080/,click_tab,button | text='Sagas (6)' | class='tab',542.40,success,,CineAIros · Películas
+2026-10-23T10:01:28.625257,52,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15010.25,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:01:31.884672,53,http://localhost:8080/,click_tab,button | text='Sagas (6)' | class='tab active',549.09,success,,CineAIros · Películas
+2026-10-23T10:01:35.350307,54,http://localhost:8080/,click_nav,button | text='Series' | class='footer-link',553.06,success,,CineAIros · Películas
+2026-10-23T10:01:43.713343,55,http://localhost:8080/,click_nav,button | text='Series' | class='nav-link active',557.59,success,,CineAIros · Películas
+2026-10-23T10:01:51.813660,56,http://localhost:8080/,select_filter_unknown,select | text='TodosAcciónAventuraAnimaciónComediaCrimenDocumenta',66.31,success,,CineAIros · Películas
+2026-10-23T10:02:02.175054,57,http://localhost:8080/,click_carousel,img | class='toprank-poster',366.93,success,,CineAIros · Películas
+2026-10-23T10:02:10.319987,58,http://localhost:8080/,click_nav,button | text='Series' | class='nav-link active',568.91,success,,CineAIros · Películas
+2026-10-23T10:02:34.152786,59,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15014.44,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:02:40.828356,60,http://localhost:8080/,type_filter_year,input | placeholder='Ej. 2010',38.75,success,,CineAIros · Películas
+2026-10-23T10:02:47.742754,61,http://localhost:8080/,click_nav,button | text='Continuar ahora →' | class='footer-link',572.98,success,,CineAIros · Películas
+2026-10-23T10:02:55.089895,62,http://localhost:8080/,type_search,input | placeholder='Buscar películas... (ej. Inception)',586.40,success,,CineAIros · Películas
+2026-10-23T10:03:02.037996,63,http://localhost:8080/,click_modal,button | text='Descartar' | class='btn-ghost',372.13,success,,CineAIros · Películas
+2026-10-23T10:03:07.985346,64,http://localhost:8080/,click_carousel,button | text='‹' | aria-label='Anterior',355.17,success,,CineAIros · Películas
+2026-10-23T10:03:14.013354,65,http://localhost:8080/,click_carousel,button | text='›' | aria-label='Siguiente',376.50,success,,CineAIros · Películas
+2026-10-23T10:03:20.297160,66,http://localhost:8080/,select_filter_unknown,select | text='Sin filtro★ 6 o más★ 7 o más★ 8 o más★ 9 o más',55.06,success,,CineAIros · Películas
+2026-10-23T10:03:26.746998,67,http://localhost:8080/,type_search,input | placeholder='Buscar películas... (ej. Inception)',583.84,success,,CineAIros · Películas
+2026-10-23T10:03:34.267220,68,http://localhost:8080/,select_filter_unknown,select | text='Sin filtro★ 6 o más★ 7 o más★ 8 o más★ 9 o más',55.06,success,,CineAIros · Películas
+2026-10-23T10:03:40.892153,69,http://localhost:8080/,click_carousel,button | text='›' | aria-label='Siguiente',372.66,success,,CineAIros · Películas
+2026-10-23T10:03:47.787914,70,http://localhost:8080/,click_modal,button | text='Descartar' | class='btn-ghost',372.98,success,,CineAIros · Películas
+2026-10-23T10:04:09.020285,71,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15004.03,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:04:14.866067,72,http://localhost:8080/,scroll,"main | text='PelículasBusca tus favoritas, guárdalas y vuelve a' | class='main'",510.76,success,,CineAIros · Películas
+2026-10-23T10:04:20.962351,73,http://localhost:8080/,click_carousel,article | text='★ 6.5Star Wars: The Mandalorian and Grogu: A Speci' | class='movie-card',398.84,success,,CineAIros · Películas
+2026-10-23T10:04:28.639767,74,http://localhost:8080/,select_filter_unknown,select | text='TodosAcciónAventuraAnimaciónComediaCrimenDocumenta',69.04,success,,CineAIros · Películas
+2026-10-23T10:04:43.271010,75,http://localhost:8080/,click_modal,button | text='✕' | class='modal-close',384.60,success,,CineAIros · Películas
+2026-10-23T10:04:49.892360,76,http://localhost:8080/,select_filter_unknown,select | text='RelevanciaMejor notaMás recientesMás antiguas',65.54,success,,CineAIros · Películas
+2026-10-23T10:04:56.749775,77,http://localhost:8080/,click_carousel,article | text='★ 6.5Scooby-Doo! Music of the Vampire2012 · Pelícu' | class='movie-card',387.79,success,,CineAIros · Películas
+2026-10-23T10:05:03.261029,78,http://localhost:8080/,select_filter_unknown,select | text='RelevanciaMejor notaMás recientesMás antiguas',51.68,success,,CineAIros · Películas
+2026-10-23T10:05:24.963034,79,http://localhost:8080/,navigation,button | text='Series' | class='footer-link',15018.10,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(""footer .footer-link"").nth(2)
+    - locator resolved to <button class=""footer-link"">Series</button>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-banner"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    6 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""cookie-banner"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-banner"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:05:31.337648,80,http://localhost:8080/,scroll,"main | text='PelículasBusca tus favoritas, guárdalas y vuelve a' | class='main'",517.50,success,,CineAIros · Películas
+2026-10-23T10:05:36.754667,81,http://localhost:8080/,select_filter_unknown,select | text='TodosAcciónAventuraAnimaciónComediaCrimenDocumenta',43.87,success,,CineAIros · Películas
+2026-10-23T10:05:42.567878,82,http://localhost:8080/,click_carousel,article | text='★ 6.5Cyber Hell: Exposing an Internet Horror2022 ·' | class='movie-card',374.68,success,,CineAIros · Películas
+2026-10-23T10:06:04.915885,83,http://localhost:8080/,navigation,button | text='Películas' | class='footer-link',15016.04,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(""footer .footer-link"").nth(1)
+    - locator resolved to <button class=""footer-link"">Películas</button>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-banner"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    6 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""cookie-banner"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-banner"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:06:11.773714,84,http://localhost:8080/,click_modal,button | text='Cerrar' | class='btn-ghost',364.60,success,,CineAIros · Películas
+2026-10-23T10:06:18.622311,85,http://localhost:8080/,click_nav,button | text='Maratones' | class='footer-link',584.11,success,,CineAIros · Películas
+2026-10-23T10:06:22.903300,86,http://localhost:8080/,click_nav,button | text='Maratones' | class='nav-link active',564.19,success,,CineAIros · Películas
+2026-10-23T10:06:26.037731,87,http://localhost:8080/,click_nav,button | text='CineAIros' | aria-label='Ir al inicio' | class='logo',545.11,success,,CineAIros · Películas
+2026-10-23T10:06:43.173480,88,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15006.30,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:06:46.936109,89,http://localhost:8080/,click_nav,button | text='Series' | class='nav-link',554.60,success,,CineAIros · Películas
+2026-10-23T10:06:53.023094,90,http://localhost:8080/,click_carousel,img | class='toprank-poster',362.46,success,,CineAIros · Películas
+2026-10-23T10:07:14.739398,91,http://localhost:8080/,carousels,"div | text='★ 8.7Dark2017–2020 · SerieCrimen, Drama, Misterio' | class='carousel-item'",15016.21,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".carousel-item"").nth(197)
+    - locator resolved to <div class=""carousel-item"">…</div>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  2 × retrying click action
+      - waiting 100ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  6 × retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:07:37.181596,92,http://localhost:8080/,navigation,button | text='CineAIros' | aria-label='Ir al inicio' | class='logo',15003.72,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(""header .logo"").first
+    - locator resolved to <button class=""logo"" aria-label=""Ir al inicio"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:07:58.843201,93,http://localhost:8080/,carousels,"article | text='★ 7.0Shining Vale2022–2023 · SerieComedia, Fantasí' | class='movie-card'",15014.13,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".movie-card"").nth(226)
+    - locator resolved to <article class=""movie-card"">…</article>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  2 × retrying click action
+      - waiting 100ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  6 × retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:08:20.370008,94,http://localhost:8080/,navigation,button | text='Inicio' | class='nav-link',15005.09,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(""nav .nav-link:not(.danger):not(.nav-cta)"").first
+    - locator resolved to <button class=""nav-link"">Inicio</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:08:41.444945,95,http://localhost:8080/,carousels,article | text='★ 4.6The Walking Dead: World Beyond2020–2021 · Ser' | class='movie-card',15017.26,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".movie-card"").nth(276)
+    - locator resolved to <article class=""movie-card"">…</article>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  2 × retrying click action
+      - waiting 100ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  6 × retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:09:03.553801,96,http://localhost:8080/,carousels,"article | text='★ 9.0Dexter: Resurrection2025– · SerieCrimen, Dram' | class='movie-card'",15006.50,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".movie-card"").nth(363)
+    - locator resolved to <article class=""movie-card"">…</article>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div class=""modal-backdrop"">…</div> intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:09:11.581129,97,http://localhost:8080/,scroll,"div | text='★ 6.6The Cage2026 · SerieCrimen, Drama, Suspense★ ' | class='carousel-track'",507.81,success,,CineAIros · Películas
+2026-10-23T10:09:34.377399,98,http://localhost:8080/,carousels,img | class='toprank-poster',15018.63,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".toprank-track img"").nth(3)
+    - locator resolved to <img loading=""lazy"" class=""toprank-poster"" alt=""Asur: Welcome to Your Dark Side"" src=""https://m.media-amazon.com/images/M/MV5BMDZkOGQzMjItNTliOC00NTIxLTg4ODEtNTMxZWY1OTk5ZWM0XkEyXkFqcGc@._V1_SX300.jpg""/>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  2 × retrying click action
+      - waiting 100ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  6 × retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:09:42.251909,99,http://localhost:8080/,scroll,"div | text='★ 8.3House of the Dragon2022– · SerieAcción, Avent' | class='carousel-track'",518.63,success,,CineAIros · Películas
+2026-10-23T10:10:05.384157,100,http://localhost:8080/,carousels,button | text='›' | aria-label='Siguiente',15014.05,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".carousel-controls button"").nth(19)
+    - locator resolved to <button aria-label=""Siguiente"">›</button>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    6 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:10:28.453501,101,http://localhost:8080/,carousels,img | class='toprank-poster',15007.37,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".toprank-track img"").nth(4)
+    - locator resolved to <img loading=""lazy"" class=""toprank-poster"" alt=""Star Trek: Strange New Worlds"" src=""https://m.media-amazon.com/images/M/MV5BOWY1Y2ZlNzctMzIwMi00NTM3LWJiNDUtMTZmYWY0Y2NmZmE2XkEyXkFqcGc@._V1_QL75_UX380_CR0,0,380,562_.jpg""/>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    26 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div class=""modal-backdrop"">…</div> intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:12:10.005697,102,http://localhost:8080/,carousels,button | text='›' | aria-label='Siguiente',92167.44,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".carousel-controls button"").nth(1)
+    - locator resolved to <button aria-label=""Siguiente"">›</button>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+  3 × retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+",CineAIros · Películas
+2026-10-23T10:12:35.990402,103,http://localhost:8080/,click_carousel,"div | text='★ 6.4Into the Dark2018–2021 · SerieDrama, Fantasía' | class='carousel-item'",491.73,success,,CineAIros · Películas
+2026-10-23T10:13:04.006164,104,http://localhost:8080/,click_nav,button | text='Continuar ahora →' | class='footer-link',4330.32,success,,CineAIros · Películas
+2026-10-23T10:13:16.700151,105,http://localhost:8080/,click_carousel,img | class='toprank-poster',381.91,success,,CineAIros · Películas
+2026-10-23T10:13:34.553036,106,http://localhost:8080/,scroll,"div | text='★ 6.3The Family2013 · PelículaComedia, Crimen, Sus' | class='carousel-track'",517.43,success,,CineAIros · Películas
+2026-10-23T10:13:56.411922,107,http://localhost:8080/,type_filter_year,input | placeholder='Ej. 2010',143.48,success,,CineAIros · Películas
+2026-10-23T10:14:21.198005,108,http://localhost:8080/,click_nav,button | text='Inicio' | class='footer-link',7631.53,success,,CineAIros · Películas
+2026-10-23T10:14:25.392409,109,http://localhost:8080/,click_nav,button | text='Inicio' | class='nav-link active',581.34,success,,CineAIros · Películas
+2026-10-23T10:14:28.825351,110,http://localhost:8080/,click_nav,button | text='Inicio' | class='nav-link active',568.59,success,,CineAIros · Películas
+2026-10-23T10:14:33.778746,111,http://localhost:8080/,click_nav,button | text='Películas' | class='footer-link',624.01,success,,CineAIros · Películas
+2026-10-23T10:14:49.933097,112,http://localhost:8080/,click_nav,button | text='Series' | class='footer-link',626.91,success,,CineAIros · Películas
+2026-10-23T10:15:16.922988,113,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15019.23,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:15:29.688970,114,http://localhost:8080/,type_search,input | placeholder='Buscar series... (ej. Breaking Bad)',613.70,success,,CineAIros · Películas
+2026-10-23T10:15:41.477104,115,http://localhost:8080/,click_carousel,button | text='›' | aria-label='Siguiente',435.14,success,,CineAIros · Películas
+2026-10-23T10:15:53.977665,116,http://localhost:8080/,scroll,div | text='★ 5.1Lil' Bush: Resident of the United States2007–' | class='carousel-track',516.85,success,,CineAIros · Películas
+2026-10-23T10:16:06.864305,117,http://localhost:8080/,type_search,input | placeholder='Buscar series... (ej. Breaking Bad)',631.50,success,,CineAIros · Películas
+2026-10-23T10:16:18.107732,118,http://localhost:8080/,scroll,div | text='★ 6.8Power Rangers Lost Galaxy1999–2000 · SerieAcc' | class='carousel-track',516.25,success,,CineAIros · Películas
+2026-10-23T10:16:29.471905,119,http://localhost:8080/,type_search,input | placeholder='Buscar series... (ej. Breaking Bad)',601.13,success,,CineAIros · Películas
+2026-10-23T10:16:40.166050,120,http://localhost:8080/,select_filter_unknown,select | text='TodosAcciónAventuraAnimaciónComediaCrimenDocumenta',94.34,success,,CineAIros · Películas
+2026-10-23T10:17:06.686603,121,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15008.42,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:17:19.334833,122,http://localhost:8080/,type_search,input | placeholder='Buscar series... (ej. Breaking Bad)',602.35,success,,CineAIros · Películas
+2026-10-23T10:17:31.713592,123,http://localhost:8080/,click_nav,button | text='Inicio' | class='nav-link',600.81,success,,CineAIros · Películas
+2026-10-23T10:17:35.852443,124,http://localhost:8080/,click_nav,button | text='Continuar ahora →' | class='footer-link',581.58,success,,CineAIros · Películas
+2026-10-23T10:17:48.908598,125,http://localhost:8080/,click_nav,button | text='Inicio' | class='nav-link',578.54,success,,CineAIros · Películas
+2026-10-23T10:17:53.709575,126,http://localhost:8080/,scroll,"main | text='CineAIrosDescubre, Exploray Guarda tus FavoritasDe' | class='main'",508.27,success,,CineAIros · Películas
+2026-10-23T10:18:13.226810,127,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15008.47,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:18:31.904691,128,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15005.64,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+",CineAIros · Películas
+2026-10-23T10:18:36.675757,129,http://localhost:8080/,scroll,"main | text='CineAIrosDescubre, Exploray Guarda tus FavoritasDe' | class='main'",506.40,success,,CineAIros · Películas
+2026-10-23T10:18:41.813406,130,http://localhost:8080/,click_nav,button | text='Series' | class='footer-link',586.44,success,,CineAIros · Películas
+2026-10-23T10:18:54.840748,131,http://localhost:8080/,click_nav,button | text='Maratones' | class='nav-link',618.27,success,,CineAIros · Películas
+2026-10-23T10:19:02.079228,132,http://localhost:8080/,click_tab,button | text='Sagas (6)' | class='tab',624.38,success,,CineAIros · Películas
+2026-10-23T10:19:07.950421,133,http://localhost:8080/,scroll,main | text='MaratonesSagas y filmografías de actores en orden.' | class='main',506.10,success,,CineAIros · Películas
+2026-10-23T10:19:13.628300,134,http://localhost:8080/,click_nav,button | text='CineAIros' | aria-label='Ir al inicio' | class='logo',593.80,success,,CineAIros · Películas
+2026-10-23T10:19:17.743120,135,http://localhost:8080/,scroll,"main | text='CineAIrosDescubre, Exploray Guarda tus FavoritasDe' | class='main'",509.84,success,,CineAIros · Películas
+2026-10-23T10:19:22.266456,136,http://localhost:8080/,click_nav,button | text='Maratones' | class='footer-link',578.51,success,,CineAIros · Películas
+2026-10-23T10:19:27.991931,137,http://localhost:8080/,click_tab,button | text='Sagas (6)' | class='tab',565.89,success,,CineAIros · Películas
+2026-10-23T10:19:48.131219,138,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15013.12,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+",CineAIros · Películas
+2026-10-23T10:19:53.619064,139,http://localhost:8080/,click_tab,button | text='Todas (12)' | class='tab',597.93,success,,CineAIros · Películas
+2026-10-23T10:19:59.170483,140,http://localhost:8080/,click_tab,button | text='Actores (6)' | class='tab',561.73,success,,CineAIros · Películas
+2026-10-23T10:20:04.796438,141,http://localhost:8080/,click_nav,button | text='Series' | class='footer-link',617.43,success,,CineAIros · Películas
+2026-10-23T10:20:26.964541,142,http://localhost:8080/,click_carousel,button | text='‹' | aria-label='Anterior',399.22,success,,CineAIros · Películas
+2026-10-23T10:20:40.293281,143,http://localhost:8080/,click_carousel,img | class='toprank-poster',433.75,success,,CineAIros · Películas
+2026-10-23T10:20:54.609650,144,http://localhost:8080/,scroll,div | text='★ 6.3Legends of the Lost with Megan Fox2018 · Seri' | class='carousel-track',507.93,success,,CineAIros · Películas
+2026-10-23T10:21:09.349053,145,http://localhost:8080/,select_filter_unknown,select | text='RelevanciaMejor notaMás recientesMás antiguas',120.95,success,,CineAIros · Películas
+2026-10-23T10:21:38.901385,146,http://localhost:8080/,carousels,button | text='›' | aria-label='Siguiente',15021.63,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".carousel-controls button"").nth(27)
+    - locator resolved to <button aria-label=""Siguiente"">›</button>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    6 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:22:08.842584,147,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15022.74,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:22:23.525195,148,http://localhost:8080/,click_modal,button | text='Cerrar' | class='btn-ghost',400.30,success,,CineAIros · Películas
+2026-10-23T10:22:36.701997,149,http://localhost:8080/,select_filter_unknown,select | text='Sin filtro★ 6 o más★ 7 o más★ 8 o más★ 9 o más',122.07,success,,CineAIros · Películas
+2026-10-23T10:22:50.731706,150,http://localhost:8080/,select_filter_unknown,select | text='Sin filtro★ 6 o más★ 7 o más★ 8 o más★ 9 o más',100.46,success,,CineAIros · Películas
+2026-10-23T10:23:04.397159,151,http://localhost:8080/,click_nav,button | text='Inicio' | class='nav-link',599.26,success,,CineAIros · Películas
+2026-10-23T10:23:09.012101,152,http://localhost:8080/,scroll,"main | text='CineAIrosDescubre, Exploray Guarda tus FavoritasDe' | class='main'",519.11,success,,CineAIros · Películas
+2026-10-23T10:23:27.600814,153,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15020.75,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    28 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:23:33.038213,154,http://localhost:8080/,click_nav,button | text='Series' | class='footer-link',583.22,success,,CineAIros · Películas
+2026-10-23T10:23:45.236369,155,http://localhost:8080/,click_carousel,img | class='toprank-poster',380.32,success,,CineAIros · Películas
+2026-10-23T10:24:15.491172,156,http://localhost:8080/,carousels,img | class='toprank-poster',15016.97,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".toprank-track img"").first
+    - locator resolved to <img loading=""lazy"" class=""toprank-poster"" alt=""The Walking Dead"" src=""https://m.media-amazon.com/images/M/MV5BYWQwMGRhNGEtZTNhMy00MzVjLWJhMjItYjcwMDljMTkyNTg2XkEyXkFqcGc@._V1_SX300.jpg""/>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div class=""modal-backdrop"">…</div> intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:24:43.228535,157,http://localhost:8080/,navigation,button | text='Películas' | class='nav-link',15023.45,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(""nav .nav-link:not(.danger):not(.nav-cta)"").nth(1)
+    - locator resolved to <button class=""nav-link"">Películas</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:24:57.122064,158,http://localhost:8080/,select_filter_unknown,select | text='RelevanciaMejor notaMás recientesMás antiguas',95.20,success,,CineAIros · Películas
+2026-10-23T10:25:27.583406,159,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15020.91,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:25:41.294690,160,http://localhost:8080/,click_modal,button | text='✕' | class='modal-close',382.59,success,,CineAIros · Películas
+2026-10-23T10:25:54.066351,161,http://localhost:8080/,select_filter_unknown,select | text='TodosAcciónAventuraAnimaciónComediaCrimenDocumenta',109.40,success,,CineAIros · Películas
+2026-10-23T10:26:07.921844,162,http://localhost:8080/,click_nav,button | text='Inicio' | class='nav-link',589.11,success,,CineAIros · Películas
+2026-10-23T10:26:27.586084,163,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15022.73,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    28 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:26:31.846558,164,http://localhost:8080/,click_nav,button | text='Películas' | class='nav-link',586.38,success,,CineAIros · Películas
+2026-10-23T10:26:45.188543,165,http://localhost:8080/,scroll,div | text='★ 7.5Scott Pilgrim vs. the World2010 · PelículaAcc' | class='carousel-track',517.32,success,,CineAIros · Películas
+2026-10-23T10:26:59.685807,166,http://localhost:8080/,click_nav,button | text='Series' | class='footer-link',622.10,success,,CineAIros · Películas
+2026-10-23T10:27:13.138758,167,http://localhost:8080/,click_nav,button | text='Series' | class='footer-link',707.78,success,,CineAIros · Películas
+2026-10-23T10:27:27.593372,168,http://localhost:8080/,click_carousel,article | text='★ 6.8Fear the Walking Dead: Flight 4622015–2016 · ' | class='movie-card',412.80,success,,CineAIros · Películas
+2026-10-23T10:27:48.035489,169,http://localhost:8080/,click_nav,button | text='Inicio' | class='footer-link',4873.66,success,,CineAIros · Películas
+2026-10-23T10:27:51.983014,170,http://localhost:8080/,scroll,"main | text='CineAIrosDescubre, Exploray Guarda tus FavoritasDe' | class='main'",506.81,success,,CineAIros · Películas
+2026-10-23T10:27:56.382597,171,http://localhost:8080/,click_nav,button | text='CineAIros' | aria-label='Ir al inicio' | class='logo',562.59,success,,CineAIros · Películas
+2026-10-23T10:28:00.629673,172,http://localhost:8080/,click_nav,button | text='Maratones' | class='nav-link',558.22,success,,CineAIros · Películas
+2026-10-23T10:28:21.899179,173,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15014.83,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    28 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:28:28.606409,174,http://localhost:8080/,click_nav,button | text='Series' | class='footer-link',586.33,success,,CineAIros · Películas
+2026-10-23T10:28:42.083286,175,http://localhost:8080/,scroll,"main | text='SeriesBusca tus favoritas, guárdalas y vuelve a ve' | class='main'",518.70,success,,CineAIros · Películas
+2026-10-23T10:28:56.144315,176,http://localhost:8080/,click_carousel,article | text='★ 7.5Masters of the Universe: Revolution2024 · Ser' | class='movie-card',438.35,success,,CineAIros · Películas
+2026-10-23T10:29:10.924246,177,http://localhost:8080/,type_filter_year,input | placeholder='Ej. 2010',80.57,success,,CineAIros · Películas
+2026-10-23T10:29:39.780396,178,http://localhost:8080/,navigation,button | text='CineAIros' | aria-label='Ir al inicio' | class='logo',15011.00,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(""header .logo"").first
+    - locator resolved to <button class=""logo"" aria-label=""Ir al inicio"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:30:09.842755,179,http://localhost:8080/,carousels,button | text='‹' | aria-label='Anterior',15018.58,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".carousel-controls button"").nth(10)
+    - locator resolved to <button aria-label=""Anterior"">‹</button>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    6 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:30:41.330685,180,http://localhost:8080/,carousels,div | text='★ 6.9Bear in the Big Blue House1997–2006 · SerieAn' | class='carousel-item',15031.22,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".carousel-item"").nth(216)
+    - locator resolved to <div class=""carousel-item"">…</div>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <p>…</p> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <p>…</p> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  2 × retrying click action
+      - waiting 100ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  6 × retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <p>…</p> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <p>…</p> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:30:57.373693,181,http://localhost:8080/,type_search,input | placeholder='Buscar series... (ej. Breaking Bad)',625.25,success,,CineAIros · Películas
+2026-10-23T10:31:25.177848,182,http://localhost:8080/,navigation,button | text='Inicio' | class='footer-link',15020.25,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(""footer .footer-link"").first
+    - locator resolved to <button class=""footer-link"">Inicio</button>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-banner"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    6 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""cookie-banner"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-banner"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:31:52.617221,183,http://localhost:8080/,navigation,button | text='Películas' | class='footer-link',15023.92,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator(""footer .footer-link"").nth(1)
+    - locator resolved to <button class=""footer-link"">Películas</button>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-banner"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    6 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""cookie-banner"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-banner"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> from <main class=""main"">…</main> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:32:05.832757,184,http://localhost:8080/,click_modal,button | text='Cerrar' | class='btn-ghost',386.31,success,,CineAIros · Películas
+2026-10-23T10:32:18.382216,185,http://localhost:8080/,click_nav,button | text='CineAIros' | aria-label='Ir al inicio' | class='logo',594.30,success,,CineAIros · Películas
+2026-10-23T10:32:23.828611,186,http://localhost:8080/,click_nav,button | text='Películas' | class='footer-link',625.24,success,,CineAIros · Películas
+2026-10-23T10:32:44.540599,187,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15013.04,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:32:50.127271,188,http://localhost:8080/,click_nav,button | text='CineAIros' | aria-label='Ir al inicio' | class='logo',569.23,success,,CineAIros · Películas
+2026-10-23T10:32:54.378942,189,http://localhost:8080/,click_nav,button | text='Maratones' | class='footer-link',572.28,success,,CineAIros · Películas
+2026-10-23T10:33:01.881848,190,http://localhost:8080/,click_nav,button | text='CineAIros' | aria-label='Ir al inicio' | class='logo',580.86,success,,CineAIros · Películas
+2026-10-23T10:33:06.895016,191,http://localhost:8080/,click_nav,button | text='Maratones' | class='nav-link',568.02,success,,CineAIros · Películas
+2026-10-23T10:33:13.762305,192,http://localhost:8080/,click_tab,button | text='Sagas (6)' | class='tab',570.78,success,,CineAIros · Películas
+2026-10-23T10:33:19.932734,193,http://localhost:8080/,click_nav,button | text='Series' | class='nav-link',612.50,success,,CineAIros · Películas
+2026-10-23T10:33:33.067259,194,http://localhost:8080/,click_carousel,button | text='‹' | aria-label='Anterior',483.96,success,,CineAIros · Películas
+2026-10-23T10:33:47.197810,195,http://localhost:8080/,click_nav,button | text='Maratones' | class='nav-link',612.66,success,,CineAIros · Películas
+2026-10-23T10:34:09.007158,196,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15007.27,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    28 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:34:15.755683,197,http://localhost:8080/,click_tab,button | text='Actores (6)' | class='tab',564.32,success,,CineAIros · Películas
+2026-10-23T10:34:37.004265,198,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15017.36,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:34:43.574726,199,http://localhost:8080/,click_nav,button | text='Maratones' | class='nav-link active',599.82,success,,CineAIros · Películas
+2026-10-23T10:34:49.111876,200,http://localhost:8080/,scroll,main | text='MaratonesSagas y filmografías de actores en orden.' | class='main',504.68,success,,CineAIros · Películas
+2026-10-23T10:34:55.454842,201,http://localhost:8080/,click_nav,button | text='CineAIros' | aria-label='Ir al inicio' | class='logo',584.93,success,,CineAIros · Películas
+2026-10-23T10:35:00.684638,202,http://localhost:8080/,scroll,"main | text='CineAIrosDescubre, Exploray Guarda tus FavoritasDe' | class='main'",520.17,success,,CineAIros · Películas
+2026-10-23T10:35:05.119976,203,http://localhost:8080/,click_nav,button | text='Películas' | class='footer-link',582.83,success,,CineAIros · Películas
+2026-10-23T10:35:19.028840,204,http://localhost:8080/,type_search,input | placeholder='Buscar películas... (ej. Inception)',648.40,success,,CineAIros · Películas
+2026-10-23T10:35:31.411276,205,http://localhost:8080/,type_filter_year,input | placeholder='Ej. 2010',87.47,success,,CineAIros · Películas
+2026-10-23T10:35:44.406581,206,http://localhost:8080/,click_nav,button | text='Inicio' | class='footer-link',636.87,success,,CineAIros · Películas
+2026-10-23T10:35:48.537098,207,http://localhost:8080/,scroll,"main | text='CineAIrosDescubre, Exploray Guarda tus FavoritasDe' | class='main'",505.21,success,,CineAIros · Películas
+2026-10-23T10:35:52.873068,208,http://localhost:8080/,scroll,"main | text='CineAIrosDescubre, Exploray Guarda tus FavoritasDe' | class='main'",516.34,success,,CineAIros · Películas
+2026-10-23T10:35:57.432669,209,http://localhost:8080/,click_nav,button | text='Maratones' | class='nav-link',598.98,success,,CineAIros · Películas
+2026-10-23T10:36:02.812334,210,http://localhost:8080/,scroll,main | text='MaratonesSagas y filmografías de actores en orden.' | class='main',512.67,success,,CineAIros · Películas
+2026-10-23T10:36:09.789286,211,http://localhost:8080/,click_nav,button | text='CineAIros' | aria-label='Ir al inicio' | class='logo',585.72,success,,CineAIros · Películas
+2026-10-23T10:36:14.570029,212,http://localhost:8080/,click_nav,button | text='Maratones' | class='nav-link',577.53,success,,CineAIros · Películas
+2026-10-23T10:36:20.557699,213,http://localhost:8080/,click_nav,button | text='Series' | class='nav-link',573.92,success,,CineAIros · Películas
+2026-10-23T10:36:34.719081,214,http://localhost:8080/,scroll,"div | text='13th Street2022– · SerieAnimación, Comedia★ 7.8Apo' | class='carousel-track'",512.53,success,,CineAIros · Películas
+2026-10-23T10:36:48.305869,215,http://localhost:8080/,type_search,input | placeholder='Buscar series... (ej. Breaking Bad)',671.12,success,,CineAIros · Películas
+2026-10-23T10:37:15.623295,216,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15008.59,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:37:28.170223,217,http://localhost:8080/,scroll,div | text='★ 7.9Tales of Wells Fargo1957–1962 · SerieWestern' | class='carousel-track',511.83,success,,CineAIros · Películas
+2026-10-23T10:37:40.689003,218,http://localhost:8080/,click_carousel,"div | text='★ 8.2The Hollow Crown2012–2016 · SerieDrama, Histó' | class='carousel-item'",378.48,success,,CineAIros · Películas
+2026-10-23T10:38:10.134304,219,http://localhost:8080/,carousels,button | text='‹' | aria-label='Anterior',15013.95,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".carousel-controls button"").first
+    - locator resolved to <button aria-label=""Anterior"">‹</button>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    6 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""cookie-content"">…</div> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:38:22.783950,220,http://localhost:8080/,type_filter_year,input | placeholder='Ej. 2010',101.89,success,,CineAIros · Películas
+2026-10-23T10:38:35.956360,221,http://localhost:8080/,click_nav,button | text='Maratones' | class='nav-link',614.74,success,,CineAIros · Películas
+2026-10-23T10:38:42.709227,222,http://localhost:8080/,scroll,main | text='MaratonesSagas y filmografías de actores en orden.' | class='main',519.16,success,,CineAIros · Películas
+2026-10-23T10:38:49.625170,223,http://localhost:8080/,click_tab,button | text='Actores (6)' | class='tab',556.60,success,,CineAIros · Películas
+2026-10-23T10:38:55.655397,224,http://localhost:8080/,click_tab,button | text='Actores (6)' | class='tab active',555.16,success,,CineAIros · Películas
+2026-10-23T10:39:01.986134,225,http://localhost:8080/,click_tab,button | text='Todas (12)' | class='tab',574.17,success,,CineAIros · Películas
+2026-10-23T10:39:08.604035,226,http://localhost:8080/,click_tab,button | text='Todas (12)' | class='tab active',587.84,success,,CineAIros · Películas
+2026-10-23T10:39:14.648698,227,http://localhost:8080/,click_nav,button | text='Series' | class='footer-link',595.90,success,,CineAIros · Películas
+2026-10-23T10:39:27.888001,228,http://localhost:8080/,select_filter_unknown,select | text='Sin filtro★ 6 o más★ 7 o más★ 8 o más★ 9 o más',93.50,success,,CineAIros · Películas
+2026-10-23T10:39:42.508003,229,http://localhost:8080/,click_carousel,"div | text='★ 7.8Crime Patrol Dial 1002015–2019 · SerieCrimen,' | class='carousel-item'",457.55,success,,CineAIros · Películas
+2026-10-23T10:39:59.387300,230,http://localhost:8080/,scroll,"div | text='★ 6.8Fear the Walking Dead2015–2023 · SerieDrama, ' | class='carousel-track'",511.48,success,,CineAIros · Películas
+2026-10-23T10:40:29.438749,231,http://localhost:8080/,chatbot,button | aria-label='Abrir conversación con CineBot' | class='chat-agent-toggle',15010.94,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".chat-agent-toggle"").first
+    - locator resolved to <button aria-expanded=""false"" class=""chat-agent-toggle"" aria-label=""Abrir conversación con CineBot"">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 100ms
+    27 × waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <button class=""btn-primary btn-small"">Aceptar todas</button> from <div class=""cookie-banner"">…</div> subtree intercepts pointer events
+     - retrying click action
+       - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:40:45.155131,232,http://localhost:8080/,scroll,div | text='★ 7.9Tales of Wells Fargo1957–1962 · SerieWestern' | class='carousel-track',507.05,success,,CineAIros · Películas
+2026-10-23T10:43:15.740653,233,http://localhost:8080/,select_filter_unknown,select | text='TodosAcciónAventuraAnimaciónComediaCrimenDocumenta',102.79,success,,CineAIros · Películas
+2026-10-23T10:43:30.826791,234,http://localhost:8080/,click_carousel,article | text='★ 6.7DC's Legends of Tomorrow2016–2022 · SerieAcci' | class='movie-card',448.86,success,,CineAIros · Películas
+2026-10-23T10:44:01.904587,235,http://localhost:8080/,carousels,img | class='toprank-poster',15025.90,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".toprank-track img"").nth(2)
+    - locator resolved to <img loading=""lazy"" alt=""Stranger Things"" class=""toprank-poster"" src=""https://m.media-amazon.com/images/M/MV5BNjY2NTkzODY0MV5BMl5BanBnXkFtZTgwNjk3NDA1OTE@._V1_SX300.jpg""/>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  2 × retrying click action
+      - waiting 100ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  6 × retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div>…</div> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:44:24.768937,236,http://localhost:8080/,click_carousel,article | text='★ 8.1The 1st Shop of Coffee Prince2007 · SerieCome' | class='movie-card',9159.81,success,,CineAIros · Películas
+2026-10-23T10:44:55.762503,237,http://localhost:8080/,carousels,img | class='toprank-poster',15037.00,timeout,"Locator.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("".toprank-track img"").nth(1)
+    - locator resolved to <img loading=""lazy"" alt=""Game of Thrones"" class=""toprank-poster"" src=""https://m.media-amazon.com/images/M/MV5BMTNhMDJmNmYtNDQ5OS00ODdlLWE0ZDAtZTgyYTIwNDY3OTU3XkEyXkFqcGc@._V1_QL75_UX380_CR0,3,380,562_.jpg""/>
+  - attempting click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <img alt=""The 1st Shop of Coffee Prince"" src=""https://m.media-amazon.com/images/M/MV5BZDgyNmYyOWEtZmE2MS00MDJmLTgzMGUtMTFmZWIyZjA2MGNiXkEyXkFqcGc@._V1_SX300.jpg""/> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 20ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <img alt=""The 1st Shop of Coffee Prince"" src=""https://m.media-amazon.com/images/M/MV5BZDgyNmYyOWEtZmE2MS00MDJmLTgzMGUtMTFmZWIyZjA2MGNiXkEyXkFqcGc@._V1_SX300.jpg""/> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  2 × retrying click action
+      - waiting 100ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  6 × retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <img alt=""The 1st Shop of Coffee Prince"" src=""https://m.media-amazon.com/images/M/MV5BZDgyNmYyOWEtZmE2MS00MDJmLTgzMGUtMTFmZWIyZjA2MGNiXkEyXkFqcGc@._V1_SX300.jpg""/> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+    - retrying click action
+      - waiting 500ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class=""modal-backdrop"">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <img alt=""The 1st Shop of Coffee Prince"" src=""https://m.media-amazon.com/images/M/MV5BZDgyNmYyOWEtZmE2MS00MDJmLTgzMGUtMTFmZWIyZjA2MGNiXkEyXkFqcGc@._V1_SX300.jpg""/> from <div class=""modal-backdrop"">…</div> subtree intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+",CineAIros · Películas
+2026-10-23T10:45:33.518540,238,http://localhost:8080/,type_search,input | placeholder='Buscar series... (ej. Breaking Bad)',646.80,success,,CineAIros · Películas
+2026-10-23T10:45:45.920383,239,http://localhost:8080/,click_nav,button | text='CineAIros' | aria-label='Ir al inicio' | class='logo',580.66,success,,CineAIros · Películas
+2026-10-23T10:45:51.266707,240,http://localhost:8080/,click_nav,button | text='Películas' | class='nav-link',597.21,success,,CineAIros · Películas
+2026-10-23T10:46:05.298593,241,http://localhost:8080/,click_carousel,article | text='★ 5.9The Wind. A Documentary Thriller2019 · Pelícu' | class='movie-card',432.57,success,,CineAIros · Películas
+2026-10-23T10:46:20.674317,242,http://localhost:8080/,select_filter_unknown,select | text='Sin filtro★ 6 o más★ 7 o más★ 8 o más★ 9 o más',121.46,success,,CineAIros · Películas
+2026-10-23T10:46:36.586294,243,http://localhost:8080/,select_filter_unknown,select | text='TodosAcciónAventuraAnimaciónComediaCrimenDocumenta',123.82,success,,CineAIros · Películas
+2026-10-23T10:46:53.194648,244,http://localhost:8080/,click_modal,button | text='Cerrar' | class='btn-ghost',422.03,success,,CineAIros · Películas
+2026-10-23T10:47:09.353176,245,http://localhost:8080/,type_search,input | placeholder='Buscar películas... (ej. Inception)',726.88,success,,CineAIros · Películas
+2026-10-23T10:47:21.916954,246,http://localhost:8080/,scroll,"div | text='★ 8.6Saving Private Ryan1998 · PelículaDrama, Béli' | class='carousel-track'",509.23,success,,CineAIros · Películas
+2026-10-23T10:47:33.631829,247,http://localhost:8080/,scroll,"div | text='★ 8.0The Revenant2016 · PelículaAcción, Drama, Wes' | class='carousel-track'",519.29,success,,CineAIros · Películas
+2026-10-23T10:47:44.891150,248,http://localhost:8080/,type_filter_year,input | placeholder='Ej. 2010',85.48,success,,CineAIros · Películas
+2026-10-23T10:47:57.542928,249,http://localhost:8080/,click_carousel,"div | text='★ 7.6The Others2001 · PelículaTerror, Misterio, Su' | class='carousel-item'",433.63,success,,CineAIros · Películas
+2026-10-23T10:48:12.584294,250,http://localhost:8080/,click_modal,button | text='Cerrar' | class='btn-ghost',419.82,success,,CineAIros · Películas
